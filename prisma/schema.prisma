@@ -1,0 +1,181 @@
+// Schéma NOVA — socle opérationnel (Phase 0 + Phase 1 du brief technique)
+// Les modèles liés aux rapports vocaux terrain (Phase 2) et au copilote
+// financier (Phase 3) ne sont volontairement pas inclus ici — à ajouter
+// une fois ces phases validées, pas avant.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business?
+  subscription Subscription?
+}
+
+model Business {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  sector       String
+  mission      String?
+  tone         String    @default("pro")
+  tauxHoraire  Float     @default(40)
+  accountantEmail String? // comptable partenaire ou comptable habituel du client, pour l'envoi du rapport stratégique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  clients   Client[]
+  projects  Project[]
+  devis     Devis[]
+  tasks     Task[]
+  documents Document[]
+  voiceReports     VoiceReport[]
+  strategicReports StrategicReport[]
+}
+
+// --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
+
+model Client {
+  id        String   @id @default(cuid())
+  businessId String
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+  devis    Devis[]
+
+  @@index([businessId])
+}
+
+model Project {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name       String
+  address    String?
+  status     String    @default("planifie") // planifie | en_cours | termine | annule
+  startDate  DateTime?
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tasks Task[]
+  voiceReports VoiceReport[]
+
+  @@index([businessId])
+  @@index([clientId])
+}
+
+model Devis {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  label      String
+  description String?
+  amount     Float?
+  status     String   @default("brouillon") // brouillon | envoye | accepte | refuse
+  content    String   // texte du devis généré
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([clientId])
+}
+
+model Task {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  text       String
+  done       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([projectId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type       String   // brief | marketing | conseil
+  title      String
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+// --- Phase 2 : rapports terrain vocaux ---
+// Rappel légal (voir NOVA_Brief_Technique_v3.md) : ceci est un outil de
+// compte-rendu d'activité, jamais un outil de notation ou de surveillance
+// individuelle. Ne pas ajouter de champ de scoring/performance ici.
+model VoiceReport {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  authorLabel  String   // nom/rôle déclaré par le collaborateur, pas un champ RH
+  audioUrl     String?  // référence au fichier audio d'origine (stockage externe)
+  transcript   String   // texte transcrit
+  summary      String   // résumé structuré généré par l'IA à partir du transcript
+  language     String   @default("fr")
+  createdAt    DateTime @default(now())
+
+  @@index([businessId])
+  @@index([projectId])
+}
+
+// --- Phase 3 : copilote financier (option premium) ---
+// Le diagnostic gratuit (avant inscription) reste stateless, non stocké ici.
+model StrategicReport {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  period       String   // ex. "2026-T3"
+  content      String   // jamais nommé "audit" ni "bilan" dans le contenu généré
+  reviewedBy   String?  // nom du comptable partenaire ayant relu le rapport
+  reviewedAt   DateTime?
+  status       String   @default("brouillon") // brouillon | en_relecture | envoye
+  createdAt    DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  plan                 String   @default("essentiel") // essentiel | pro | premium
+  status               String   @default("inactive")  // inactive | active | past_due | canceled
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
