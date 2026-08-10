@@ -1,7 +1,7 @@
-// Schéma NOVA — socle opérationnel (Phase 0 + Phase 1 du brief technique)
-// Les modèles liés aux rapports vocaux terrain (Phase 2) et au copilote
-// financier (Phase 3) ne sont volontairement pas inclus ici — à ajouter
-// une fois ces phases validées, pas avant.
+// Schéma NOVA — socle opérationnel (Phase 0 + Phase 1), rapports vocaux
+// terrain (Phase 2, modèle VoiceReport) et copilote financier (Phase 3,
+// modèle StrategicReport) du brief technique — toutes construites
+// directement, choix produit assumé (voir README.md).
 
 generator client {
   provider = "prisma-client-js"
