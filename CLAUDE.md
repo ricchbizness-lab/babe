@@ -14,6 +14,24 @@
 - **Border-radius** : 8px sur les cards, 6px sur les boutons, 4px sur les
   badges
 
+### Tokens CSS (`app/globals.css`)
+
+- Espacement (8px grid) : `--nova-space-1: 8px`, `--nova-space-2: 16px`,
+  `--nova-space-3: 24px`, `--nova-space-4: 32px`, `--nova-space-5: 40px` —
+  toujours utiliser ces variables pour padding/margin/gap, jamais une valeur
+  en dur
+- Rayons : `--nova-radius-card: 8px`, `--nova-radius-btn: 6px`,
+  `--nova-radius-badge: 4px`
+- Ombre : `--nova-shadow-card: 0 1px 3px rgba(0,0,0,0.06)`
+- Transitions : `--nova-transition-color: 150ms ease`,
+  `--nova-transition-transform: 100ms ease`
+- Couleurs : `--nova-bg`, `--nova-surface`, `--nova-border`, `--nova-ink`,
+  `--nova-ink-soft`, `--nova-ink-faint`, `--nova-teal`, `--nova-teal-deep`,
+  `--nova-teal-tint`, `--nova-amber`, `--nova-amber-tint`, `--nova-danger`,
+  `--nova-danger-tint`
+- Polices : `--nova-font-sans` (Inter), `--nova-font-heading` (Manrope),
+  `--nova-font-mono` (IBM Plex Mono)
+
 ## Composants — règles non négociables
 
 - Toujours utiliser `components/ui.tsx`, jamais créer de styles inline ad hoc
