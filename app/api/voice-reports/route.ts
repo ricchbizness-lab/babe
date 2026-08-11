@@ -24,6 +24,7 @@ export async function GET() {
     const businessId = await requireBusinessId(userId);
     const reports = await prisma.voiceReport.findMany({
       where: { businessId },
+      include: { project: { select: { id: true, name: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,
     });

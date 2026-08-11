@@ -165,7 +165,12 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       </section>
 
       <section>
-        <h2 className="nova-section-title">Rapports vocaux ({project.voiceReports.length})</h2>
+        <div className="nova-section-header-row">
+          <h2 className="nova-section-title">Rapports vocaux ({project.voiceReports.length})</h2>
+          <Link href={`/dashboard/rapports-vocaux/nouveau?projectId=${project.id}`} className="nova-btn nova-btn-secondary">
+            Ajouter un rapport
+          </Link>
+        </div>
         <Table columns={reportColumns} rows={project.voiceReports} emptyLabel="Aucun rapport vocal rattaché à ce chantier." />
       </section>
     </div>

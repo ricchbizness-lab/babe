@@ -164,6 +164,14 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-weight: 700;
   margin: 0 0 var(--nova-space-2);
 }
+.nova-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  margin-bottom: var(--nova-space-2);
+}
+.nova-section-header-row .nova-section-title { margin-bottom: 0; }
 
 /* --- Sidebar --- */
 
@@ -656,6 +664,47 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-1);
   flex-wrap: wrap;
 }
+
+/* --- Rapports vocaux --- */
+
+.nova-notice {
+  background: var(--nova-teal-tint);
+  color: var(--nova-teal-deep);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  font-size: 13px;
+}
+
+.nova-hint-standalone { font-size: 12px; color: var(--nova-ink-faint); margin: calc(var(--nova-space-1) * -1) 0 var(--nova-space-2); }
+
+.nova-mode-toggle { margin-bottom: var(--nova-space-2); }
+
+.nova-record-block { display: flex; flex-direction: column; margin-bottom: var(--nova-space-2); }
+.nova-record-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-3);
+  margin-top: var(--nova-space-1);
+}
+.nova-btn-recording { animation: nova-record-btn-pulse 1.2s ease-in-out infinite; }
+@keyframes nova-record-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(179, 67, 46, 0.45); }
+  50% { box-shadow: 0 0 0 10px rgba(179, 67, 46, 0); }
+}
+.nova-record-indicator { display: flex; align-items: center; gap: var(--nova-space-1); }
+.nova-record-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--nova-danger);
+  animation: nova-record-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes nova-record-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.nova-record-timer { font-family: var(--nova-font-mono); font-size: 15px; font-weight: 600; color: var(--nova-danger); }
+.nova-record-preview { width: 100%; margin-top: var(--nova-space-2); }
 
 .nova-wizard-actions {
   display: flex;
