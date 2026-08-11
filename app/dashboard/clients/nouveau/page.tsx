@@ -1,0 +1,81 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { BackLink, Button, Card, Field, TextareaField } from "@/components/ui";
+
+export default function NewClientPage() {
+  const router = useRouter();
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await fetch("/api/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      setError("Impossible de créer le client — vérifiez les champs.");
+      return;
+    }
+    const data = await res.json();
+    router.push(`/dashboard/clients/${data.client.id}`);
+  }
+
+  return (
+    <div className="nova-page">
+      <BackLink href="/dashboard/clients" label="Retour aux clients" />
+
+      <header className="nova-page-header">
+        <h1>Nouveau client</h1>
+      </header>
+
+      <Card>
+        <form onSubmit={handleSubmit}>
+          <Field
+            label="Nom"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Jean Dupont"
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="jean.dupont@exemple.fr"
+          />
+          <Field
+            label="Téléphone"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            placeholder="06 12 34 56 78"
+          />
+          <Field
+            label="Adresse"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            placeholder="12 rue des Lilas, 75011 Paris"
+          />
+          <TextareaField
+            label="Notes"
+            rows={3}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+          {error && <div className="error">{error}</div>}
+          <Button type="submit" disabled={loading}>
+            {loading ? "Création..." : "Créer le client"}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}

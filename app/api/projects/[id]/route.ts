@@ -3,6 +3,28 @@ import { prisma } from "@/lib/prisma";
 import { projectSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    const { userId } = await requireSession();
+    const businessId = await requireBusinessId(userId);
+
+    const project = await prisma.project.findUnique({
+      where: { id: params.id },
+      include: {
+        client: true,
+        tasks: { orderBy: { createdAt: "desc" } },
+        voiceReports: { orderBy: { createdAt: "desc" } },
+      },
+    });
+    await assertOwnedByBusiness(project, businessId);
+
+    return NextResponse.json({ project });
+  } catch (err) {
+    const { status, message } = ownershipErrorToStatus(err);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const { userId } = await requireSession();

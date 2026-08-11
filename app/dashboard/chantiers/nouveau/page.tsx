@@ -1,0 +1,115 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { BackLink, Button, Card, Field, SelectField } from "@/components/ui";
+
+type ClientOption = { id: string; name: string };
+
+export default function NewChantierPage() {
+  const router = useRouter();
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [form, setForm] = useState({
+    name: "",
+    clientId: "",
+    address: "",
+    status: "planifie",
+    startDate: "",
+    endDate: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((res) => res.json())
+      .then((data) => setClients(data.clients ?? []));
+  }, []);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name,
+        clientId: form.clientId || undefined,
+        address: form.address || undefined,
+        status: form.status,
+        startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+        endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+      }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      setError("Impossible de créer le chantier — vérifiez les champs.");
+      return;
+    }
+    const data = await res.json();
+    router.push(`/dashboard/chantiers/${data.project.id}`);
+  }
+
+  return (
+    <div className="nova-page">
+      <BackLink href="/dashboard/chantiers" label="Retour aux chantiers" />
+
+      <header className="nova-page-header">
+        <h1>Nouveau chantier</h1>
+      </header>
+
+      <Card>
+        <form onSubmit={handleSubmit}>
+          <Field
+            label="Nom du chantier"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Rénovation toiture — 12 rue des Lilas"
+          />
+          <SelectField
+            label="Client rattaché"
+            value={form.clientId}
+            onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+          >
+            <option value="">Aucun client rattaché</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </SelectField>
+          <Field
+            label="Adresse"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            placeholder="12 rue des Lilas, 75011 Paris"
+          />
+          <SelectField label="Statut" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <option value="planifie">Planifié</option>
+            <option value="en_cours">En cours</option>
+            <option value="termine">Terminé</option>
+            <option value="annule">Annulé</option>
+          </SelectField>
+          <Field
+            label="Date de début"
+            type="date"
+            value={form.startDate}
+            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          />
+          <Field
+            label="Date de fin"
+            type="date"
+            value={form.endDate}
+            onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+          />
+          {error && <div className="error">{error}</div>}
+          <Button type="submit" disabled={loading}>
+            {loading ? "Création..." : "Créer le chantier"}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}

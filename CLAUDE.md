@@ -27,8 +27,8 @@
   `--nova-transition-transform: 100ms ease`
 - Couleurs : `--nova-bg`, `--nova-surface`, `--nova-border`, `--nova-ink`,
   `--nova-ink-soft`, `--nova-ink-faint`, `--nova-teal`, `--nova-teal-deep`,
-  `--nova-teal-tint`, `--nova-amber`, `--nova-amber-tint`, `--nova-danger`,
-  `--nova-danger-tint`
+  `--nova-teal-tint`, `--nova-amber`, `--nova-amber-tint`, `--nova-success`,
+  `--nova-success-tint`, `--nova-danger`, `--nova-danger-tint`
 - Polices : `--nova-font-sans` (Inter), `--nova-font-heading` (Manrope),
   `--nova-font-mono` (IBM Plex Mono)
 
@@ -52,6 +52,26 @@
 - Jamais de données simulées dans les pages — toujours les vraies routes API
 - Jamais les mots "audit" ou "bilan" dans les textes générés par l'IA
 - Recommandations IA toujours formulées en option, jamais en directive
+
+## Scope produit — phase en cours
+
+7 modules validés, à construire dans cet ordre exact, un à la fois, jamais
+sans confirmation explicite entre deux :
+
+1. **CRM (clients + chantiers)** — ✅ fait
+2. Devis avec génération IA
+3. Facturation (cycle devis → facture)
+4. Portail client (lien unique, lecture seule)
+5. Rapports vocaux terrain (interface)
+6. Planning / dispatch équipe
+7. Copilote financier (interface)
+
+Hors scope de cette phase, jamais construit mais affiché en grisé dans la
+sidebar sous "Bientôt disponible" (badge "Prochainement", jamais cliquable,
+jamais de route derrière) : facturation électronique conforme (PDP),
+e-signature de devis (Yousign), système téléphonique intégré, WhatsApp
+Business, GPS tracking équipe, synchronisation comptable
+(Pennylane/QuickBooks).
 
 ## Process de travail
 

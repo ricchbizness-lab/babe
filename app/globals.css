@@ -11,6 +11,8 @@
   --nova-teal-tint: #E7F0ED;
   --nova-amber: #C98A2B;
   --nova-amber-tint: #FBF1E2;
+  --nova-success: #2F7A4D;
+  --nova-success-tint: #E9F3EC;
   --nova-danger: #B3432E;
   --nova-danger-tint: #FBEAE6;
 
@@ -138,7 +140,24 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-3);
 }
 .nova-page-header h1 { font-size: 24px; }
+.nova-page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+.nova-page-header-row h1 { font-size: 24px; }
 .nova-page-subtitle { margin: var(--nova-space-1) 0 0; color: var(--nova-ink-soft); font-size: 14px; }
+.nova-inline-link { color: var(--nova-teal-deep); font-weight: 600; }
+.nova-inline-link:hover { text-decoration: underline; }
+.nova-truncate {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 420px;
+}
 .nova-section-title {
   font-family: var(--nova-font-heading);
   font-size: 15px;
@@ -179,12 +198,51 @@ button.primary:hover { background: var(--nova-teal-deep); }
   justify-content: center;
   font-size: 14px;
 }
+.nova-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
 .nova-sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 0;
-  flex: 1;
 }
+.nova-sidebar-soon-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nova-ink-faint);
+  padding: 0 var(--nova-space-2);
+  margin: var(--nova-space-3) 0 var(--nova-space-1);
+}
+.nova-sidebar-soon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+}
+.nova-sidebar-soon-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  color: var(--nova-ink-faint);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: default;
+}
+.nova-sidebar-soon-item svg { flex-shrink: 0; margin-top: 2px; }
+.nova-sidebar-soon-item-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nova-space-1);
+  min-width: 0;
+}
+.nova-sidebar-soon-item-label { line-height: 1.3; }
 .nova-sidebar-link {
   position: relative;
   display: flex;
@@ -289,6 +347,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-neutral { background: #F1F1F2; color: var(--nova-ink-soft); }
 .nova-badge-teal { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
 .nova-badge-amber { background: var(--nova-amber-tint); color: var(--nova-amber); }
+.nova-badge-success { background: var(--nova-success-tint); color: var(--nova-success); }
 .nova-badge-danger { background: var(--nova-danger-tint); color: var(--nova-danger); }
 
 .nova-timestamp {
@@ -321,6 +380,12 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border-bottom: 1px solid var(--nova-border);
 }
 .nova-table tr:last-child td { border-bottom: none; }
+.nova-table tbody tr {
+  transition: background-color var(--nova-transition-color);
+}
+.nova-table tbody tr:hover { background: #FAFAFA; }
+.nova-table-row-clickable { cursor: pointer; }
+.nova-table-row-clickable:hover { background: var(--nova-teal-tint) !important; }
 .nova-table-empty {
   padding: var(--nova-space-4);
   text-align: center;
@@ -328,6 +393,103 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-size: 13.5px;
   border: 1px dashed var(--nova-border);
   border-radius: var(--nova-radius-card);
+}
+
+/* --- Recherche --- */
+
+.nova-search {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+  background: var(--nova-surface);
+  border: 1.5px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  color: var(--nova-ink-faint);
+  max-width: 320px;
+  transition: border-color var(--nova-transition-color);
+}
+.nova-search:focus-within { border-color: var(--nova-teal); }
+.nova-search input {
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+.nova-search input:focus-visible { outline: none; }
+
+/* --- État vide --- */
+
+.nova-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--nova-space-1);
+  padding: var(--nova-space-5) var(--nova-space-3);
+  border: 1px dashed var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  color: var(--nova-ink-soft);
+}
+.nova-empty-state-icon { color: var(--nova-ink-faint); margin-bottom: var(--nova-space-1); }
+.nova-empty-state-title { font-weight: 700; color: var(--nova-ink); margin: 0; }
+.nova-empty-state-description { font-size: 13px; margin: 0 0 var(--nova-space-1); max-width: 360px; }
+
+/* --- Lien retour --- */
+
+.nova-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  transition: color var(--nova-transition-color);
+}
+.nova-back-link:hover { color: var(--nova-teal-deep); }
+
+/* --- Filtres (chips) --- */
+
+.nova-filter-row { display: flex; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-filter-chip {
+  padding: var(--nova-space-1) var(--nova-space-2);
+  border-radius: var(--nova-radius-btn);
+  border: 1.5px solid var(--nova-border);
+  background: var(--nova-surface);
+  color: var(--nova-ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--nova-transition-color), color var(--nova-transition-color),
+    background-color var(--nova-transition-color);
+}
+.nova-filter-chip:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+.nova-filter-chip-active { background: var(--nova-teal); border-color: var(--nova-teal); color: #fff; }
+.nova-filter-chip-active:hover { color: #fff; }
+
+/* --- Liste de détails (fiches client / chantier) --- */
+
+.nova-detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--nova-space-2) var(--nova-space-3);
+  margin: 0;
+}
+.nova-detail-list dt {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  margin: 0 0 2px;
+}
+.nova-detail-list dd { margin: 0; font-size: 14px; color: var(--nova-ink); }
+.nova-detail-notes {
+  margin: var(--nova-space-2) 0 0;
+  padding-top: var(--nova-space-2);
+  border-top: 1px dashed var(--nova-border);
+  font-size: 13.5px;
+  color: var(--nova-ink-soft);
+  white-space: pre-wrap;
 }
 
 /* --- Bandeau de métriques --- */
@@ -415,6 +577,6 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-shell { grid-template-columns: 1fr; }
   .nova-sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; }
   .nova-sidebar-nav { flex-direction: row; }
-  .nova-sidebar-business { display: none; }
+  .nova-sidebar-business, .nova-sidebar-soon-title, .nova-sidebar-soon { display: none; }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid { grid-template-columns: 1fr 1fr; }
 }
