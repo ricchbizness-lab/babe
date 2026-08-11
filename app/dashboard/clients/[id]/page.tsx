@@ -33,9 +33,9 @@ const DEVIS_STATUS_LABEL: Record<string, string> = {
   accepte: "Accepté",
   refuse: "Refusé",
 };
-const DEVIS_STATUS_TONE: Record<string, "neutral" | "amber" | "success" | "danger"> = {
+const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
   brouillon: "neutral",
-  envoye: "amber",
+  envoye: "teal",
   accepte: "success",
   refuse: "danger",
 };

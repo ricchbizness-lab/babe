@@ -66,7 +66,7 @@ export type IconKey = keyof typeof ICONS;
 // Bouton
 // ---------------------------------------------------------------------------
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "success" | "danger";
 
 export function Button({
   variant = "primary",

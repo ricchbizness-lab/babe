@@ -15,6 +15,13 @@ const MODULE_INSTRUCTIONS: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        { error: "Génération IA non configurée pour le moment — clé Anthropic manquante." },
+        { status: 503 }
+      );
+    }
+
     const { userId } = await requireSession();
 
     // Limite l'abus d'appels IA (coût direct) même par un compte légitime.

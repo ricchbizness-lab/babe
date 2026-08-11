@@ -36,12 +36,14 @@ export const devisSchema = z.object({
   clientId: z.string().optional(),
   description: z.string().max(2000).optional(),
   amount: z.number().min(0).optional(),
+  content: z.string().max(20000).optional(),
 });
 
 export const devisUpdateSchema = z.object({
   status: z.enum(["brouillon", "envoye", "accepte", "refuse"]).optional(),
   label: z.string().min(1).max(200).optional(),
   amount: z.number().min(0).optional(),
+  content: z.string().max(20000).optional(),
 });
 
 export const taskSchema = z.object({

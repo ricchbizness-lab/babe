@@ -308,6 +308,11 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-btn-secondary:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
 .nova-btn-ghost { background: transparent; color: var(--nova-ink-soft); }
 .nova-btn-ghost:hover { color: var(--nova-ink); }
+.nova-btn-success { background: var(--nova-success); color: #fff; }
+.nova-btn-success:hover { filter: brightness(0.92); }
+.nova-btn-danger { background: var(--nova-danger); color: #fff; }
+.nova-btn-danger:hover { filter: brightness(0.92); }
+.nova-btn[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
 
 /* --- Cartes --- */
 
@@ -558,6 +563,85 @@ button.primary:hover { background: var(--nova-teal-deep); }
     transform var(--nova-transition-transform);
 }
 .nova-quick-action:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); transform: translateY(-1px); }
+
+/* --- Assistant IA (génération devis) --- */
+
+.nova-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  margin-bottom: var(--nova-space-1);
+}
+.nova-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nova-border);
+}
+.nova-step-dot-active { background: var(--nova-teal); }
+.nova-step-dot-done { background: var(--nova-teal-deep); }
+
+.nova-ai-zone {
+  background: var(--nova-teal-tint);
+  border: 1px solid var(--nova-teal-tint);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-3);
+}
+.nova-ai-zone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  margin-bottom: var(--nova-space-2);
+}
+.nova-ai-zone textarea {
+  background: var(--nova-surface);
+  min-height: 220px;
+}
+.nova-ai-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-ai-loading-label {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--nova-teal-deep);
+}
+.nova-ai-content {
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--nova-ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.nova-card-text { margin: 0; color: var(--nova-ink); font-size: 13.5px; line-height: 1.5; }
+
+.nova-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  border: 1px solid var(--nova-amber-tint);
+  background: var(--nova-amber-tint);
+  color: #8A5A16;
+  border-radius: var(--nova-radius-card);
+  font-size: 13px;
+}
+
+.nova-status-actions {
+  display: flex;
+  gap: var(--nova-space-1);
+  flex-wrap: wrap;
+}
+
+.nova-wizard-actions {
+  display: flex;
+  gap: var(--nova-space-2);
+}
 
 /* --- Skeletons --- */
 

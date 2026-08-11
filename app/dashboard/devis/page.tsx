@@ -1,0 +1,98 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Badge, EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+
+type DevisRow = {
+  id: string;
+  label: string;
+  status: string;
+  amount: number | null;
+  createdAt: string;
+  client: { id: string; name: string } | null;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  brouillon: "Brouillon",
+  envoye: "Envoyé",
+  accepte: "Accepté",
+  refuse: "Refusé",
+};
+const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+  brouillon: "neutral",
+  envoye: "teal",
+  accepte: "success",
+  refuse: "danger",
+};
+
+export default function DevisPage() {
+  const [devis, setDevis] = useState<DevisRow[] | null>(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    fetch("/api/devis")
+      .then((res) => res.json())
+      .then((data) => setDevis(data.devis ?? []));
+  }, []);
+
+  const filtered = (devis ?? []).filter((d) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return d.label.toLowerCase().includes(q) || (d.client?.name || "").toLowerCase().includes(q);
+  });
+
+  const columns: TableColumn<DevisRow>[] = [
+    { key: "label", label: "Devis" },
+    { key: "client", label: "Client", render: (d) => d.client?.name || "—" },
+    {
+      key: "status",
+      label: "Statut",
+      render: (d) => <Badge tone={STATUS_TONE[d.status] || "neutral"}>{STATUS_LABEL[d.status] || d.status}</Badge>,
+    },
+    {
+      key: "amount",
+      label: "Montant",
+      align: "right",
+      render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+    },
+    { key: "createdAt", label: "Créé le", render: (d) => <Timestamp date={d.createdAt} /> },
+  ];
+
+  return (
+    <div className="nova-page">
+      <header className="nova-page-header-row">
+        <div>
+          <h1>Devis</h1>
+          <p className="nova-page-subtitle">
+            {devis === null ? "…" : `${devis.length} devis`}
+          </p>
+        </div>
+        <Link href="/dashboard/devis/nouveau" className="nova-btn nova-btn-primary">
+          Nouveau devis
+        </Link>
+      </header>
+
+      <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
+
+      {devis === null ? (
+        <TableSkeleton columns={5} />
+      ) : devis.length === 0 ? (
+        <EmptyState
+          icon="devis"
+          title="Aucun devis pour l'instant — créez votre premier devis"
+          description="Nova peut générer le contenu à votre place à partir de quelques informations."
+          actionLabel="Créer un devis"
+          actionHref="/dashboard/devis/nouveau"
+        />
+      ) : (
+        <Table
+          columns={columns}
+          rows={filtered}
+          getRowHref={(d) => `/dashboard/devis/${d.id}`}
+          emptyLabel="Aucun résultat pour cette recherche."
+        />
+      )}
+    </div>
+  );
+}

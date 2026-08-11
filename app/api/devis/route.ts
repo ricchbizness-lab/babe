@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         clientId: parsed.data.clientId,
         description: parsed.data.description,
         amount: parsed.data.amount,
-        content: "",
+        content: parsed.data.content || "",
         businessId,
       },
     });

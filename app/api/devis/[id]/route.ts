@@ -3,6 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { devisUpdateSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    const { userId } = await requireSession();
+    const businessId = await requireBusinessId(userId);
+
+    const devis = await prisma.devis.findUnique({
+      where: { id: params.id },
+      include: { client: true },
+    });
+    await assertOwnedByBusiness(devis, businessId);
+
+    return NextResponse.json({ devis });
+  } catch (err) {
+    const { status, message } = ownershipErrorToStatus(err);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const { userId } = await requireSession();
