@@ -63,7 +63,7 @@ sans confirmation explicite entre deux :
 3. **Facturation (cycle devis → facture)** — ✅ fait
 4. **Portail client (lien unique, lecture seule)** — ✅ fait
 5. **Rapports vocaux terrain (interface)** — ✅ fait
-6. Planning / dispatch équipe
+6. **Planning / dispatch équipe** — ✅ fait
 7. Copilote financier (interface)
 
 Hors scope de cette phase, jamais construit mais affiché en grisé dans la
