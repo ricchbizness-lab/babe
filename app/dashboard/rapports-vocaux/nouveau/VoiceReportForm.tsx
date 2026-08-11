@@ -118,20 +118,29 @@ export function VoiceReportForm({
       body.audioMimeType = audioBlob.type || "audio/webm";
     }
 
-    const res = await fetch("/api/voice-reports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSubmitting(false);
+    try {
+      const res = await fetch("/api/voice-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Impossible d'enregistrer le rapport.");
-      return;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Impossible d'enregistrer le rapport.");
+        return;
+      }
+      const data = await res.json();
+      if (!data.report) {
+        setError("Réponse inattendue du serveur — réessayez.");
+        return;
+      }
+      setResult({ summary: data.report.summary });
+    } catch {
+      setError("Impossible de joindre le serveur — vérifiez votre connexion et réessayez.");
+    } finally {
+      setSubmitting(false);
     }
-    const data = await res.json();
-    setResult({ summary: data.report.summary });
   }
 
   if (result) {
