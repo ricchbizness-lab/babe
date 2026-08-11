@@ -62,7 +62,7 @@ sans confirmation explicite entre deux :
 2. **Devis avec génération IA** — ✅ fait
 3. **Facturation (cycle devis → facture)** — ✅ fait
 4. **Portail client (lien unique, lecture seule)** — ✅ fait
-5. Rapports vocaux terrain (interface)
+5. **Rapports vocaux terrain (interface)** — ✅ fait
 6. Planning / dispatch équipe
 7. Copilote financier (interface)
 
