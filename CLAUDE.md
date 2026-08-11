@@ -60,7 +60,7 @@ sans confirmation explicite entre deux :
 
 1. **CRM (clients + chantiers)** — ✅ fait
 2. **Devis avec génération IA** — ✅ fait
-3. Facturation (cycle devis → facture)
+3. **Facturation (cycle devis → facture)** — ✅ fait
 4. Portail client (lien unique, lecture seule)
 5. Rapports vocaux terrain (interface)
 6. Planning / dispatch équipe
