@@ -620,6 +620,25 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-card-text { margin: 0; color: var(--nova-ink); font-size: 13.5px; line-height: 1.5; }
 
+.nova-portal-link-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+.nova-portal-link {
+  flex: 1;
+  min-width: 220px;
+  font-family: var(--nova-font-mono);
+  font-size: 12.5px;
+  background: var(--nova-bg);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  color: var(--nova-teal-deep);
+  word-break: break-all;
+}
+
 .nova-info-banner {
   display: flex;
   align-items: flex-start;
@@ -703,6 +722,75 @@ button.primary:hover { background: var(--nova-teal-deep); }
     max-width: 100%;
   }
   @page { size: A4; margin: 18mm; }
+}
+
+/* --- Portail client (page publique, hors dashboard) --- */
+
+.nova-portal {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--nova-bg);
+  padding: var(--nova-space-4) var(--nova-space-2);
+}
+.nova-portal-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-3);
+}
+.nova-portal-card-center { text-align: center; align-items: center; margin: auto 0; }
+.nova-portal-business {
+  font-family: var(--nova-font-heading);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--nova-ink);
+}
+.nova-portal-project {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  margin: calc(var(--nova-space-1) * -1) 0 0;
+}
+.nova-portal-card-center .nova-portal-project { font-size: 20px; color: var(--nova-ink); margin: 0; }
+.nova-portal-status .nova-badge { font-size: 13px; padding: 6px 14px; }
+.nova-portal-section h2 {
+  font-family: var(--nova-font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 var(--nova-space-2);
+}
+.nova-portal-empty { color: var(--nova-ink-faint); font-size: 15px; margin: 0; }
+.nova-portal-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--nova-space-2); }
+.nova-portal-tasks li { display: flex; align-items: flex-start; gap: var(--nova-space-2); font-size: 16px; color: var(--nova-ink); }
+.nova-portal-tasks li svg { flex-shrink: 0; margin-top: 2px; color: var(--nova-ink-faint); }
+.nova-portal-task-done { color: var(--nova-ink-soft); text-decoration: line-through; }
+.nova-portal-task-done svg { color: var(--nova-success) !important; }
+.nova-portal-reports { display: flex; flex-direction: column; gap: var(--nova-space-2); }
+.nova-portal-report {
+  background: var(--nova-teal-tint);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+}
+.nova-portal-report-meta {
+  font-family: var(--nova-font-mono);
+  font-size: 12.5px;
+  color: var(--nova-teal-deep);
+  margin-bottom: var(--nova-space-1);
+}
+.nova-portal-report p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--nova-ink); }
+.nova-portal-footer {
+  margin-top: var(--nova-space-3);
+  font-size: 12px;
+  color: var(--nova-ink-faint);
+  text-align: center;
 }
 
 /* --- Skeletons --- */

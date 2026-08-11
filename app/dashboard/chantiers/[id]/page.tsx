@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BackLink, Badge, Card, CardTitle, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Check, Copy, Share2 } from "lucide-react";
+import { BackLink, Badge, Button, Card, CardTitle, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 
 type ChantierDetail = {
   id: string;
@@ -33,6 +34,9 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
 export default function ChantierDetailPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<ChantierDetail | null>(null);
   const [error, setError] = useState("");
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch(`/api/projects/${params.id}`).then(async (res) => {
@@ -44,6 +48,22 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       setProject(data.project);
     });
   }, [params.id]);
+
+  async function handleShare() {
+    setSharing(true);
+    const res = await fetch(`/api/projects/${params.id}/portal-token`, { method: "POST" });
+    setSharing(false);
+    if (!res.ok) return;
+    const data = await res.json();
+    setPortalUrl(data.url);
+  }
+
+  async function handleCopy() {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   if (error) {
     return (
@@ -98,6 +118,28 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         </div>
         <Badge tone={STATUS_TONE[project.status] || "neutral"}>{STATUS_LABEL[project.status] || project.status}</Badge>
       </header>
+
+      <Card>
+        <CardTitle>Portail client</CardTitle>
+        <p className="nova-card-text">
+          Générez un lien public à envoyer à votre client pour qu'il suive l'avancement de ce chantier, sans avoir
+          besoin de compte.
+        </p>
+        {portalUrl ? (
+          <div className="nova-portal-link-row">
+            <code className="nova-portal-link">{portalUrl}</code>
+            <Button variant="secondary" onClick={handleCopy}>
+              {copied ? <Check size={16} strokeWidth={1.75} /> : <Copy size={16} strokeWidth={1.75} />}
+              {copied ? "Lien copié !" : "Copier le lien"}
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={handleShare} disabled={sharing}>
+            <Share2 size={16} strokeWidth={1.75} />
+            {sharing ? "Génération..." : "Partager avec le client"}
+          </Button>
+        )}
+      </Card>
 
       <Card>
         <CardTitle>Détails</CardTitle>

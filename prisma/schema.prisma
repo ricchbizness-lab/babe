@@ -77,6 +77,7 @@ model Project {
   status     String    @default("planifie") // planifie | en_cours | termine | annule
   startDate  DateTime?
   endDate    DateTime?
+  portalToken String?  @unique // portail client (module 4) — généré à la demande, jamais à la création
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
