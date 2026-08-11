@@ -44,6 +44,7 @@ model Business {
   documents Document[]
   voiceReports     VoiceReport[]
   strategicReports StrategicReport[]
+  teamMembers      TeamMember[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -83,6 +84,7 @@ model Project {
 
   tasks Task[]
   voiceReports VoiceReport[]
+  assignments  Assignment[]
 
   @@index([businessId])
   @@index([clientId])
@@ -152,6 +154,38 @@ model VoiceReport {
 
   @@index([businessId])
   @@index([projectId])
+}
+
+// --- Planning / dispatch équipe (module 6) ---
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  role       String?
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now())
+
+  assignments Assignment[]
+
+  @@index([businessId])
+}
+
+model Assignment {
+  id           String     @id @default(cuid())
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date         DateTime
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@index([teamMemberId])
+  @@index([projectId])
+  @@index([date])
 }
 
 // --- Phase 3 : copilote financier (option premium) ---

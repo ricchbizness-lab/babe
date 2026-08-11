@@ -842,6 +842,101 @@ button.primary:hover { background: var(--nova-teal-deep); }
   text-align: center;
 }
 
+/* --- Planning --- */
+
+.nova-week-nav { display: flex; gap: var(--nova-space-1); }
+.nova-planning-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--nova-space-2);
+  align-items: start;
+}
+.nova-planning-day {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-planning-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--nova-space-1);
+  border-bottom: 1px solid var(--nova-border);
+}
+.nova-planning-day-label { font-family: var(--nova-font-heading); font-size: 13px; font-weight: 700; }
+.nova-planning-day-date { font-family: var(--nova-font-mono); font-size: 11.5px; color: var(--nova-ink-faint); }
+.nova-planning-day-body { display: flex; flex-direction: column; gap: var(--nova-space-2); }
+.nova-planning-project {
+  background: var(--nova-bg);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-1) var(--nova-space-2);
+}
+.nova-planning-project-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-1);
+  flex-wrap: wrap;
+}
+.nova-planning-empty { font-size: 12px; color: var(--nova-ink-faint); margin: var(--nova-space-1) 0 0; }
+.nova-planning-people { list-style: none; margin: var(--nova-space-1) 0 0; padding: 0; font-size: 13px; color: var(--nova-ink); }
+.nova-planning-people li { padding: 2px 0; }
+
+/* --- Dispatch --- */
+
+.nova-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--nova-space-2);
+}
+.nova-team-card {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-team-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--nova-space-1); }
+.nova-team-card-name { font-weight: 700; font-size: 14.5px; }
+.nova-team-card-role { font-size: 12.5px; color: var(--nova-ink-soft); }
+.nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
+.nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
+.nova-team-card-assignments-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  margin-bottom: var(--nova-space-1);
+}
+.nova-assignment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-1);
+}
+.nova-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--nova-ink-faint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: var(--nova-radius-badge);
+  transition: color var(--nova-transition-color);
+}
+.nova-icon-btn:hover { color: var(--nova-danger); }
+
 /* --- Skeletons --- */
 
 .nova-skeleton {
@@ -862,4 +957,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-sidebar-nav { flex-direction: row; }
   .nova-sidebar-business, .nova-sidebar-soon-title, .nova-sidebar-soon { display: none; }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid { grid-template-columns: 1fr 1fr; }
+  .nova-planning-grid { grid-template-columns: 1fr; }
+  .nova-page-header-row { flex-direction: column; align-items: stretch; }
+  .nova-week-nav { justify-content: space-between; }
 }

@@ -63,6 +63,20 @@ export const agentSchema = z.object({
   input: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const teamMemberSchema = z.object({
+  name: z.string().min(1).max(200),
+  role: z.string().max(200).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().max(30).optional(),
+});
+
+export const assignmentSchema = z.object({
+  teamMemberId: z.string(),
+  projectId: z.string().optional(),
+  date: z.string().datetime(),
+  note: z.string().max(500).optional(),
+});
+
 export const voiceReportSchema = z.object({
   projectId: z.string().optional(),
   authorLabel: z.string().min(1).max(200),

@@ -16,6 +16,7 @@ import {
   Banknote,
   Bot,
   Building2,
+  CalendarDays,
   CheckSquare,
   FileSignature,
   FileText,
@@ -28,6 +29,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  UserCog,
   UserPlus,
   Users,
   type LucideIcon,
@@ -47,6 +49,8 @@ const ICONS = {
   chantiers: Building2,
   devis: FileText,
   facturation: Banknote,
+  planning: CalendarDays,
+  dispatch: UserCog,
   taches: CheckSquare,
   "rapports-vocaux": Mic,
   copilote: Bot,
@@ -361,6 +365,8 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/facturation", label: "Facturation", icon: "facturation" },
   { href: "/dashboard/taches", label: "Tâches", icon: "taches" },
   { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
+  { href: "/dashboard/planning", label: "Planning", icon: "planning" },
+  { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", icon: "dispatch" },
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
   { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
 ];
@@ -381,6 +387,14 @@ const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
 
 export function Sidebar({ businessName }: { businessName: string }) {
   const pathname = usePathname();
+  // Plusieurs hrefs peuvent être des préfixes les uns des autres (ex.
+  // /dashboard/planning et /dashboard/planning/dispatch) — ne marquer actif
+  // que le lien le plus spécifique, jamais les deux à la fois.
+  const activeHref = [...NAV_ITEMS]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((item) =>
+      item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname?.startsWith(`${item.href}/`)
+    )?.href;
   return (
     <aside className="nova-sidebar">
       <div className="nova-sidebar-logo">
@@ -391,7 +405,7 @@ export function Sidebar({ businessName }: { businessName: string }) {
         <nav className="nova-sidebar-nav">
           {NAV_ITEMS.map(({ href, label, icon }) => {
             const Icon = ICONS[icon];
-            const active = href === "/dashboard" ? pathname === href : pathname?.startsWith(href);
+            const active = href === activeHref;
             return (
               <Link key={href} href={href} className={`nova-sidebar-link ${active ? "nova-sidebar-link-active" : ""}`}>
                 <Icon size={18} strokeWidth={1.75} />
