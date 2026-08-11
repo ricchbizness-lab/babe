@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type {
   ButtonHTMLAttributes,
+  CSSProperties,
   HTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
@@ -147,7 +148,7 @@ export function SelectField({
 // Badge — statuts et timestamps, toujours en police mono (IBM Plex Mono)
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "neutral" | "teal" | "warning" | "danger";
+type BadgeTone = "neutral" | "teal" | "amber" | "danger";
 
 export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; children: ReactNode }) {
   return <span className={`nova-badge nova-badge-${tone}`}>{children}</span>;
@@ -284,5 +285,43 @@ export function Sidebar({ businessName }: { businessName: string }) {
       </nav>
       <div className="nova-sidebar-business">{businessName}</div>
     </aside>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Skeletons — jamais afficher 0 ou vide pendant le chargement des données
+// ---------------------------------------------------------------------------
+
+export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
+  return <div className={`nova-skeleton ${className}`.trim()} style={style} aria-hidden="true" />;
+}
+
+export function MetricsBandSkeleton() {
+  return (
+    <div className="nova-metrics-band" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div className="nova-metric" key={i}>
+          <Skeleton style={{ width: 48, height: 28, marginBottom: 8 }} />
+          <Skeleton style={{ width: 88, height: 12 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function AnalyseNovaSkeleton() {
+  return (
+    <Card aria-hidden="true">
+      <Skeleton style={{ width: 140, height: 16, marginBottom: 16 }} />
+      <Skeleton style={{ width: "70%", height: 12, marginBottom: 24 }} />
+      <div className="nova-analyse-grid">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton style={{ width: 80, height: 22, marginBottom: 8 }} />
+            <Skeleton style={{ width: 120, height: 12 }} />
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
