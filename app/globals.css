@@ -1,19 +1,49 @@
 :root {
-  --linen: #F5F1E7;
-  --ink: #221F1B;
-  --ink-soft: #6B6255;
-  --teal: #1C6B5A;
-  --teal-deep: #124A3E;
-  --line: #DDD4C0;
-  --rust: #BD4F2E;
+  /* NOVA v7 — tokens de couleur */
+  --nova-bg: #FAFAFA;
+  --nova-surface: #FFFFFF;
+  --nova-border: #E4E4E7;
+  --nova-ink: #18181B;
+  --nova-ink-soft: #6B7280;
+  --nova-ink-faint: #9CA3AF;
+  --nova-teal: #14594A;
+  --nova-teal-deep: #0E3F35;
+  --nova-teal-tint: #E7F0ED;
+  --nova-warning: #B8860B;
+  --nova-warning-tint: #FBF3E1;
+  --nova-danger: #B3432E;
+  --nova-danger-tint: #FBEAE6;
+
+  /* NOVA v7 — typographie (les variables --font-sans / --font-mono sont
+     injectées par next/font dans app/layout.tsx) */
+  --nova-font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --nova-font-mono: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Alias conservés pour les pages existantes (login/register/onboarding)
+     construites avant le design system v7 — pointent vers les mêmes valeurs
+     pour que ces pages héritent de l'identité v7 sans être réécrites. */
+  --linen: var(--nova-bg);
+  --ink: var(--nova-ink);
+  --ink-soft: var(--nova-ink-soft);
+  --teal: var(--nova-teal);
+  --teal-deep: var(--nova-teal-deep);
+  --line: var(--nova-border);
+  --rust: var(--nova-danger);
 }
+
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
-  background: var(--linen);
-  color: var(--ink);
-  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--nova-bg);
+  color: var(--nova-ink);
+  font-family: var(--nova-font-sans);
 }
+
+h1, h2, h3 { font-weight: 700; margin: 0; }
+
+a { color: inherit; text-decoration: none; }
+
 input, select, textarea, button {
   font-family: inherit;
   font-size: 14px;
@@ -21,15 +51,17 @@ input, select, textarea, button {
 input, select, textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid var(--nova-border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--nova-surface);
   margin-top: 4px;
   margin-bottom: 14px;
+  color: var(--nova-ink);
 }
-label { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+label { font-size: 12.5px; font-weight: 600; color: var(--nova-ink-soft); }
+
 button.primary {
-  background: var(--teal);
+  background: var(--nova-teal);
   color: #fff;
   border: none;
   padding: 11px 18px;
@@ -37,13 +69,267 @@ button.primary {
   cursor: pointer;
   font-weight: 600;
 }
-button.primary:hover { background: var(--teal-deep); }
-.error { color: var(--rust); font-size: 13px; margin-top: 4px; }
+button.primary:hover { background: var(--nova-teal-deep); }
+
+.error { color: var(--nova-danger); font-size: 13px; margin-top: 4px; }
+
 .card {
   max-width: 420px;
   margin: 80px auto;
   padding: 32px;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
   border-radius: 12px;
+}
+
+/* ===========================================================================
+   Design system NOVA v7 — classes utilisées par components/ui.tsx
+   =========================================================================== */
+
+/* --- Layout général (sidebar + contenu) --- */
+
+.nova-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background: var(--nova-bg);
+}
+.nova-main {
+  padding: 32px 40px;
+  min-width: 0;
+}
+.nova-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.nova-page-header h1 { font-size: 24px; }
+.nova-page-subtitle { margin: 4px 0 0; color: var(--nova-ink-soft); font-size: 14px; }
+.nova-section-title { font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+
+/* --- Sidebar --- */
+
+.nova-sidebar {
+  background: var(--nova-surface);
+  border-right: 1px solid var(--nova-border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.nova-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  padding: 0 10px 24px;
+}
+.nova-sidebar-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--nova-teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.nova-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.nova-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--nova-ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.nova-sidebar-link:hover { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-sidebar-link-active { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-sidebar-business {
+  border-top: 1px solid var(--nova-border);
+  padding: 16px 10px 0;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--nova-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Boutons --- */
+
+.nova-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 7px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.nova-btn-primary { background: var(--nova-teal); color: #fff; }
+.nova-btn-primary:hover { background: var(--nova-teal-deep); }
+.nova-btn-secondary { background: var(--nova-surface); color: var(--nova-ink); border-color: var(--nova-border); }
+.nova-btn-secondary:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+.nova-btn-ghost { background: transparent; color: var(--nova-ink-soft); }
+.nova-btn-ghost:hover { color: var(--nova-ink); }
+
+/* --- Cartes --- */
+
+.nova-card {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.nova-card-accent { border-top: 3px solid var(--nova-teal); }
+.nova-card-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+
+/* --- Champs de formulaire --- */
+
+.nova-field { display: flex; flex-direction: column; }
+.nova-hint { font-size: 12px; color: var(--nova-ink-faint); margin-top: -10px; margin-bottom: 12px; }
+.nova-field-error { font-size: 12px; color: var(--nova-danger); margin-top: -10px; margin-bottom: 12px; }
+
+/* --- Badges (statuts, timestamps — police mono) --- */
+
+.nova-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: var(--nova-font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.nova-badge-neutral { background: #F1F1F2; color: var(--nova-ink-soft); }
+.nova-badge-teal { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-badge-warning { background: var(--nova-warning-tint); color: var(--nova-warning); }
+.nova-badge-danger { background: var(--nova-danger-tint); color: var(--nova-danger); }
+
+.nova-timestamp {
+  font-family: var(--nova-font-mono);
+  font-size: 12.5px;
+  color: var(--nova-ink-soft);
+}
+
+/* --- Tables --- */
+
+.nova-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--nova-border);
+  border-radius: 10px;
+}
+.nova-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.nova-table th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--nova-border);
+  background: #FCFCFC;
+}
+.nova-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--nova-border);
+}
+.nova-table tr:last-child td { border-bottom: none; }
+.nova-table-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--nova-ink-faint);
+  font-size: 13.5px;
+  border: 1px dashed var(--nova-border);
+  border-radius: 10px;
+}
+
+/* --- Bandeau de métriques --- */
+
+.nova-metrics-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.nova-metric-link { display: block; }
+.nova-metric {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-top: 3px solid var(--nova-teal);
+  border-radius: 12px;
+  padding: 18px 20px;
+  transition: border-color 0.15s;
+}
+.nova-metric-link:hover .nova-metric { border-color: var(--nova-teal); }
+.nova-metric-value { font-size: 28px; font-weight: 800; color: var(--nova-ink); }
+.nova-metric-label { font-size: 12.5px; color: var(--nova-ink-soft); margin-top: 4px; }
+
+/* --- Analyse Nova --- */
+
+.nova-analyse-intro { font-size: 13px; color: var(--nova-ink-soft); margin: 0 0 18px; }
+.nova-analyse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.nova-analyse-value { font-size: 22px; font-weight: 800; color: var(--nova-teal-deep); }
+.nova-analyse-label { font-size: 12.5px; color: var(--nova-ink-soft); margin-top: 4px; }
+.nova-analyse-estimate {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--nova-border);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--nova-ink-soft);
+  flex-wrap: wrap;
+}
+
+/* --- Accès rapide --- */
+
+.nova-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.nova-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nova-ink);
+}
+.nova-quick-action:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+
+@media (max-width: 860px) {
+  .nova-shell { grid-template-columns: 1fr; }
+  .nova-sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; }
+  .nova-sidebar-nav { flex-direction: row; }
+  .nova-sidebar-business { display: none; }
+  .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid { grid-template-columns: 1fr 1fr; }
 }

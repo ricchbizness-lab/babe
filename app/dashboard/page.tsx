@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeRegistreActivite } from "@/lib/registre";
+import { Badge, Card, CardTitle, MetricCard, QuickAction } from "@/components/ui";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -11,40 +13,67 @@ export default async function DashboardPage() {
   const business = await prisma.business.findUnique({ where: { userId } });
   if (!business) redirect("/onboarding");
 
-  const [clientCount, projectCount, taskCount, devisCount] = await Promise.all([
+  const [clientCount, projectCount, devisEnAttente, tachesEnAttente, registre] = await Promise.all([
     prisma.client.count({ where: { businessId: business.id } }),
     prisma.project.count({ where: { businessId: business.id } }),
+    prisma.devis.count({ where: { businessId: business.id, status: "envoye" } }),
     prisma.task.count({ where: { businessId: business.id, done: false } }),
-    prisma.devis.count({ where: { businessId: business.id } }),
+    computeRegistreActivite(business.id),
   ]);
 
   return (
-    <div style={{ maxWidth: 720, margin: "60px auto", padding: "0 24px" }}>
-      <h1 style={{ fontSize: 26 }}>{business.name}</h1>
-      <p style={{ color: "var(--ink-soft)" }}>{business.sector}</p>
+    <div className="nova-page">
+      <header className="nova-page-header">
+        <h1>{business.name}</h1>
+        <p className="nova-page-subtitle">{business.sector}</p>
+      </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 28 }}>
-        <Stat label="Clients" value={clientCount} />
-        <Stat label="Chantiers" value={projectCount} />
-        <Stat label="Tâches en attente" value={taskCount} />
-        <Stat label="Devis" value={devisCount} />
-      </div>
+      <section className="nova-metrics-band">
+        <MetricCard label="Clients" value={clientCount} href="/dashboard/clients" />
+        <MetricCard label="Chantiers" value={projectCount} href="/dashboard/chantiers" />
+        <MetricCard label="Devis en attente" value={devisEnAttente} href="/dashboard/devis" />
+        <MetricCard label="Tâches en attente" value={tachesEnAttente} href="/dashboard/taches" />
+      </section>
 
-      <p style={{ marginTop: 40, fontSize: 13, color: "var(--ink-soft)" }}>
-        Socle opérationnel de base — CRM, chantiers, devis, tâches. Les
-        rapports vocaux terrain et le copilote financier ne sont pas encore
-        implémentés dans cette version (voir NOVA_Brief_Technique_v3.md,
-        Phase 2 et 3).
-      </p>
-    </div>
-  );
-}
+      <Card>
+        <CardTitle>Analyse Nova</CardTitle>
+        <p className="nova-analyse-intro">
+          Des faits vérifiables tirés de votre activité — jamais une estimation présentée comme certaine.
+        </p>
+        <div className="nova-analyse-grid">
+          <div>
+            <div className="nova-analyse-value">{registre.caFacture.toLocaleString("fr-FR")} €</div>
+            <div className="nova-analyse-label">CA facturé (devis acceptés)</div>
+          </div>
+          <div>
+            <div className="nova-analyse-value">
+              {registre.devisAcceptes} / {registre.devisTotal}
+            </div>
+            <div className="nova-analyse-label">Devis acceptés</div>
+          </div>
+          <div>
+            <div className="nova-analyse-value">{registre.tachesTraiteesATemps}</div>
+            <div className="nova-analyse-label">Tâches traitées</div>
+          </div>
+        </div>
+        <div className="nova-analyse-estimate">
+          <Badge tone="warning">Estimation, pas un fait</Badge>
+          <span>
+            Temps estimé gagné : environ {registre.tempsEstime.heures.toFixed(1)} h (≈{" "}
+            {registre.tempsEstime.estimationEuros.toLocaleString("fr-FR")} € à {registre.tempsEstime.tauxHoraire} €/h)
+            — hypothèse déclarée, jamais additionnée au CA ci-dessus.
+          </span>
+        </div>
+      </Card>
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 10, padding: 16 }}>
-      <div style={{ fontSize: 26, fontWeight: 700, color: "var(--teal)" }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 6 }}>{label}</div>
+      <section>
+        <h2 className="nova-section-title">Accès rapide</h2>
+        <div className="nova-quick-actions-grid">
+          <QuickAction label="Nouveau devis" href="/dashboard/devis" icon="devis" />
+          <QuickAction label="Ajouter un client" href="/dashboard/clients" icon="user-plus" />
+          <QuickAction label="Ajouter une tâche" href="/dashboard/taches" icon="taches" />
+        </div>
+      </section>
     </div>
   );
 }
