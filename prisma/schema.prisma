@@ -32,6 +32,8 @@ model Business {
   tone         String    @default("pro")
   tauxHoraire  Float     @default(40)
   accountantEmail String? // comptable partenaire ou comptable habituel du client, pour l'envoi du rapport stratégique
+  siret        String? // mention légale facture — éditable dans Paramètres (module 7)
+  conditionsPaiement String? @default("Paiement sous 30 jours") // pied de page facture
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

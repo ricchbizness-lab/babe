@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { BackLink, Badge, Card, CardTitle, Button, Timestamp } from "@/components/ui";
 
 type DevisDetail = {
@@ -112,6 +113,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             {a.label}
           </Button>
         ))}
+        {devis.status === "accepte" && (
+          <Link href={`/dashboard/facturation/${devis.id}`} className="nova-btn nova-btn-secondary">
+            <FileText size={16} strokeWidth={1.75} />
+            Voir la facture
+          </Link>
+        )}
       </div>
 
       {devis.description && (

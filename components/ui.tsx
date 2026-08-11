@@ -13,6 +13,7 @@ import type {
 } from "react";
 import {
   ArrowLeft,
+  Banknote,
   Bot,
   Building2,
   CheckSquare,
@@ -45,6 +46,7 @@ const ICONS = {
   crm: Users,
   chantiers: Building2,
   devis: FileText,
+  facturation: Banknote,
   taches: CheckSquare,
   "rapports-vocaux": Mic,
   copilote: Bot,
@@ -356,6 +358,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/clients", label: "CRM", icon: "crm" },
   { href: "/dashboard/chantiers", label: "Chantiers", icon: "chantiers" },
   { href: "/dashboard/devis", label: "Devis", icon: "devis" },
+  { href: "/dashboard/facturation", label: "Facturation", icon: "facturation" },
   { href: "/dashboard/taches", label: "Tâches", icon: "taches" },
   { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },

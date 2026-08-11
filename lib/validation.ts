@@ -12,6 +12,8 @@ export const businessSchema = z.object({
   tone: z.enum(["pro", "chaleureux", "direct"]).default("pro"),
   tauxHoraire: z.number().min(0).max(1000).default(40),
   accountantEmail: z.string().email().optional().or(z.literal("")),
+  siret: z.string().max(20).optional(),
+  conditionsPaiement: z.string().max(500).optional(),
 });
 
 export const clientSchema = z.object({

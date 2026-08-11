@@ -643,6 +643,68 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-2);
 }
 
+/* --- Facturation (vue imprimable) --- */
+
+.nova-invoice-actions { margin-bottom: var(--nova-space-1); }
+
+.nova-invoice {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-5);
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-4);
+}
+.nova-invoice-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--nova-space-3);
+  padding-bottom: var(--nova-space-3);
+  border-bottom: 2px solid var(--nova-ink);
+}
+.nova-invoice-business {
+  font-family: var(--nova-font-heading);
+  font-size: 20px;
+  font-weight: 800;
+}
+.nova-invoice-meta { font-size: 12.5px; color: var(--nova-ink-soft); margin-top: var(--nova-space-1); }
+.nova-invoice-number-block { text-align: right; }
+.nova-invoice-number {
+  font-family: var(--nova-font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--nova-teal-deep);
+}
+.nova-invoice-client { font-size: 13.5px; }
+.nova-invoice-client-name { font-weight: 700; font-size: 14.5px; margin: 2px 0 var(--nova-space-1); }
+.nova-invoice-table th, .nova-invoice-table td { vertical-align: top; }
+.nova-invoice-label { font-weight: 600; }
+.nova-invoice-footer {
+  padding-top: var(--nova-space-3);
+  border-top: 1px solid var(--nova-border);
+  font-size: 12.5px;
+  color: var(--nova-ink-soft);
+}
+
+@media print {
+  .nova-no-print { display: none !important; }
+  .nova-shell { display: block; }
+  .nova-sidebar { display: none !important; }
+  .nova-main { padding: 0; }
+  body { background: #fff; }
+  .nova-invoice {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    max-width: 100%;
+  }
+  @page { size: A4; margin: 18mm; }
+}
+
 /* --- Skeletons --- */
 
 .nova-skeleton {
