@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Card, CardTitle, Field, SelectField, TextareaField } from "@/components/ui";
+import { Button, Card, CardTitle, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type BusinessForm = {
   name: string;
@@ -26,10 +26,10 @@ const EMPTY_FORM: BusinessForm = {
 };
 
 export default function ParametresPage() {
+  const toast = useToast();
   const [form, setForm] = useState<BusinessForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/business")
@@ -53,7 +53,6 @@ export default function ParametresPage() {
     e.preventDefault();
     if (!form) return;
     setError("");
-    setSaved(false);
     setSaving(true);
     try {
       const res = await fetch("/api/business", {
@@ -72,13 +71,16 @@ export default function ParametresPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Impossible d'enregistrer — vérifiez les champs.");
+        const message = data.error || "Impossible d'enregistrer — vérifiez les champs.";
+        setError(message);
+        toast.error(message);
         return;
       }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success("Paramètres enregistrés");
     } catch {
-      setError("Impossible de joindre le serveur — réessayez.");
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -165,7 +167,6 @@ export default function ParametresPage() {
             hint="Affiché en pied de page de vos factures."
           />
           {error && <div className="error">{error}</div>}
-          {saved && <div className="nova-save-confirm">Modifications enregistrées.</div>}
           <Button type="submit" disabled={saving}>
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>

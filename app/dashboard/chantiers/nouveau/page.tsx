@@ -2,12 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { BackLink, Button, Card, Field, SelectField } from "@/components/ui";
+import { BackLink, Button, Card, Field, SelectField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 
 export default function NewChantierPage() {
   const router = useRouter();
+  const toast = useToast();
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [form, setForm] = useState({
     name: "",
@@ -30,25 +31,35 @@ export default function NewChantierPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        clientId: form.clientId || undefined,
-        address: form.address || undefined,
-        status: form.status,
-        startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
-        endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
-      }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError("Impossible de créer le chantier — vérifiez les champs.");
-      return;
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          clientId: form.clientId || undefined,
+          address: form.address || undefined,
+          status: form.status,
+          startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+          endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const message = "Impossible de créer le chantier — vérifiez les champs.";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      const data = await res.json();
+      toast.success("Chantier créé");
+      router.push(`/dashboard/chantiers/${data.project.id}`);
+    } catch {
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    router.push(`/dashboard/chantiers/${data.project.id}`);
   }
 
   return (

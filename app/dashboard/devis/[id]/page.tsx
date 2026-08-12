@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, Trash2 } from "lucide-react";
-import { BackLink, Badge, Card, CardTitle, Button, ConfirmModal, Timestamp } from "@/components/ui";
+import { BackLink, Badge, Card, CardTitle, Button, ConfirmModal, Timestamp, useToast } from "@/components/ui";
 
 type DevisDetail = {
   id: string;
@@ -38,6 +38,7 @@ const STATUS_ACTIONS: { status: string; label: string; variant: "primary" | "suc
 
 export default function DevisDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const toast = useToast();
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [error, setError] = useState("");
   const [updating, setUpdating] = useState(false);
@@ -58,27 +59,43 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   async function handleStatusChange(status: string) {
     if (!devis) return;
     setUpdating(true);
-    const res = await fetch(`/api/devis/${devis.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setUpdating(false);
-    if (res.ok) {
-      const data = await res.json();
-      setDevis(data.devis);
+    try {
+      const res = await fetch(`/api/devis/${devis.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDevis(data.devis);
+        toast.success(`Devis marqué comme ${STATUS_LABEL[status]?.toLowerCase() || status}`);
+        return;
+      }
+      toast.error("Erreur lors de la mise à jour du devis.");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setUpdating(false);
     }
   }
 
   async function confirmDelete() {
     setDeleting(true);
-    const res = await fetch(`/api/devis/${params.id}`, { method: "DELETE" });
-    setDeleting(false);
-    if (res.ok) {
-      router.push("/dashboard/devis");
-      return;
+    try {
+      const res = await fetch(`/api/devis/${params.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        toast.success("Devis supprimé");
+        router.push("/dashboard/devis");
+        return;
+      }
+      toast.error("Erreur lors de la suppression du devis.");
+      setConfirmingDelete(false);
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setConfirmingDelete(false);
     }
-    setConfirmingDelete(false);
   }
 
   if (error) {

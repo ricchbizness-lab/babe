@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mic, Trash2 } from "lucide-react";
-import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
 type ReportRow = {
   id: string;
@@ -14,6 +14,7 @@ type ReportRow = {
 };
 
 export default function RapportsVocauxPage() {
+  const toast = useToast();
   const [reports, setReports] = useState<ReportRow[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -27,10 +28,18 @@ export default function RapportsVocauxPage() {
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const res = await fetch(`/api/voice-reports/${deleteTarget.id}`, { method: "DELETE" });
-    setDeleting(false);
-    if (res.ok) {
-      setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));
+    try {
+      const res = await fetch(`/api/voice-reports/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));
+        toast.success("Rapport supprimé");
+      } else {
+        toast.error("Erreur lors de la suppression du rapport.");
+      }
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
     setDeleteTarget(null);
   }

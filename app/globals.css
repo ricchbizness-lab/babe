@@ -988,15 +988,6 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-task-text-done { flex: 1; font-size: 14px; color: var(--nova-ink-faint); text-decoration: line-through; }
 .nova-task-project { font-size: 12.5px; flex-shrink: 0; }
 
-/* --- Paramètres --- */
-
-.nova-save-confirm {
-  color: var(--nova-success);
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: var(--nova-space-1);
-}
-
 /* --- ConfirmModal --- */
 
 .nova-modal-overlay {
@@ -1029,6 +1020,61 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-modal-message { margin: 0 0 var(--nova-space-3); font-size: 14px; color: var(--nova-ink); line-height: 1.5; }
 .nova-modal-actions { display: flex; justify-content: flex-end; gap: var(--nova-space-2); }
+
+/* --- Toasts --- */
+
+.nova-toast-container {
+  position: fixed;
+  bottom: var(--nova-space-3);
+  right: var(--nova-space-3);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  max-width: 360px;
+}
+.nova-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+  padding: var(--nova-space-2);
+  border-radius: var(--nova-radius-card);
+  box-shadow: 0 8px 24px rgba(20, 24, 28, 0.16);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  animation: nova-toast-in 180ms ease;
+}
+.nova-toast-leaving {
+  animation: nova-toast-out 200ms ease forwards;
+}
+@keyframes nova-toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes nova-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(24px); }
+}
+.nova-toast-success { background: var(--nova-success); }
+.nova-toast-error { background: var(--nova-danger); }
+.nova-toast-info { background: var(--nova-teal); }
+.nova-toast-message { flex: 1; }
+.nova-toast-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--nova-radius-badge);
+  transition: opacity var(--nova-transition-color), background var(--nova-transition-color);
+}
+.nova-toast-close:hover { opacity: 1; background: rgba(255, 255, 255, 0.15); }
 
 /* --- Skeletons --- */
 

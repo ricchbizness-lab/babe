@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
 type ClientDetail = {
   id: string;
@@ -44,6 +44,7 @@ const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger
 
 export default function ClientDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const toast = useToast();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [error, setError] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -62,13 +63,21 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
 
   async function confirmDelete() {
     setDeleting(true);
-    const res = await fetch(`/api/clients/${params.id}`, { method: "DELETE" });
-    setDeleting(false);
-    if (res.ok) {
-      router.push("/dashboard/clients");
-      return;
+    try {
+      const res = await fetch(`/api/clients/${params.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        toast.success("Client supprimé");
+        router.push("/dashboard/clients");
+        return;
+      }
+      toast.error("Erreur lors de la suppression du client.");
+      setConfirmingDelete(false);
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setConfirmingDelete(false);
     }
-    setConfirmingDelete(false);
   }
 
   if (error) {

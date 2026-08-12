@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { Badge, BackLink, Button, Card, Field, Skeleton, SelectField, TextareaField } from "@/components/ui";
+import { Badge, BackLink, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 type GenError = "no-key" | "no-subscription" | "other" | null;
@@ -16,6 +16,7 @@ const GEN_ERROR_MESSAGE: Record<Exclude<GenError, null>, string> = {
 
 export default function NewDevisPage() {
   const router = useRouter();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [form, setForm] = useState({ label: "", clientId: "", amount: "", description: "" });
@@ -49,52 +50,68 @@ export default function NewDevisPage() {
     setGenerating(true);
     setGenError(null);
     const clientName = clients.find((c) => c.id === form.clientId)?.name;
-    const res = await fetch("/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        module: "devis",
-        input: {
-          label: form.label,
-          client: clientName,
-          montant: form.amount ? Number(form.amount) : undefined,
-          description: form.description,
-        },
-      }),
-    });
-    setGenerating(false);
-    if (!res.ok) {
-      if (res.status === 503) setGenError("no-key");
-      else if (res.status === 402) setGenError("no-subscription");
-      else setGenError("other");
-      return;
+    try {
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          module: "devis",
+          input: {
+            label: form.label,
+            client: clientName,
+            montant: form.amount ? Number(form.amount) : undefined,
+            description: form.description,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const kind: Exclude<GenError, null> = res.status === 503 ? "no-key" : res.status === 402 ? "no-subscription" : "other";
+        setGenError(kind);
+        toast.error("Erreur de génération IA — " + GEN_ERROR_MESSAGE[kind]);
+        return;
+      }
+      const data = await res.json();
+      setContent(data.result || "");
+      setAiGenerated(true);
+    } catch {
+      setGenError("other");
+      toast.error("Erreur de génération IA — impossible de joindre le serveur.");
+    } finally {
+      setGenerating(false);
     }
-    const data = await res.json();
-    setContent(data.result || "");
-    setAiGenerated(true);
   }
 
   async function handleSave() {
     setSaving(true);
     setSaveError("");
-    const res = await fetch("/api/devis", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        label: form.label,
-        clientId: form.clientId || undefined,
-        amount: form.amount ? Number(form.amount) : undefined,
-        description: form.description || undefined,
-        content,
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      setSaveError("Impossible d'enregistrer le devis — vérifiez les champs.");
-      return;
+    try {
+      const res = await fetch("/api/devis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: form.label,
+          clientId: form.clientId || undefined,
+          amount: form.amount ? Number(form.amount) : undefined,
+          description: form.description || undefined,
+          content,
+        }),
+      });
+      if (!res.ok) {
+        const message = "Impossible d'enregistrer le devis — vérifiez les champs.";
+        setSaveError(message);
+        toast.error(message);
+        return;
+      }
+      const data = await res.json();
+      toast.success("Devis créé");
+      router.push(`/dashboard/devis/${data.devis.id}`);
+    } catch {
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setSaveError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
-    const data = await res.json();
-    router.push(`/dashboard/devis/${data.devis.id}`);
   }
 
   return (

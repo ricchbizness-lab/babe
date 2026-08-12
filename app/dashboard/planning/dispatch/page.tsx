@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import { Button, Card, CardTitle, ConfirmModal, EmptyState, Field, SelectField, TextareaField } from "@/components/ui";
+import { Button, Card, CardTitle, ConfirmModal, EmptyState, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
@@ -18,6 +18,7 @@ type AssignmentRow = {
 const todayKey = toDateKey(new Date());
 
 export default function DispatchPage() {
+  const toast = useToast();
   const [members, setMembers] = useState<Member[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [assignments, setAssignments] = useState<AssignmentRow[] | null>(null);
@@ -63,14 +64,19 @@ export default function DispatchPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setMemberError(data.error || "Impossible d'ajouter ce collaborateur.");
+        const message = data.error || "Impossible d'ajouter ce collaborateur.";
+        setMemberError(message);
+        toast.error(message);
         return;
       }
       const data = await res.json();
       setMembers((prev) => [...(prev ?? []), data.member]);
       setMemberForm({ name: "", role: "", email: "", phone: "" });
+      toast.success("Collaborateur ajouté");
     } catch {
-      setMemberError("Impossible de joindre le serveur — réessayez.");
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setMemberError(message);
+      toast.error(message);
     } finally {
       setMemberSubmitting(false);
     }
@@ -79,11 +85,19 @@ export default function DispatchPage() {
   async function confirmDeleteMember() {
     if (!deleteMemberTarget) return;
     setDeletingMember(true);
-    const res = await fetch(`/api/team/${deleteMemberTarget.id}`, { method: "DELETE" });
-    setDeletingMember(false);
-    if (res.ok) {
-      setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteMemberTarget.id));
-      setAssignments((prev) => (prev ?? []).filter((a) => a.teamMember.id !== deleteMemberTarget.id));
+    try {
+      const res = await fetch(`/api/team/${deleteMemberTarget.id}`, { method: "DELETE" });
+      setDeletingMember(false);
+      if (res.ok) {
+        setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteMemberTarget.id));
+        setAssignments((prev) => (prev ?? []).filter((a) => a.teamMember.id !== deleteMemberTarget.id));
+        toast.success("Collaborateur supprimé");
+      } else {
+        toast.error("Erreur lors de la suppression du collaborateur.");
+      }
+    } catch {
+      setDeletingMember(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
     setDeleteMemberTarget(null);
   }
@@ -109,7 +123,9 @@ export default function DispatchPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setAssignError(data.error || "Impossible de créer l'affectation.");
+        const message = data.error || "Impossible de créer l'affectation.";
+        setAssignError(message);
+        toast.error(message);
         return;
       }
       const data = await res.json();
@@ -117,8 +133,11 @@ export default function DispatchPage() {
         setAssignments((prev) => [...(prev ?? []), data.assignment]);
       }
       setAssignForm({ teamMemberId: "", projectId: "", date: todayKey, note: "" });
+      toast.success("Affectation créée");
     } catch {
-      setAssignError("Impossible de joindre le serveur — réessayez.");
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setAssignError(message);
+      toast.error(message);
     } finally {
       setAssignSubmitting(false);
     }
@@ -127,10 +146,18 @@ export default function DispatchPage() {
   async function confirmDeleteAssignment() {
     if (!deleteAssignmentTarget) return;
     setDeletingAssignment(true);
-    const res = await fetch(`/api/assignments/${deleteAssignmentTarget.id}`, { method: "DELETE" });
-    setDeletingAssignment(false);
-    if (res.ok) {
-      setAssignments((prev) => (prev ?? []).filter((a) => a.id !== deleteAssignmentTarget.id));
+    try {
+      const res = await fetch(`/api/assignments/${deleteAssignmentTarget.id}`, { method: "DELETE" });
+      setDeletingAssignment(false);
+      if (res.ok) {
+        setAssignments((prev) => (prev ?? []).filter((a) => a.id !== deleteAssignmentTarget.id));
+        toast.success("Affectation supprimée");
+      } else {
+        toast.error("Erreur lors de la suppression de l'affectation.");
+      }
+    } catch {
+      setDeletingAssignment(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
     setDeleteAssignmentTarget(null);
   }

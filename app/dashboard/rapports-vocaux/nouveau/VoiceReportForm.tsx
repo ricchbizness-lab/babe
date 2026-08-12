@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square } from "lucide-react";
-import { Badge, BackLink, Button, Card, Field, SelectField, TextareaField } from "@/components/ui";
+import { Badge, BackLink, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
 type Mode = "texte" | "audio";
@@ -32,6 +32,7 @@ export function VoiceReportForm({
   defaultProjectId?: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [mode, setMode] = useState<Mode>("texte");
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [authorLabel, setAuthorLabel] = useState("");
@@ -98,11 +99,15 @@ export function VoiceReportForm({
     setError("");
 
     if (mode === "texte" && !transcriptText.trim()) {
-      setError("Saisissez le compte rendu avant d'envoyer.");
+      const message = "Saisissez le compte rendu avant d'envoyer.";
+      setError(message);
+      toast.error(message);
       return;
     }
     if (mode === "audio" && !audioBlob) {
-      setError("Enregistrez un message avant d'envoyer.");
+      const message = "Enregistrez un message avant d'envoyer.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -127,17 +132,24 @@ export function VoiceReportForm({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Impossible d'enregistrer le rapport.");
+        const message = data.error || "Impossible d'enregistrer le rapport.";
+        setError(message);
+        toast.error(message);
         return;
       }
       const data = await res.json();
       if (!data.report) {
-        setError("Réponse inattendue du serveur — réessayez.");
+        const message = "Réponse inattendue du serveur — réessayez.";
+        setError(message);
+        toast.error(message);
         return;
       }
+      toast.success("Rapport vocal soumis");
       setResult({ summary: data.report.summary });
     } catch {
-      setError("Impossible de joindre le serveur — vérifiez votre connexion et réessayez.");
+      const message = "Impossible de joindre le serveur — vérifiez votre connexion et réessayez.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

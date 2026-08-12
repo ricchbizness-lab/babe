@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { BackLink, Button, Card, Field, TextareaField } from "@/components/ui";
+import { BackLink, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
 
 export default function NewClientPage() {
   const router = useRouter();
+  const toast = useToast();
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,18 +15,28 @@ export default function NewClientPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await fetch("/api/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError("Impossible de créer le client — vérifiez les champs.");
-      return;
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const message = "Impossible de créer le client — vérifiez les champs.";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      const data = await res.json();
+      toast.success("Client créé");
+      router.push(`/dashboard/clients/${data.client.id}`);
+    } catch {
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    router.push(`/dashboard/clients/${data.client.id}`);
   }
 
   return (

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Share2, Trash2 } from "lucide-react";
-import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Copy, Share2, Trash2 } from "lucide-react";
+import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
 type ChantierDetail = {
   id: string;
@@ -34,11 +34,11 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
 
 export default function ChantierDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const toast = useToast();
   const [project, setProject] = useState<ChantierDetail | null>(null);
   const [error, setError] = useState("");
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -55,29 +55,44 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
 
   async function handleShare() {
     setSharing(true);
-    const res = await fetch(`/api/projects/${params.id}/portal-token`, { method: "POST" });
-    setSharing(false);
-    if (!res.ok) return;
-    const data = await res.json();
-    setPortalUrl(data.url);
+    try {
+      const res = await fetch(`/api/projects/${params.id}/portal-token`, { method: "POST" });
+      setSharing(false);
+      if (!res.ok) {
+        toast.error("Impossible de générer le lien du portail.");
+        return;
+      }
+      const data = await res.json();
+      setPortalUrl(data.url);
+    } catch {
+      setSharing(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    }
   }
 
   async function handleCopy() {
     if (!portalUrl) return;
     await navigator.clipboard.writeText(portalUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Lien copié !");
   }
 
   async function confirmDelete() {
     setDeleting(true);
-    const res = await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
-    setDeleting(false);
-    if (res.ok) {
-      router.push("/dashboard/chantiers");
-      return;
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        toast.success("Chantier supprimé");
+        router.push("/dashboard/chantiers");
+        return;
+      }
+      toast.error("Erreur lors de la suppression du chantier.");
+      setConfirmingDelete(false);
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setConfirmingDelete(false);
     }
-    setConfirmingDelete(false);
   }
 
   if (error) {
@@ -150,8 +165,8 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
           <div className="nova-portal-link-row">
             <code className="nova-portal-link">{portalUrl}</code>
             <Button variant="secondary" onClick={handleCopy}>
-              {copied ? <Check size={16} strokeWidth={1.75} /> : <Copy size={16} strokeWidth={1.75} />}
-              {copied ? "Lien copié !" : "Copier le lien"}
+              <Copy size={16} strokeWidth={1.75} />
+              Copier le lien
             </Button>
           </div>
         ) : (

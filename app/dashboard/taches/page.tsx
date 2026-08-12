@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { ConfirmModal, EmptyState, TableSkeleton } from "@/components/ui";
+import { ConfirmModal, EmptyState, TableSkeleton, useToast } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
 type TaskRow = {
@@ -21,6 +21,7 @@ const FILTERS: { key: "all" | "pending" | "done"; label: string }[] = [
 ];
 
 export default function TachesPage() {
+  const toast = useToast();
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "done">("all");
@@ -53,15 +54,20 @@ export default function TachesPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Impossible d'ajouter cette tâche.");
+        const message = data.error || "Impossible d'ajouter cette tâche.";
+        setError(message);
+        toast.error(message);
         return;
       }
       const data = await res.json();
       setTasks((prev) => [data.task, ...(prev ?? [])]);
       setNewText("");
       setNewProjectId("");
+      toast.success("Tâche ajoutée");
     } catch {
-      setError("Impossible de joindre le serveur — réessayez.");
+      const message = "Impossible de joindre le serveur — réessayez.";
+      setError(message);
+      toast.error(message);
     } finally {
       setAdding(false);
     }
@@ -69,24 +75,39 @@ export default function TachesPage() {
 
   async function handleToggle(task: TaskRow) {
     setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
-    const res = await fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: !task.done }),
-    });
-    if (!res.ok) {
-      // revert en cas d'échec
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ done: !task.done }),
+      });
+      if (!res.ok) {
+        setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
+        toast.error("Erreur lors de la mise à jour de la tâche.");
+        return;
+      }
+      toast.success(task.done ? "Tâche marquée comme non faite" : "Tâche cochée comme faite");
+    } catch {
       setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
   }
 
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const res = await fetch(`/api/tasks/${deleteTarget.id}`, { method: "DELETE" });
-    setDeleting(false);
-    if (res.ok) {
-      setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));
+    try {
+      const res = await fetch(`/api/tasks/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));
+        toast.success("Tâche supprimée");
+      } else {
+        toast.error("Erreur lors de la suppression de la tâche.");
+      }
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
     setDeleteTarget(null);
   }

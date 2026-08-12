@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -18,9 +18,11 @@ import {
   Bot,
   Building2,
   CalendarDays,
+  CheckCircle2,
   CheckSquare,
   FileSignature,
   FileText,
+  Info,
   LayoutDashboard,
   MapPin,
   MessageCircle,
@@ -33,6 +35,8 @@ import {
   UserCog,
   UserPlus,
   Users,
+  X,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -186,6 +190,106 @@ export function ConfirmModal({
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Toasts — feedback global de succès/erreur, empilés en bas à droite
+// ---------------------------------------------------------------------------
+
+type ToastVariant = "success" | "error" | "info";
+type ToastItem = { id: number; message: string; variant: ToastVariant; leaving: boolean };
+type ToastAPI = {
+  success: (message: string) => void;
+  error: (message: string) => void;
+  info: (message: string) => void;
+};
+
+const ToastContext = createContext<ToastAPI | null>(null);
+const TOAST_DURATION = 3000;
+const TOAST_EXIT_DURATION = 200;
+
+let toastIdSeq = 0;
+
+const TOAST_ICON: Record<ToastVariant, LucideIcon> = {
+  success: CheckCircle2,
+  error: XCircle,
+  info: Info,
+};
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, TOAST_EXIT_DURATION);
+  }, []);
+
+  const push = useCallback(
+    (variant: ToastVariant, message: string) => {
+      const id = ++toastIdSeq;
+      setToasts((prev) => [...prev, { id, message, variant, leaving: false }]);
+      setTimeout(() => dismiss(id), TOAST_DURATION);
+    },
+    [dismiss]
+  );
+
+  const api = useMemo<ToastAPI>(
+    () => ({
+      success: (message: string) => push("success", message),
+      error: (message: string) => push("error", message),
+      info: (message: string) => push("info", message),
+    }),
+    [push]
+  );
+
+  return (
+    <ToastContext.Provider value={api}>
+      {children}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+    </ToastContext.Provider>
+  );
+}
+
+export function useToast(): ToastAPI {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error("useToast doit être utilisé à l'intérieur d'un ToastProvider.");
+  return ctx;
+}
+
+export function ToastContainer({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
+  if (toasts.length === 0) return null;
+  return (
+    <div className="nova-toast-container">
+      {toasts.map((t) => (
+        <Toast key={t.id} variant={t.variant} message={t.message} leaving={t.leaving} onDismiss={() => onDismiss(t.id)} />
+      ))}
+    </div>
+  );
+}
+
+export function Toast({
+  variant,
+  message,
+  leaving = false,
+  onDismiss,
+}: {
+  variant: ToastVariant;
+  message: string;
+  leaving?: boolean;
+  onDismiss: () => void;
+}) {
+  const Icon = TOAST_ICON[variant];
+  return (
+    <div className={`nova-toast nova-toast-${variant} ${leaving ? "nova-toast-leaving" : ""}`.trim()} role="status">
+      <Icon size={16} strokeWidth={1.75} />
+      <span className="nova-toast-message">{message}</span>
+      <button type="button" className="nova-toast-close" onClick={onDismiss} aria-label="Fermer">
+        <X size={14} strokeWidth={2} />
+      </button>
     </div>
   );
 }
