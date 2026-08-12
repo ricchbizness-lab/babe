@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import { Button, Card, CardTitle, EmptyState, Field, SelectField, TextareaField } from "@/components/ui";
+import { Button, Card, CardTitle, ConfirmModal, EmptyState, Field, SelectField, TextareaField } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
@@ -29,6 +29,11 @@ export default function DispatchPage() {
   const [assignForm, setAssignForm] = useState({ teamMemberId: "", projectId: "", date: todayKey, note: "" });
   const [assignError, setAssignError] = useState("");
   const [assignSubmitting, setAssignSubmitting] = useState(false);
+
+  const [deleteMemberTarget, setDeleteMemberTarget] = useState<Member | null>(null);
+  const [deletingMember, setDeletingMember] = useState(false);
+  const [deleteAssignmentTarget, setDeleteAssignmentTarget] = useState<AssignmentRow | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
 
   useEffect(() => {
     fetch("/api/team")
@@ -71,10 +76,16 @@ export default function DispatchPage() {
     }
   }
 
-  async function handleDeleteMember(id: string) {
-    await fetch(`/api/team/${id}`, { method: "DELETE" });
-    setMembers((prev) => (prev ?? []).filter((m) => m.id !== id));
-    setAssignments((prev) => (prev ?? []).filter((a) => a.teamMember.id !== id));
+  async function confirmDeleteMember() {
+    if (!deleteMemberTarget) return;
+    setDeletingMember(true);
+    const res = await fetch(`/api/team/${deleteMemberTarget.id}`, { method: "DELETE" });
+    setDeletingMember(false);
+    if (res.ok) {
+      setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteMemberTarget.id));
+      setAssignments((prev) => (prev ?? []).filter((a) => a.teamMember.id !== deleteMemberTarget.id));
+    }
+    setDeleteMemberTarget(null);
   }
 
   async function handleAddAssignment(e: FormEvent) {
@@ -113,9 +124,15 @@ export default function DispatchPage() {
     }
   }
 
-  async function handleDeleteAssignment(id: string) {
-    await fetch(`/api/assignments/${id}`, { method: "DELETE" });
-    setAssignments((prev) => (prev ?? []).filter((a) => a.id !== id));
+  async function confirmDeleteAssignment() {
+    if (!deleteAssignmentTarget) return;
+    setDeletingAssignment(true);
+    const res = await fetch(`/api/assignments/${deleteAssignmentTarget.id}`, { method: "DELETE" });
+    setDeletingAssignment(false);
+    if (res.ok) {
+      setAssignments((prev) => (prev ?? []).filter((a) => a.id !== deleteAssignmentTarget.id));
+    }
+    setDeleteAssignmentTarget(null);
   }
 
   function assignmentsForMember(memberId: string) {
@@ -234,7 +251,7 @@ export default function DispatchPage() {
                   <button
                     type="button"
                     className="nova-icon-btn"
-                    onClick={() => handleDeleteMember(m.id)}
+                    onClick={() => setDeleteMemberTarget(m)}
                     aria-label={`Retirer ${m.name}`}
                   >
                     <X size={16} strokeWidth={1.75} />
@@ -261,7 +278,7 @@ export default function DispatchPage() {
                           <button
                             type="button"
                             className="nova-icon-btn"
-                            onClick={() => handleDeleteAssignment(a.id)}
+                            onClick={() => setDeleteAssignmentTarget(a)}
                             aria-label="Retirer l'affectation"
                           >
                             <X size={13} strokeWidth={1.75} />
@@ -276,6 +293,25 @@ export default function DispatchPage() {
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        open={deleteMemberTarget !== null}
+        itemLabel={deleteMemberTarget ? `le collaborateur « ${deleteMemberTarget.name} »` : ""}
+        onConfirm={confirmDeleteMember}
+        onCancel={() => setDeleteMemberTarget(null)}
+        confirming={deletingMember}
+      />
+      <ConfirmModal
+        open={deleteAssignmentTarget !== null}
+        itemLabel={
+          deleteAssignmentTarget
+            ? `l'affectation de ${deleteAssignmentTarget.teamMember.name}${deleteAssignmentTarget.project ? ` sur « ${deleteAssignmentTarget.project.name} »` : ""}`
+            : ""
+        }
+        onConfirm={confirmDeleteAssignment}
+        onCancel={() => setDeleteAssignmentTarget(null)}
+        confirming={deletingAssignment}
+      />
     </div>
   );
 }

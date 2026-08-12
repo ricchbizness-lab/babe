@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { EmptyState, TableSkeleton } from "@/components/ui";
+import { ConfirmModal, EmptyState, TableSkeleton } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
 type TaskRow = {
@@ -28,6 +28,8 @@ export default function TachesPage() {
   const [newProjectId, setNewProjectId] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<TaskRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -78,12 +80,15 @@ export default function TachesPage() {
     }
   }
 
-  async function handleDelete(task: TaskRow) {
-    if (!window.confirm(`Supprimer « ${task.text} » ? Cette action est irréversible.`)) return;
-    const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await fetch(`/api/tasks/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleting(false);
     if (res.ok) {
-      setTasks((prev) => (prev ?? []).filter((t) => t.id !== task.id));
+      setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));
     }
+    setDeleteTarget(null);
   }
 
   const filtered = (tasks ?? []).filter((t) => {
@@ -161,13 +166,21 @@ export default function TachesPage() {
                   {t.project.name}
                 </Link>
               )}
-              <button type="button" className="nova-icon-btn" onClick={() => handleDelete(t)} aria-label="Supprimer la tâche">
+              <button type="button" className="nova-icon-btn" onClick={() => setDeleteTarget(t)} aria-label="Supprimer la tâche">
                 <Trash2 size={15} strokeWidth={1.75} />
               </button>
             </li>
           ))}
         </ul>
       )}
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        itemLabel={deleteTarget ? `la tâche « ${deleteTarget.text} »` : ""}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BackLink, Badge, Card, CardTitle, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 
 type ClientDetail = {
   id: string;
@@ -41,8 +43,11 @@ const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger
 };
 
 export default function ClientDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/clients/${params.id}`).then(async (res) => {
@@ -54,6 +59,17 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       setClient(data.client);
     });
   }, [params.id]);
+
+  async function confirmDelete() {
+    setDeleting(true);
+    const res = await fetch(`/api/clients/${params.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      router.push("/dashboard/clients");
+      return;
+    }
+    setConfirmingDelete(false);
+  }
 
   if (error) {
     return (
@@ -105,11 +121,17 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
     <div className="nova-page">
       <BackLink href="/dashboard/clients" label="Retour aux clients" />
 
-      <header className="nova-page-header">
-        <h1>{client.name}</h1>
-        <p className="nova-page-subtitle">
-          Client depuis le {new Date(client.createdAt).toLocaleDateString("fr-FR")}
-        </p>
+      <header className="nova-page-header-row">
+        <div>
+          <h1>{client.name}</h1>
+          <p className="nova-page-subtitle">
+            Client depuis le {new Date(client.createdAt).toLocaleDateString("fr-FR")}
+          </p>
+        </div>
+        <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+          <Trash2 size={16} strokeWidth={1.75} />
+          Supprimer le client
+        </Button>
       </header>
 
       <Card>
@@ -145,6 +167,14 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
         <h2 className="nova-section-title">Devis ({client.devis.length})</h2>
         <Table columns={devisColumns} rows={client.devis} emptyLabel="Aucun devis rattaché à ce client." />
       </section>
+
+      <ConfirmModal
+        open={confirmingDelete}
+        itemLabel={`le client « ${client.name} »`}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+        confirming={deleting}
+      />
     </div>
   );
 }

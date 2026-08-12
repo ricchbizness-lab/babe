@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -140,6 +141,51 @@ export function EmptyState({
           {actionLabel}
         </Link>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ConfirmModal — confirmation obligatoire avant toute suppression
+// ---------------------------------------------------------------------------
+
+export function ConfirmModal({
+  open,
+  itemLabel,
+  onConfirm,
+  onCancel,
+  confirming = false,
+}: {
+  open: boolean;
+  itemLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirming?: boolean;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div className="nova-modal-overlay" onClick={onCancel}>
+      <div className="nova-modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <p className="nova-modal-message">Supprimer {itemLabel} ? Cette action est irréversible.</p>
+        <div className="nova-modal-actions">
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={confirming}>
+            Annuler
+          </Button>
+          <Button type="button" variant="danger" onClick={onConfirm} disabled={confirming}>
+            {confirming ? "Suppression..." : "Supprimer"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

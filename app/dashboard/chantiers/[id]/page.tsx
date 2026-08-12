@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Share2 } from "lucide-react";
-import { BackLink, Badge, Button, Card, CardTitle, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { Check, Copy, Share2, Trash2 } from "lucide-react";
+import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 
 type ChantierDetail = {
   id: string;
@@ -32,11 +33,14 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
 };
 
 export default function ChantierDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [project, setProject] = useState<ChantierDetail | null>(null);
   const [error, setError] = useState("");
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/projects/${params.id}`).then(async (res) => {
@@ -63,6 +67,17 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     await navigator.clipboard.writeText(portalUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function confirmDelete() {
+    setDeleting(true);
+    const res = await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      router.push("/dashboard/chantiers");
+      return;
+    }
+    setConfirmingDelete(false);
   }
 
   if (error) {
@@ -116,7 +131,13 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
             )}
           </p>
         </div>
-        <Badge tone={STATUS_TONE[project.status] || "neutral"}>{STATUS_LABEL[project.status] || project.status}</Badge>
+        <div className="nova-header-actions">
+          <Badge tone={STATUS_TONE[project.status] || "neutral"}>{STATUS_LABEL[project.status] || project.status}</Badge>
+          <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+            <Trash2 size={16} strokeWidth={1.75} />
+            Supprimer
+          </Button>
+        </div>
       </header>
 
       <Card>
@@ -173,6 +194,14 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         </div>
         <Table columns={reportColumns} rows={project.voiceReports} emptyLabel="Aucun rapport vocal rattaché à ce chantier." />
       </section>
+
+      <ConfirmModal
+        open={confirmingDelete}
+        itemLabel={`le chantier « ${project.name} »`}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+        confirming={deleting}
+      />
     </div>
   );
 }

@@ -664,6 +664,12 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-1);
   flex-wrap: wrap;
 }
+.nova-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
 
 /* --- Rapports vocaux --- */
 
@@ -990,6 +996,39 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-weight: 600;
   margin-top: var(--nova-space-1);
 }
+
+/* --- ConfirmModal --- */
+
+.nova-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 28, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--nova-space-3);
+  z-index: 100;
+  animation: nova-modal-overlay-fade 150ms ease;
+}
+@keyframes nova-modal-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.nova-modal {
+  background: var(--nova-surface);
+  border-radius: var(--nova-radius-card);
+  box-shadow: 0 12px 32px rgba(20, 24, 28, 0.18);
+  padding: var(--nova-space-4);
+  max-width: 420px;
+  width: 100%;
+  animation: nova-modal-in 180ms ease;
+}
+@keyframes nova-modal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nova-modal-message { margin: 0 0 var(--nova-space-3); font-size: 14px; color: var(--nova-ink); line-height: 1.5; }
+.nova-modal-actions { display: flex; justify-content: flex-end; gap: var(--nova-space-2); }
 
 /* --- Skeletons --- */
 

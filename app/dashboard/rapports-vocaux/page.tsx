@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Mic } from "lucide-react";
-import { EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Mic, Trash2 } from "lucide-react";
+import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 
 type ReportRow = {
   id: string;
@@ -15,12 +15,25 @@ type ReportRow = {
 
 export default function RapportsVocauxPage() {
   const [reports, setReports] = useState<ReportRow[] | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/voice-reports")
       .then((res) => res.json())
       .then((data) => setReports(data.reports ?? []));
   }, []);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await fetch(`/api/voice-reports/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));
+    }
+    setDeleteTarget(null);
+  }
 
   const columns: TableColumn<ReportRow>[] = [
     { key: "authorLabel", label: "Auteur" },
@@ -38,6 +51,21 @@ export default function RapportsVocauxPage() {
     },
     { key: "summary", label: "Résumé", render: (r) => <span className="nova-truncate">{r.summary}</span> },
     { key: "createdAt", label: "Le", render: (r) => <Timestamp date={r.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (r) => (
+        <button
+          type="button"
+          className="nova-icon-btn"
+          onClick={() => setDeleteTarget(r)}
+          aria-label={`Supprimer le rapport de ${r.authorLabel}`}
+        >
+          <Trash2 size={15} strokeWidth={1.75} />
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -68,6 +96,14 @@ export default function RapportsVocauxPage() {
       ) : (
         <Table columns={columns} rows={reports} />
       )}
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        itemLabel={deleteTarget ? `le rapport de ${deleteTarget.authorLabel}` : ""}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
     </div>
   );
 }

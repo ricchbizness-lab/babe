@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
-import { BackLink, Badge, Card, CardTitle, Button, Timestamp } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { FileText, Trash2 } from "lucide-react";
+import { BackLink, Badge, Card, CardTitle, Button, ConfirmModal, Timestamp } from "@/components/ui";
 
 type DevisDetail = {
   id: string;
@@ -36,9 +37,12 @@ const STATUS_ACTIONS: { status: string; label: string; variant: "primary" | "suc
 ];
 
 export default function DevisDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [error, setError] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/devis/${params.id}`).then(async (res) => {
@@ -64,6 +68,17 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       const data = await res.json();
       setDevis(data.devis);
     }
+  }
+
+  async function confirmDelete() {
+    setDeleting(true);
+    const res = await fetch(`/api/devis/${params.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      router.push("/dashboard/devis");
+      return;
+    }
+    setConfirmingDelete(false);
   }
 
   if (error) {
@@ -119,6 +134,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             Voir la facture
           </Link>
         )}
+        <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+          <Trash2 size={16} strokeWidth={1.75} />
+          Supprimer
+        </Button>
       </div>
 
       {devis.description && (
@@ -137,6 +156,14 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         </div>
         <p className="nova-ai-content">{devis.content || "Aucun contenu rédigé."}</p>
       </Card>
+
+      <ConfirmModal
+        open={confirmingDelete}
+        itemLabel={`le devis « ${devis.label} »`}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+        confirming={deleting}
+      />
     </div>
   );
 }
