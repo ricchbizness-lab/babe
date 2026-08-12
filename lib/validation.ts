@@ -77,6 +77,19 @@ export const assignmentSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+export const teamMemberUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  role: z.string().max(200).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().max(30).optional(),
+});
+
+export const assignmentUpdateSchema = z.object({
+  projectId: z.string().optional(),
+  date: z.string().datetime().optional(),
+  note: z.string().max(500).optional(),
+});
+
 export const voiceReportSchema = z.object({
   projectId: z.string().optional(),
   authorLabel: z.string().min(1).max(200),

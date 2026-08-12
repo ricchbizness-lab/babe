@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
-import { Button, Card, CardTitle, ConfirmModal, DatePickerField, EmptyState, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { Pencil, Sparkles, X } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardTitle,
+  ConfirmModal,
+  DatePickerField,
+  EditModal,
+  EmptyState,
+  Field,
+  SelectField,
+  Skeleton,
+  TextareaField,
+  useToast,
+} from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
@@ -13,6 +27,14 @@ type AssignmentRow = {
   note: string | null;
   teamMember: { id: string; name: string };
   project: { id: string; name: string } | null;
+};
+
+type SuggestError = "no-key" | "no-subscription" | "other" | null;
+
+const SUGGEST_ERROR_MESSAGE: Record<Exclude<SuggestError, null>, string> = {
+  "no-key": "La génération IA n'est pas encore configurée pour cet environnement.",
+  "no-subscription": "La génération IA est réservée aux abonnements actifs.",
+  other: "La génération a échoué, réessayez dans un instant.",
 };
 
 const todayKey = toDateKey(new Date());
@@ -35,6 +57,17 @@ export default function DispatchPage() {
   const [deletingMember, setDeletingMember] = useState(false);
   const [deleteAssignmentTarget, setDeleteAssignmentTarget] = useState<AssignmentRow | null>(null);
   const [deletingAssignment, setDeletingAssignment] = useState(false);
+
+  const [editMemberTarget, setEditMemberTarget] = useState<Member | null>(null);
+  const [editMemberForm, setEditMemberForm] = useState({ name: "", role: "", email: "", phone: "" });
+  const [editingMember, setEditingMember] = useState(false);
+
+  const [editAssignmentTarget, setEditAssignmentTarget] = useState<AssignmentRow | null>(null);
+  const [editAssignmentForm, setEditAssignmentForm] = useState({ projectId: "", date: todayKey, note: "" });
+  const [editingAssignment, setEditingAssignment] = useState(false);
+
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/team")
@@ -102,6 +135,43 @@ export default function DispatchPage() {
     setDeleteMemberTarget(null);
   }
 
+  function openEditMember(m: Member) {
+    setEditMemberForm({ name: m.name, role: m.role || "", email: m.email || "", phone: m.phone || "" });
+    setEditMemberTarget(m);
+  }
+
+  async function confirmEditMember() {
+    if (!editMemberTarget) return;
+    if (!editMemberForm.name.trim()) {
+      toast.error("Le nom est requis.");
+      return;
+    }
+    setEditingMember(true);
+    try {
+      const res = await fetch(`/api/team/${editMemberTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editMemberForm),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de modifier ce collaborateur.");
+        return;
+      }
+      const data = await res.json();
+      setMembers((prev) => (prev ?? []).map((m) => (m.id === data.member.id ? data.member : m)));
+      setAssignments((prev) =>
+        (prev ?? []).map((a) => (a.teamMember.id === data.member.id ? { ...a, teamMember: { id: data.member.id, name: data.member.name } } : a))
+      );
+      toast.success("Collaborateur mis à jour");
+      setEditMemberTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setEditingMember(false);
+    }
+  }
+
   async function handleAddAssignment(e: FormEvent) {
     e.preventDefault();
     setAssignError("");
@@ -162,9 +232,78 @@ export default function DispatchPage() {
     setDeleteAssignmentTarget(null);
   }
 
+  function openEditAssignment(a: AssignmentRow) {
+    setEditAssignmentForm({ projectId: a.project?.id || "", date: toDateKey(new Date(a.date)), note: a.note || "" });
+    setEditAssignmentTarget(a);
+  }
+
+  async function confirmEditAssignment() {
+    if (!editAssignmentTarget) return;
+    setEditingAssignment(true);
+    try {
+      const res = await fetch(`/api/assignments/${editAssignmentTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: editAssignmentForm.projectId || undefined,
+          date: new Date(`${editAssignmentForm.date}T00:00:00.000Z`).toISOString(),
+          note: editAssignmentForm.note || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de modifier cette affectation.");
+        return;
+      }
+      const data = await res.json();
+      if (data.assignment.date && toDateKey(new Date(data.assignment.date)) === todayKey) {
+        setAssignments((prev) => (prev ?? []).map((a) => (a.id === data.assignment.id ? data.assignment : a)));
+      } else {
+        setAssignments((prev) => (prev ?? []).filter((a) => a.id !== data.assignment.id));
+      }
+      toast.success("Affectation mise à jour");
+      setEditAssignmentTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setEditingAssignment(false);
+    }
+  }
+
+  async function handleSuggest() {
+    const member = (members ?? []).find((m) => m.id === assignForm.teamMemberId);
+    const project = projects.find((p) => p.id === assignForm.projectId);
+    if (!member || !project) return;
+    setSuggesting(true);
+    setSuggestion(null);
+    try {
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          module: "conseil",
+          input: { chantier: project.name, role: member.role || member.name },
+        }),
+      });
+      if (!res.ok) {
+        const kind: Exclude<SuggestError, null> = res.status === 503 ? "no-key" : res.status === 402 ? "no-subscription" : "other";
+        toast.error("Erreur de génération IA — " + SUGGEST_ERROR_MESSAGE[kind]);
+        return;
+      }
+      const data = await res.json();
+      setSuggestion(data.result || "");
+    } catch {
+      toast.error("Erreur de génération IA — impossible de joindre le serveur.");
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
   function assignmentsForMember(memberId: string) {
     return (assignments ?? []).filter((a) => a.teamMember.id === memberId);
   }
+
+  const canSuggest = Boolean(assignForm.teamMemberId && assignForm.projectId);
 
   return (
     <div className="nova-page">
@@ -175,86 +314,113 @@ export default function DispatchPage() {
         </p>
       </header>
 
-      <Card>
-        <CardTitle>Ajouter un collaborateur</CardTitle>
-        <form onSubmit={handleAddMember}>
-          <Field
-            label="Nom"
-            required
-            value={memberForm.name}
-            onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
-            placeholder="Julie Martin"
-          />
-          <Field
-            label="Rôle"
-            value={memberForm.role}
-            onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
-            placeholder="Électricienne"
-          />
-          <Field
-            label="Email"
-            type="email"
-            value={memberForm.email}
-            onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
-          />
-          <Field
-            label="Téléphone"
-            value={memberForm.phone}
-            onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })}
-          />
-          {memberError && <div className="error">{memberError}</div>}
-          <Button type="submit" disabled={memberSubmitting}>
-            {memberSubmitting ? "Ajout..." : "Ajouter"}
-          </Button>
-        </form>
-      </Card>
+      <div className="nova-dispatch-forms">
+        <Card>
+          <CardTitle>Ajouter un collaborateur</CardTitle>
+          <form onSubmit={handleAddMember}>
+            <Field
+              label="Nom"
+              required
+              value={memberForm.name}
+              onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
+              placeholder="Julie Martin"
+            />
+            <Field
+              label="Rôle"
+              value={memberForm.role}
+              onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+              placeholder="Électricienne"
+            />
+            <Field
+              label="Email"
+              type="email"
+              value={memberForm.email}
+              onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
+            />
+            <Field
+              label="Téléphone"
+              value={memberForm.phone}
+              onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })}
+            />
+            {memberError && <div className="error">{memberError}</div>}
+            <Button type="submit" disabled={memberSubmitting}>
+              {memberSubmitting ? "Ajout..." : "Ajouter"}
+            </Button>
+          </form>
+        </Card>
 
-      <Card>
-        <CardTitle>Affecter un collaborateur à un chantier</CardTitle>
-        <form onSubmit={handleAddAssignment}>
-          <SelectField
-            label="Collaborateur"
-            required
-            value={assignForm.teamMemberId}
-            onChange={(e) => setAssignForm({ ...assignForm, teamMemberId: e.target.value })}
-          >
-            <option value="">Sélectionner...</option>
-            {(members ?? []).map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label="Chantier"
-            value={assignForm.projectId}
-            onChange={(e) => setAssignForm({ ...assignForm, projectId: e.target.value })}
-          >
-            <option value="">Aucun chantier</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </SelectField>
-          <DatePickerField
-            label="Date"
-            value={assignForm.date}
-            onChange={(value) => setAssignForm({ ...assignForm, date: value })}
-          />
-          <TextareaField
-            label="Note"
-            rows={2}
-            value={assignForm.note}
-            onChange={(e) => setAssignForm({ ...assignForm, note: e.target.value })}
-            placeholder="Matériel à apporter, horaire particulier..."
-          />
-          {assignError && <div className="error">{assignError}</div>}
-          <Button type="submit" disabled={assignSubmitting}>
-            {assignSubmitting ? "Affectation..." : "Affecter"}
-          </Button>
-        </form>
-      </Card>
+        <Card>
+          <CardTitle>Affecter un collaborateur à un chantier</CardTitle>
+          <form onSubmit={handleAddAssignment}>
+            <SelectField
+              label="Collaborateur"
+              required
+              value={assignForm.teamMemberId}
+              onChange={(e) => setAssignForm({ ...assignForm, teamMemberId: e.target.value })}
+            >
+              <option value="">Sélectionner...</option>
+              {(members ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Chantier"
+              value={assignForm.projectId}
+              onChange={(e) => setAssignForm({ ...assignForm, projectId: e.target.value })}
+            >
+              <option value="">Aucun chantier</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </SelectField>
+            <DatePickerField
+              label="Date"
+              value={assignForm.date}
+              onChange={(value) => setAssignForm({ ...assignForm, date: value })}
+            />
+            <TextareaField
+              label="Note"
+              rows={2}
+              value={assignForm.note}
+              onChange={(e) => setAssignForm({ ...assignForm, note: e.target.value })}
+              placeholder="Matériel à apporter, horaire particulier..."
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleSuggest}
+              disabled={!canSuggest || suggesting}
+            >
+              <Sparkles size={15} strokeWidth={1.75} />
+              {suggesting ? "Nova réfléchit..." : "Nova suggère les outils à prévoir"}
+            </Button>
+            {assignError && <div className="error">{assignError}</div>}
+            <Button type="submit" disabled={assignSubmitting}>
+              {assignSubmitting ? "Affectation..." : "Affecter"}
+            </Button>
+          </form>
+        </Card>
+      </div>
+
+      {(suggesting || suggestion) && (
+        <Card accent={false} className="nova-ai-zone">
+          <div className="nova-ai-zone-header">
+            <Badge tone="teal">Suggestion Nova</Badge>
+          </div>
+          {suggesting ? (
+            <div className="nova-ai-loading">
+              <p className="nova-ai-loading-label">Nova réfléchit aux outils à prévoir...</p>
+              <Skeleton style={{ height: 80 }} />
+            </div>
+          ) : (
+            <p className="nova-ai-content">{suggestion}</p>
+          )}
+        </Card>
+      )}
 
       <section>
         <h2 className="nova-section-title">Équipe</h2>
@@ -273,14 +439,24 @@ export default function DispatchPage() {
                     <div className="nova-team-card-name">{m.name}</div>
                     {m.role && <div className="nova-team-card-role">{m.role}</div>}
                   </div>
-                  <button
-                    type="button"
-                    className="nova-icon-btn"
-                    onClick={() => setDeleteMemberTarget(m)}
-                    aria-label={`Retirer ${m.name}`}
-                  >
-                    <X size={16} strokeWidth={1.75} />
-                  </button>
+                  <div className="nova-team-card-actions">
+                    <button
+                      type="button"
+                      className="nova-team-card-edit-link"
+                      onClick={() => openEditMember(m)}
+                      aria-label={`Modifier ${m.name}`}
+                    >
+                      <Pencil size={15} strokeWidth={1.75} />
+                    </button>
+                    <button
+                      type="button"
+                      className="nova-icon-btn"
+                      onClick={() => setDeleteMemberTarget(m)}
+                      aria-label={`Retirer ${m.name}`}
+                    >
+                      <X size={16} strokeWidth={1.75} />
+                    </button>
+                  </div>
                 </div>
                 {(m.email || m.phone) && (
                   <div className="nova-team-card-contact">
@@ -300,14 +476,24 @@ export default function DispatchPage() {
                             {a.project?.name || "Sans chantier"}
                             {a.note ? ` — ${a.note}` : ""}
                           </span>
-                          <button
-                            type="button"
-                            className="nova-icon-btn"
-                            onClick={() => setDeleteAssignmentTarget(a)}
-                            aria-label="Retirer l'affectation"
-                          >
-                            <X size={13} strokeWidth={1.75} />
-                          </button>
+                          <span className="nova-team-card-actions">
+                            <button
+                              type="button"
+                              className="nova-team-card-edit-link"
+                              onClick={() => openEditAssignment(a)}
+                              aria-label="Modifier l'affectation"
+                            >
+                              <Pencil size={13} strokeWidth={1.75} />
+                            </button>
+                            <button
+                              type="button"
+                              className="nova-icon-btn"
+                              onClick={() => setDeleteAssignmentTarget(a)}
+                              aria-label="Retirer l'affectation"
+                            >
+                              <X size={13} strokeWidth={1.75} />
+                            </button>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -337,6 +523,70 @@ export default function DispatchPage() {
         onCancel={() => setDeleteAssignmentTarget(null)}
         confirming={deletingAssignment}
       />
+
+      <EditModal
+        open={editMemberTarget !== null}
+        title="Modifier le collaborateur"
+        onCancel={() => setEditMemberTarget(null)}
+        onSave={confirmEditMember}
+        saving={editingMember}
+      >
+        <Field
+          label="Nom"
+          required
+          value={editMemberForm.name}
+          onChange={(e) => setEditMemberForm({ ...editMemberForm, name: e.target.value })}
+        />
+        <Field
+          label="Rôle"
+          value={editMemberForm.role}
+          onChange={(e) => setEditMemberForm({ ...editMemberForm, role: e.target.value })}
+        />
+        <Field
+          label="Email"
+          type="email"
+          value={editMemberForm.email}
+          onChange={(e) => setEditMemberForm({ ...editMemberForm, email: e.target.value })}
+        />
+        <Field
+          label="Téléphone"
+          value={editMemberForm.phone}
+          onChange={(e) => setEditMemberForm({ ...editMemberForm, phone: e.target.value })}
+        />
+      </EditModal>
+
+      <EditModal
+        open={editAssignmentTarget !== null}
+        title="Modifier l'affectation"
+        onCancel={() => setEditAssignmentTarget(null)}
+        onSave={confirmEditAssignment}
+        saving={editingAssignment}
+      >
+        <SelectField
+          label="Chantier"
+          value={editAssignmentForm.projectId}
+          onChange={(e) => setEditAssignmentForm({ ...editAssignmentForm, projectId: e.target.value })}
+        >
+          <option value="">Aucun chantier</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </SelectField>
+        <DatePickerField
+          label="Date"
+          value={editAssignmentForm.date}
+          onChange={(value) => setEditAssignmentForm({ ...editAssignmentForm, date: value })}
+        />
+        <TextareaField
+          label="Note"
+          rows={2}
+          value={editAssignmentForm.note}
+          onChange={(e) => setEditAssignmentForm({ ...editAssignmentForm, note: e.target.value })}
+          placeholder="Matériel à apporter, horaire particulier..."
+        />
+      </EditModal>
     </div>
   );
 }

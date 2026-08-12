@@ -1008,6 +1008,26 @@ button.primary:hover { background: var(--nova-teal-deep); }
 
 /* --- Dispatch --- */
 
+.nova-dispatch-forms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--nova-space-3);
+  align-items: start;
+}
+.nova-team-card-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.nova-team-card-edit-link {
+  background: transparent;
+  border: none;
+  color: var(--nova-ink-faint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: var(--nova-radius-badge);
+  transition: color var(--nova-transition-color);
+}
+.nova-team-card-edit-link:hover { color: var(--nova-teal-deep); }
 .nova-team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1132,6 +1152,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-modal-message { margin: 0 0 var(--nova-space-3); font-size: 14px; color: var(--nova-ink); line-height: 1.5; }
 .nova-modal-actions { display: flex; justify-content: flex-end; gap: var(--nova-space-2); }
+.nova-modal-title { font-family: var(--nova-font-heading); font-size: 16px; font-weight: 700; margin: 0 0 var(--nova-space-2); }
+.nova-modal-edit { max-width: 480px; }
 
 /* --- Toasts --- */
 
@@ -1211,4 +1233,5 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-planning-grid { grid-template-columns: 1fr; }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }
   .nova-week-nav { justify-content: space-between; }
+  .nova-dispatch-forms { grid-template-columns: 1fr; }
 }

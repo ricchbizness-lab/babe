@@ -198,6 +198,60 @@ export function ConfirmModal({
 }
 
 // ---------------------------------------------------------------------------
+// EditModal — modale générique de modification (réutilise le chrome de ConfirmModal)
+// ---------------------------------------------------------------------------
+
+export function EditModal({
+  open,
+  title,
+  onCancel,
+  onSave,
+  saving = false,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onCancel: () => void;
+  onSave: () => void;
+  saving?: boolean;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div className="nova-modal-overlay" onClick={onCancel}>
+      <div
+        className="nova-modal nova-modal-edit"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="nova-modal-title">{title}</h3>
+        {children}
+        <div className="nova-modal-actions">
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
+            Annuler
+          </Button>
+          <Button type="button" onClick={onSave} disabled={saving}>
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Toasts — feedback global de succès/erreur, empilés en bas à droite
 // ---------------------------------------------------------------------------
 
