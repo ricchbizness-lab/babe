@@ -937,6 +937,60 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-icon-btn:hover { color: var(--nova-danger); }
 
+/* --- Tâches --- */
+
+.nova-quick-add {
+  display: flex;
+  gap: var(--nova-space-1);
+  flex-wrap: wrap;
+}
+.nova-quick-add input[type="text"] { flex: 2; min-width: 200px; margin: 0; }
+.nova-quick-add select { flex: 1; min-width: 160px; margin: 0; }
+.nova-quick-add button { flex-shrink: 0; }
+
+.nova-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  overflow: hidden;
+}
+.nova-task-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  border-bottom: 1px solid var(--nova-border);
+  transition: background-color var(--nova-transition-color);
+}
+.nova-task-row:last-child { border-bottom: none; }
+.nova-task-row:hover { background: var(--nova-bg); }
+.nova-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--nova-teal);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+}
+.nova-task-text { flex: 1; font-size: 14px; color: var(--nova-ink); }
+.nova-task-text-done { flex: 1; font-size: 14px; color: var(--nova-ink-faint); text-decoration: line-through; }
+.nova-task-project { font-size: 12.5px; flex-shrink: 0; }
+
+/* --- Paramètres --- */
+
+.nova-save-confirm {
+  color: var(--nova-success);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: var(--nova-space-1);
+}
+
 /* --- Skeletons --- */
 
 .nova-skeleton {
