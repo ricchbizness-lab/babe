@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge, EmptyState, Skeleton } from "@/components/ui";
 import { addDays, formatShortDate, isSameDay, startOfWeek, weekDays } from "@/lib/dates";
 
-type ProjectRow = { id: string; name: string; status: string };
+type ProjectRow = { id: string; name: string; status: string; startDate: string | null; endDate: string | null };
 type AssignmentRow = {
   id: string;
   date: string;
@@ -41,10 +41,21 @@ export default function PlanningPage() {
       .then((data) => setAssignments(data.assignments ?? []));
   }, []);
 
-  const activeProjects = (projects ?? []).filter((p) => p.status === "en_cours");
   const days = weekDays(weekStart);
   const weekEnd = addDays(weekStart, 4);
   const rangeLabel = `${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)} ${weekEnd.getFullYear()}`;
+
+  // Un chantier « en cours » sans dates renseignées reste toujours pertinent
+  // (on ne peut pas savoir s'il concerne la semaine affichée) ; s'il a des
+  // dates, elles doivent chevaucher la semaine pour qu'il s'affiche.
+  function overlapsWeek(project: ProjectRow) {
+    if (!project.startDate || !project.endDate) return true;
+    const start = new Date(project.startDate);
+    const end = new Date(project.endDate);
+    return start <= weekEnd && end >= weekStart;
+  }
+
+  const activeProjects = (projects ?? []).filter((p) => p.status === "en_cours" && overlapsWeek(p));
 
   function assignmentsFor(projectId: string, day: Date) {
     return (assignments ?? []).filter((a) => a.project?.id === projectId && isSameDay(new Date(a.date), day));
@@ -109,7 +120,12 @@ export default function PlanningPage() {
                         <Badge tone={STATUS_TONE[p.status] || "neutral"}>{STATUS_LABEL[p.status] || p.status}</Badge>
                       </div>
                       {dayAssignments.length === 0 ? (
-                        <p className="nova-planning-empty">Aucune affectation</p>
+                        <p className="nova-planning-empty">
+                          <span>Aucun collaborateur affecté</span>
+                          <Link href="/dashboard/planning/dispatch" className="nova-planning-empty-link">
+                            Affecter →
+                          </Link>
+                        </p>
                       ) : (
                         <ul className="nova-planning-people">
                           {dayAssignments.map((a) => (

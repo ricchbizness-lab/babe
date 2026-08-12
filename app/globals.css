@@ -985,7 +985,24 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-1);
   flex-wrap: wrap;
 }
-.nova-planning-empty { font-size: 12px; color: var(--nova-ink-faint); margin: var(--nova-space-1) 0 0; }
+.nova-planning-empty {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--nova-space-1);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--nova-ink-faint);
+  margin: var(--nova-space-1) 0 0;
+}
+.nova-planning-empty-link {
+  flex-shrink: 0;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--nova-teal-deep);
+  white-space: nowrap;
+}
+.nova-planning-empty-link:hover { text-decoration: underline; }
 .nova-planning-people { list-style: none; margin: var(--nova-space-1) 0 0; padding: 0; font-size: 13px; color: var(--nova-ink); }
 .nova-planning-people li { padding: 2px 0; }
 
