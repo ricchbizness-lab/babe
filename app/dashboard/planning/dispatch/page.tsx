@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import { Button, Card, CardTitle, ConfirmModal, EmptyState, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { Button, Card, CardTitle, ConfirmModal, DatePickerField, EmptyState, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
@@ -237,12 +237,10 @@ export default function DispatchPage() {
               </option>
             ))}
           </SelectField>
-          <Field
+          <DatePickerField
             label="Date"
-            type="date"
-            required
             value={assignForm.date}
-            onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
+            onChange={(value) => setAssignForm({ ...assignForm, date: value })}
           />
           <TextareaField
             label="Note"

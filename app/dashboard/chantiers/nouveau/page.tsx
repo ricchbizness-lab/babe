@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { BackLink, Button, Card, Field, SelectField, useToast } from "@/components/ui";
+import { BackLink, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 
@@ -103,17 +103,15 @@ export default function NewChantierPage() {
             <option value="termine">Terminé</option>
             <option value="annule">Annulé</option>
           </SelectField>
-          <Field
+          <DatePickerField
             label="Date de début"
-            type="date"
             value={form.startDate}
-            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            onChange={(value) => setForm({ ...form, startDate: value })}
           />
-          <Field
+          <DatePickerField
             label="Date de fin"
-            type="date"
             value={form.endDate}
-            onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+            onChange={(value) => setForm({ ...form, endDate: value })}
           />
           {error && <div className="error">{error}</div>}
           <Button type="submit" disabled={loading}>

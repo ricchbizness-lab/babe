@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -20,6 +20,8 @@ import {
   CalendarDays,
   CheckCircle2,
   CheckSquare,
+  ChevronLeft,
+  ChevronRight,
   FileSignature,
   FileText,
   Info,
@@ -39,6 +41,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -343,6 +346,138 @@ export function SelectField({
     <div className="nova-field">
       <label>{label}</label>
       <select {...props}>{children}</select>
+      {hint && !error && <div className="nova-hint">{hint}</div>}
+      {error && <div className="nova-field-error">{error}</div>}
+    </div>
+  );
+}
+
+const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+function formatDateDisplay(value: string): string {
+  const date = new Date(`${value}T00:00:00`);
+  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatMonthYear(date: Date): string {
+  const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function DatePickerField({
+  label,
+  value,
+  onChange,
+  hint,
+  error,
+}: FieldChrome & {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = value ? new Date(`${value}T00:00:00`) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const todayKey = toDateKey(new Date());
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  function openPicker() {
+    const d = value ? new Date(`${value}T00:00:00`) : new Date();
+    setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    setOpen((o) => !o);
+  }
+
+  return (
+    <div className="nova-field" ref={containerRef}>
+      <label>{label}</label>
+      <div className="nova-datepicker">
+        <button
+          type="button"
+          className="nova-datepicker-trigger"
+          onClick={openPicker}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+        >
+          <span className={value ? "" : "nova-datepicker-placeholder"}>
+            {value ? formatDateDisplay(value) : "jj/mm/aaaa"}
+          </span>
+          <CalendarDays size={16} strokeWidth={1.75} />
+        </button>
+        {open && (
+          <div className="nova-datepicker-panel" role="dialog" aria-label={label}>
+            <div className="nova-datepicker-header">
+              <button
+                type="button"
+                className="nova-datepicker-nav"
+                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+                aria-label="Mois précédent"
+              >
+                <ChevronLeft size={16} strokeWidth={1.75} />
+              </button>
+              <span className="nova-datepicker-month">{formatMonthYear(viewMonth)}</span>
+              <button
+                type="button"
+                className="nova-datepicker-nav"
+                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+                aria-label="Mois suivant"
+              >
+                <ChevronRight size={16} strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="nova-datepicker-weekdays">
+              {WEEKDAY_LABELS.map((d) => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
+            <div className="nova-datepicker-grid">
+              {monthGrid(viewMonth).map(({ date, inMonth }) => {
+                const dateKey = toDateKey(date);
+                const selected = dateKey === value;
+                const isToday = dateKey === todayKey;
+                return (
+                  <button
+                    key={dateKey}
+                    type="button"
+                    className={[
+                      "nova-datepicker-day",
+                      inMonth ? "" : "nova-datepicker-day-muted",
+                      selected ? "nova-datepicker-day-selected" : "",
+                      isToday && !selected ? "nova-datepicker-day-today" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => {
+                      onChange(dateKey);
+                      setOpen(false);
+                    }}
+                  >
+                    {date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
       {hint && !error && <div className="nova-hint">{hint}</div>}
       {error && <div className="nova-field-error">{error}</div>}
     </div>

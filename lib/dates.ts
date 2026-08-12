@@ -32,3 +32,18 @@ export function weekDays(weekStart: Date): { date: Date; label: string }[] {
 export function formatShortDate(date: Date): string {
   return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 }
+
+export function addMonths(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+/** Grille de 6 semaines (42 jours, lundi en première colonne) couvrant tout le mois de monthStart. */
+export function monthGrid(monthStart: Date): { date: Date; inMonth: boolean }[] {
+  const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // lundi = 0
+  const gridStart = addDays(firstOfMonth, -firstWeekday);
+  return Array.from({ length: 42 }, (_, i) => {
+    const date = addDays(gridStart, i);
+    return { date, inMonth: date.getMonth() === monthStart.getMonth() };
+  });
+}
