@@ -15,6 +15,7 @@
   --nova-success-tint: #E9F3EC;
   --nova-danger: #B3432E;
   --nova-danger-tint: #FBEAE6;
+  --nova-linen-deep: #F1F1F2; /* fond des bulles Nova du copilote — neutre, plus soutenu que --nova-bg */
 
   /* NOVA v7 — typographie. --font-sans (Inter) et --font-heading (Manrope)
      et --font-mono (IBM Plex Mono) sont injectées par next/font dans
@@ -1238,6 +1239,144 @@ button.primary:hover { background: var(--nova-teal-deep); }
   100% { background-position: 0 50%; }
 }
 
+/* --- Copilote (module 7) --- */
+
+.nova-locked-screen {
+  max-width: 420px;
+  margin: 80px auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-5) var(--nova-space-4);
+}
+.nova-locked-icon { color: var(--nova-teal); }
+.nova-locked-message { color: var(--nova-ink-soft); font-size: 14px; margin: 0; }
+
+.nova-copilot-columns {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--nova-space-3);
+  align-items: start;
+}
+
+.nova-registre {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-3);
+  position: sticky;
+  top: var(--nova-space-3);
+}
+.nova-registre-item { display: flex; flex-direction: column; gap: 2px; }
+.nova-registre-value { font-family: var(--nova-font-heading); font-size: 26px; font-weight: 800; color: var(--nova-ink); }
+.nova-registre-label { font-size: 12.5px; color: var(--nova-ink-soft); }
+.nova-registre-divider { border-top: 1px dashed var(--nova-border); margin: 0; }
+.nova-registre-estimate-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  margin-bottom: 4px;
+}
+.nova-registre-estimate-value { font-size: 14px; font-weight: 600; color: var(--nova-ink-faint); }
+
+.nova-copilot-chat {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  display: flex;
+  flex-direction: column;
+  height: 640px;
+  overflow: hidden;
+}
+.nova-copilot-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-copilot-bubble-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 80%;
+}
+.nova-copilot-bubble-row-user { align-items: flex-end; align-self: flex-end; }
+.nova-copilot-bubble {
+  padding: var(--nova-space-1) var(--nova-space-2);
+  border-radius: var(--nova-radius-card);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.nova-copilot-bubble-assistant { background: var(--nova-linen-deep); color: var(--nova-ink); }
+.nova-copilot-bubble-user { background: var(--nova-teal); color: #fff; }
+.nova-copilot-input-row {
+  display: flex;
+  gap: var(--nova-space-1);
+  padding: var(--nova-space-2);
+  border-top: 1px solid var(--nova-border);
+  flex-shrink: 0;
+}
+.nova-copilot-input-row input { margin: 0; flex: 1; }
+.nova-copilot-suggestions { display: flex; flex-direction: column; gap: var(--nova-space-1); }
+.nova-copilot-suggestions-lead { font-size: 13px; color: var(--nova-ink-soft); margin: 0 0 var(--nova-space-1); }
+.nova-copilot-suggestion {
+  text-align: left;
+  padding: var(--nova-space-2);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  background: var(--nova-surface);
+  font-size: 13.5px;
+  color: var(--nova-teal-deep);
+  cursor: pointer;
+  transition: background var(--nova-transition-color), border-color var(--nova-transition-color);
+}
+.nova-copilot-suggestion:hover { background: var(--nova-teal-tint); border-color: var(--nova-teal); }
+
+.nova-typing-dots { display: inline-flex; gap: 3px; padding: 4px 0; }
+.nova-typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nova-ink-faint);
+  animation: nova-typing-bounce 1.2s infinite ease-in-out;
+}
+.nova-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.nova-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes nova-typing-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.nova-report-list { display: flex; flex-direction: column; gap: var(--nova-space-1); }
+.nova-report-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+}
+.nova-report-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.nova-report-period { font-family: var(--nova-font-heading); font-weight: 700; font-size: 14px; }
+
 @media (max-width: 860px) {
   .nova-shell { grid-template-columns: 1fr; }
   .nova-sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; }
@@ -1248,4 +1387,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }
   .nova-week-nav { justify-content: space-between; }
   .nova-dispatch-forms { grid-template-columns: 1fr; }
+  .nova-copilot-columns { grid-template-columns: 1fr; }
+  .nova-registre { position: static; }
+  .nova-copilot-chat { height: 70vh; }
 }

@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Contact,
+  FileBarChart,
   FileSignature,
   FileText,
   Info,
@@ -64,6 +65,7 @@ const ICONS = {
   equipe: Contact,
   "rapports-vocaux": Mic,
   copilote: Bot,
+  rapport: FileBarChart,
   parametres: Settings,
   "user-plus": UserPlus,
 } satisfies Record<string, LucideIcon>;
@@ -710,6 +712,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/planning", label: "Planning", icon: "planning" },
   { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", icon: "dispatch" },
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
+  { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", icon: "rapport" },
   { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
 ];
 

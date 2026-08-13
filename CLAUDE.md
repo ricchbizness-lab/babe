@@ -28,7 +28,8 @@
 - Couleurs : `--nova-bg`, `--nova-surface`, `--nova-border`, `--nova-ink`,
   `--nova-ink-soft`, `--nova-ink-faint`, `--nova-teal`, `--nova-teal-deep`,
   `--nova-teal-tint`, `--nova-amber`, `--nova-amber-tint`, `--nova-success`,
-  `--nova-success-tint`, `--nova-danger`, `--nova-danger-tint`
+  `--nova-success-tint`, `--nova-danger`, `--nova-danger-tint`,
+  `--nova-linen-deep` (fond des bulles Nova du copilote)
 - Polices : `--nova-font-sans` (Inter), `--nova-font-heading` (Manrope),
   `--nova-font-mono` (IBM Plex Mono)
 
@@ -64,7 +65,9 @@ sans confirmation explicite entre deux :
 4. **Portail client (lien unique, lecture seule)** — ✅ fait
 5. **Rapports vocaux terrain (interface)** — ✅ fait
 6. **Planning / dispatch équipe** — ✅ fait
-7. Copilote financier (interface)
+7. **Copilote financier (interface)** — ✅ fait
+
+Les 7 modules du scope produit sont désormais tous construits.
 
 Hors scope de cette phase, jamais construit mais affiché en grisé dans la
 sidebar sous "Bientôt disponible" (badge "Prochainement", jamais cliquable,
