@@ -3,8 +3,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Share2, Trash2 } from "lucide-react";
-import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { Copy, Pencil, Share2, Trash2 } from "lucide-react";
+import {
+  BackLink,
+  Badge,
+  Button,
+  Card,
+  CardTitle,
+  ConfirmModal,
+  DatePickerField,
+  EditModal,
+  Field,
+  SelectField,
+  Table,
+  TableSkeleton,
+  Timestamp,
+  useToast,
+  type TableColumn,
+} from "@/components/ui";
+import { toDateKey } from "@/lib/dates";
 
 type ChantierDetail = {
   id: string;
@@ -19,6 +36,8 @@ type ChantierDetail = {
   voiceReports: { id: string; authorLabel: string; summary: string; createdAt: string }[];
 };
 
+type ClientOption = { id: string; name: string };
+
 const STATUS_LABEL: Record<string, string> = {
   planifie: "Planifié",
   en_cours: "En cours",
@@ -32,6 +51,13 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
   annule: "danger",
 };
 
+const STATUS_ACTIONS: { status: string; label: string; variant: "secondary" | "primary" | "success" | "danger" }[] = [
+  { status: "planifie", label: "Marquer comme planifié", variant: "secondary" },
+  { status: "en_cours", label: "Marquer comme en cours", variant: "primary" },
+  { status: "termine", label: "Marquer comme terminé", variant: "success" },
+  { status: "annule", label: "Marquer comme annulé", variant: "danger" },
+];
+
 export default function ChantierDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const toast = useToast();
@@ -41,6 +67,11 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   const [sharing, setSharing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", address: "", clientId: "", status: "planifie", startDate: "", endDate: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetch(`/api/projects/${params.id}`).then(async (res) => {
@@ -51,7 +82,80 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       setProject(data.project);
     });
+    fetch("/api/clients")
+      .then((res) => res.json())
+      .then((data) => setClients((data.clients ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }))));
   }, [params.id]);
+
+  async function handleStatusChange(status: string) {
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        toast.error("Erreur lors de la mise à jour du chantier.");
+        return;
+      }
+      const data = await res.json();
+      setProject((prev) => (prev ? { ...prev, status: data.project.status } : prev));
+      toast.success(`Chantier marqué comme ${(STATUS_LABEL[status] || status).toLowerCase()}`);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  function openEdit() {
+    if (!project) return;
+    setEditForm({
+      name: project.name,
+      address: project.address || "",
+      clientId: project.client?.id || "",
+      status: project.status,
+      startDate: project.startDate ? toDateKey(new Date(project.startDate)) : "",
+      endDate: project.endDate ? toDateKey(new Date(project.endDate)) : "",
+    });
+    setEditing(true);
+  }
+
+  async function confirmEdit() {
+    if (!editForm.name.trim()) {
+      toast.error("Le nom du chantier est requis.");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/projects/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name,
+          address: editForm.address || undefined,
+          clientId: editForm.clientId || undefined,
+          status: editForm.status,
+          startDate: editForm.startDate ? new Date(`${editForm.startDate}T00:00:00.000Z`).toISOString() : undefined,
+          endDate: editForm.endDate ? new Date(`${editForm.endDate}T00:00:00.000Z`).toISOString() : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de modifier ce chantier.");
+        return;
+      }
+      const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
+      setProject(refreshed.project);
+      toast.success("Chantier mis à jour");
+      setEditing(false);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   async function handleShare() {
     setSharing(true);
@@ -148,12 +252,24 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         </div>
         <div className="nova-header-actions">
           <Badge tone={STATUS_TONE[project.status] || "neutral"}>{STATUS_LABEL[project.status] || project.status}</Badge>
+          <Button variant="secondary" onClick={openEdit}>
+            <Pencil size={16} strokeWidth={1.75} />
+            Modifier
+          </Button>
           <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
             <Trash2 size={16} strokeWidth={1.75} />
             Supprimer
           </Button>
         </div>
       </header>
+
+      <div className="nova-status-actions">
+        {STATUS_ACTIONS.filter((a) => a.status !== project.status).map((a) => (
+          <Button key={a.status} variant={a.variant} disabled={updatingStatus} onClick={() => handleStatusChange(a.status)}>
+            {a.label}
+          </Button>
+        ))}
+      </div>
 
       <Card>
         <CardTitle>Portail client</CardTitle>
@@ -217,6 +333,58 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         onCancel={() => setConfirmingDelete(false)}
         confirming={deleting}
       />
+
+      <EditModal
+        open={editing}
+        title="Modifier le chantier"
+        onCancel={() => setEditing(false)}
+        onSave={confirmEdit}
+        saving={savingEdit}
+      >
+        <Field
+          label="Nom du chantier"
+          required
+          value={editForm.name}
+          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+        />
+        <SelectField
+          label="Client rattaché"
+          value={editForm.clientId}
+          onChange={(e) => setEditForm({ ...editForm, clientId: e.target.value })}
+        >
+          <option value="">Aucun client rattaché</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </SelectField>
+        <Field
+          label="Adresse"
+          value={editForm.address}
+          onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+        />
+        <SelectField
+          label="Statut"
+          value={editForm.status}
+          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+        >
+          <option value="planifie">Planifié</option>
+          <option value="en_cours">En cours</option>
+          <option value="termine">Terminé</option>
+          <option value="annule">Annulé</option>
+        </SelectField>
+        <DatePickerField
+          label="Date de début"
+          value={editForm.startDate}
+          onChange={(value) => setEditForm({ ...editForm, startDate: value })}
+        />
+        <DatePickerField
+          label="Date de fin"
+          value={editForm.endDate}
+          onChange={(value) => setEditForm({ ...editForm, endDate: value })}
+        />
+      </EditModal>
     </div>
   );
 }
