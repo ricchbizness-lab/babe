@@ -1111,6 +1111,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   padding: var(--nova-space-2) var(--nova-space-3);
   border-bottom: 1px solid var(--nova-border);
   transition: background-color var(--nova-transition-color);
+  cursor: pointer;
 }
 .nova-task-row:last-child { border-bottom: none; }
 .nova-task-row:hover { background: var(--nova-bg); }

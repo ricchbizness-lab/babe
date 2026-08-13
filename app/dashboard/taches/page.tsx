@@ -173,7 +173,18 @@ export default function TachesPage() {
       ) : (
         <ul className="nova-task-list">
           {filtered.map((t) => (
-            <li key={t.id} className="nova-task-row">
+            <li
+              key={t.id}
+              className="nova-task-row"
+              onClick={(e) => {
+                // Le changement du checkbox déclenche déjà handleToggle via son
+                // propre onChange (et le clic sur le lien/bouton ne doit pas
+                // cocher la tâche) — on évite ainsi un double-toggle qui
+                // annulerait le clic.
+                if ((e.target as HTMLElement).closest("input, a, button")) return;
+                handleToggle(t);
+              }}
+            >
               <input
                 type="checkbox"
                 className="nova-checkbox"
@@ -183,11 +194,23 @@ export default function TachesPage() {
               />
               <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
               {t.project && (
-                <Link href={`/dashboard/chantiers/${t.project.id}`} className="nova-inline-link nova-task-project">
+                <Link
+                  href={`/dashboard/chantiers/${t.project.id}`}
+                  className="nova-inline-link nova-task-project"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {t.project.name}
                 </Link>
               )}
-              <button type="button" className="nova-icon-btn" onClick={() => setDeleteTarget(t)} aria-label="Supprimer la tâche">
+              <button
+                type="button"
+                className="nova-icon-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteTarget(t);
+                }}
+                aria-label="Supprimer la tâche"
+              >
                 <Trash2 size={15} strokeWidth={1.75} />
               </button>
             </li>
