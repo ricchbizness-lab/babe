@@ -213,7 +213,16 @@ button.primary:hover { background: var(--nova-teal-deep); }
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  scrollbar-width: thin; /* Firefox — scrollbar discrète, jamais l'épaisseur par défaut du navigateur */
+  scrollbar-color: var(--nova-border) transparent;
 }
+.nova-sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.nova-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.nova-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--nova-border);
+  border-radius: var(--nova-radius-badge);
+}
+.nova-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: var(--nova-ink-faint); }
 .nova-sidebar-nav {
   display: flex;
   flex-direction: column;
