@@ -100,6 +100,7 @@ model Devis {
   description String?
   amount     Float?
   status     String   @default("brouillon") // brouillon | envoye | accepte | refuse
+  paymentStatus String @default("en_attente") // en_attente | payee | en_retard — pertinent une fois le devis accepté (facture)
   content    String   // texte du devis généré
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

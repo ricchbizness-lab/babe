@@ -814,7 +814,13 @@ button.primary:hover { background: var(--nova-teal-deep); }
 
 /* --- Facturation (vue imprimable) --- */
 
-.nova-invoice-actions { margin-bottom: var(--nova-space-1); }
+.nova-invoice-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--nova-space-1);
+}
 
 .nova-invoice {
   background: var(--nova-surface);

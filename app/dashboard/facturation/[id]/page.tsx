@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Printer } from "lucide-react";
-import { BackLink, Button, Card } from "@/components/ui";
+import { Badge, BackLink, Button, Card, useToast } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 
 type DevisDetail = {
@@ -11,6 +11,7 @@ type DevisDetail = {
   description: string | null;
   amount: number | null;
   status: string;
+  paymentStatus: string;
   updatedAt: string;
   client: { id: string; name: string; email: string | null; phone: string | null; address: string | null } | null;
 };
@@ -21,11 +22,24 @@ type Business = {
   conditionsPaiement: string | null;
 };
 
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  en_attente: "En attente",
+  payee: "Payée",
+  en_retard: "En retard",
+};
+const PAYMENT_STATUS_TONE: Record<string, "amber" | "success" | "danger"> = {
+  en_attente: "amber",
+  payee: "success",
+  en_retard: "danger",
+};
+
 export default function FactureDetailPage({ params }: { params: { id: string } }) {
+  const toast = useToast();
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [numero, setNumero] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -57,6 +71,28 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
     });
   }, [params.id]);
 
+  async function handleMarkPaid() {
+    setMarkingPaid(true);
+    try {
+      const res = await fetch(`/api/devis/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: "payee" }),
+      });
+      if (!res.ok) {
+        toast.error("Erreur lors de la mise à jour du statut de paiement.");
+        return;
+      }
+      const data = await res.json();
+      setDevis((prev) => (prev ? { ...prev, paymentStatus: data.devis.paymentStatus } : prev));
+      toast.success("Facture marquée comme payée");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
+
   if (error) {
     return (
       <div className="nova-page">
@@ -87,6 +123,14 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
       </div>
 
       <div className="nova-invoice-actions nova-no-print">
+        <Badge tone={PAYMENT_STATUS_TONE[devis.paymentStatus] || "amber"}>
+          {PAYMENT_STATUS_LABEL[devis.paymentStatus] || devis.paymentStatus}
+        </Badge>
+        {devis.paymentStatus !== "payee" && (
+          <Button variant="success" onClick={handleMarkPaid} disabled={markingPaid}>
+            {markingPaid ? "Mise à jour..." : "Marquer comme payée"}
+          </Button>
+        )}
         <Button onClick={() => window.print()}>
           <Printer size={16} strokeWidth={1.75} />
           Imprimer / Télécharger PDF

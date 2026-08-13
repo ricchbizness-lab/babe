@@ -43,6 +43,7 @@ export const devisSchema = z.object({
 
 export const devisUpdateSchema = z.object({
   status: z.enum(["brouillon", "envoye", "accepte", "refuse"]).optional(),
+  paymentStatus: z.enum(["en_attente", "payee", "en_retard"]).optional(),
   label: z.string().min(1).max(200).optional(),
   amount: z.number().min(0).optional(),
   content: z.string().max(20000).optional(),
