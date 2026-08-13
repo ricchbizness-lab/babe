@@ -58,6 +58,16 @@ const STATUS_ACTIONS: { status: string; label: string; variant: "secondary" | "p
   { status: "annule", label: "Marquer comme annulé", variant: "danger" },
 ];
 
+function statusChangeMessage(status: string, tasksUpdated: number, devisUpdated: number): string {
+  if (status === "termine" && tasksUpdated > 0) {
+    return `Chantier terminé — ${tasksUpdated} tâche${tasksUpdated > 1 ? "s" : ""} marquée${tasksUpdated > 1 ? "s" : ""} comme terminée${tasksUpdated > 1 ? "s" : ""}`;
+  }
+  if (status === "annule" && (tasksUpdated > 0 || devisUpdated > 0)) {
+    return "Chantier annulé — tâches et devis mis à jour";
+  }
+  return `Chantier marqué comme ${(STATUS_LABEL[status] || status).toLowerCase()}`;
+}
+
 export default function ChantierDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const toast = useToast();
@@ -100,8 +110,12 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         return;
       }
       const data = await res.json();
-      setProject((prev) => (prev ? { ...prev, status: data.project.status } : prev));
-      toast.success(`Chantier marqué comme ${(STATUS_LABEL[status] || status).toLowerCase()}`);
+      // Le changement de statut peut entraîner une mise à jour en cascade des
+      // tâches (et des devis pour une annulation) — on recharge la fiche
+      // complète pour refléter ces changements plutôt que de deviner l'état.
+      const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
+      setProject(refreshed.project);
+      toast.success(statusChangeMessage(status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0));
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
@@ -146,9 +160,11 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         toast.error(data.error || "Impossible de modifier ce chantier.");
         return;
       }
+      const data = await res.json();
       const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
       setProject(refreshed.project);
-      toast.success("Chantier mis à jour");
+      const cascaded = (data.tasksUpdated ?? 0) > 0 || (data.devisUpdated ?? 0) > 0;
+      toast.success(cascaded ? statusChangeMessage(data.project.status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0) : "Chantier mis à jour");
       setEditing(false);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");

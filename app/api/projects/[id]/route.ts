@@ -39,15 +39,47 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
-    const project = await prisma.project.update({
-      where: { id: params.id, businessId },
-      data: {
-        ...parsed.data,
-        startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : undefined,
-        endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : undefined,
-      },
+    // Un chantier terminé ou annulé entraîne la mise à jour automatique des
+    // tâches (et, pour une annulation, des devis du client) rattachés — le
+    // tout dans une seule transaction pour garder projet/tâches/devis
+    // cohérents entre eux.
+    const result = await prisma.$transaction(async (tx) => {
+      const project = await tx.project.update({
+        where: { id: params.id, businessId },
+        data: {
+          ...parsed.data,
+          startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : undefined,
+          endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : undefined,
+        },
+      });
+
+      let tasksUpdated = 0;
+      let devisUpdated = 0;
+
+      if (parsed.data.status === "termine" || parsed.data.status === "annule") {
+        const tasksResult = await tx.task.updateMany({
+          where: { projectId: params.id, done: false },
+          data: { done: true },
+        });
+        tasksUpdated = tasksResult.count;
+      }
+
+      if (parsed.data.status === "annule" && project.clientId) {
+        const devisResult = await tx.devis.updateMany({
+          where: { clientId: project.clientId, status: { in: ["brouillon", "envoye"] } },
+          data: { status: "refuse" },
+        });
+        devisUpdated = devisResult.count;
+      }
+
+      return { project, tasksUpdated, devisUpdated };
     });
-    return NextResponse.json({ project });
+
+    return NextResponse.json({
+      project: result.project,
+      tasksUpdated: result.tasksUpdated,
+      devisUpdated: result.devisUpdated,
+    });
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);
     return NextResponse.json({ error: message }, { status });
