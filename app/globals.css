@@ -1054,6 +1054,13 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-team-card-role { font-size: 12.5px; color: var(--nova-ink-soft); }
 .nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
 .nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
+.nova-team-card-footer {
+  display: flex;
+  gap: var(--nova-space-1);
+  border-top: 1px dashed var(--nova-border);
+  padding-top: var(--nova-space-2);
+}
+.nova-team-card-footer .nova-btn { flex: 1; justify-content: center; }
 .nova-team-card-assignments-title {
   font-size: 11px;
   text-transform: uppercase;
