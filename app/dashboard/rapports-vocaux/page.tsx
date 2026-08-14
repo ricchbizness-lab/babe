@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mic, Trash2 } from "lucide-react";
 import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
@@ -14,6 +15,7 @@ type ReportRow = {
 };
 
 export default function RapportsVocauxPage() {
+  const router = useRouter();
   const toast = useToast();
   const [reports, setReports] = useState<ReportRow[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
@@ -34,6 +36,7 @@ export default function RapportsVocauxPage() {
       if (res.ok) {
         setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));
         toast.success("Rapport supprimé");
+        router.refresh();
       } else {
         toast.error("Erreur lors de la suppression du rapport.");
       }

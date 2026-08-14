@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
 import { Badge, BackLink, Button, Card, useToast } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
@@ -34,6 +35,7 @@ const PAYMENT_STATUS_TONE: Record<string, "amber" | "success" | "danger"> = {
 };
 
 export default function FactureDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const toast = useToast();
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
@@ -86,6 +88,7 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
       const data = await res.json();
       setDevis((prev) => (prev ? { ...prev, paymentStatus: data.devis.paymentStatus } : prev));
       toast.success("Facture marquée comme payée");
+      router.refresh();
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {

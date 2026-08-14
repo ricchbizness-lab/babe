@@ -53,6 +53,7 @@ export default function NewChantierPage() {
       }
       const data = await res.json();
       toast.success("Chantier créé");
+      router.refresh();
       router.push(`/dashboard/chantiers/${data.project.id}`);
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";

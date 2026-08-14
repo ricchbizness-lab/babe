@@ -69,6 +69,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         const data = await res.json();
         setDevis(data.devis);
         toast.success(`Devis marqué comme ${STATUS_LABEL[status]?.toLowerCase() || status}`);
+        router.refresh();
         return;
       }
       toast.error("Erreur lors de la mise à jour du devis.");
@@ -86,6 +87,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       setDeleting(false);
       if (res.ok) {
         toast.success("Devis supprimé");
+        router.refresh();
         router.push("/dashboard/devis");
         return;
       }

@@ -116,6 +116,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
       setProject(refreshed.project);
       toast.success(statusChangeMessage(status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0));
+      router.refresh();
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
@@ -165,6 +166,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       setProject(refreshed.project);
       const cascaded = (data.tasksUpdated ?? 0) > 0 || (data.devisUpdated ?? 0) > 0;
       toast.success(cascaded ? statusChangeMessage(data.project.status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0) : "Chantier mis à jour");
+      router.refresh();
       setEditing(false);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
@@ -203,6 +205,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       setDeleting(false);
       if (res.ok) {
         toast.success("Chantier supprimé");
+        router.refresh();
         router.push("/dashboard/chantiers");
         return;
       }

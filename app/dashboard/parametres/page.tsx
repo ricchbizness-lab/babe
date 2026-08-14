@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardTitle, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type BusinessForm = {
@@ -26,6 +27,7 @@ const EMPTY_FORM: BusinessForm = {
 };
 
 export default function ParametresPage() {
+  const router = useRouter();
   const toast = useToast();
   const [form, setForm] = useState<BusinessForm | null>(null);
   const [saving, setSaving] = useState(false);
@@ -77,6 +79,7 @@ export default function ParametresPage() {
         return;
       }
       toast.success("Paramètres enregistrés");
+      router.refresh();
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setError(message);

@@ -69,6 +69,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       setDeleting(false);
       if (res.ok) {
         toast.success("Client supprimé");
+        router.refresh();
         router.push("/dashboard/clients");
         return;
       }

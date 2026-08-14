@@ -145,6 +145,7 @@ export function VoiceReportForm({
         return;
       }
       toast.success("Rapport vocal soumis");
+      router.refresh();
       setResult({ summary: data.report.summary });
     } catch {
       const message = "Impossible de joindre le serveur — vérifiez votre connexion et réessayez.";

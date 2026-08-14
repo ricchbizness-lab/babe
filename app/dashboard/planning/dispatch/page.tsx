@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Sparkles, X } from "lucide-react";
 import {
   Badge,
@@ -40,6 +41,7 @@ const SUGGEST_ERROR_MESSAGE: Record<Exclude<SuggestError, null>, string> = {
 const todayKey = toDateKey(new Date());
 
 export default function DispatchPage() {
+  const router = useRouter();
   const toast = useToast();
   const [members, setMembers] = useState<Member[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -106,6 +108,7 @@ export default function DispatchPage() {
       setMembers((prev) => [...(prev ?? []), data.member]);
       setMemberForm({ name: "", role: "", email: "", phone: "" });
       toast.success("Collaborateur ajouté");
+      router.refresh();
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setMemberError(message);
@@ -125,6 +128,7 @@ export default function DispatchPage() {
         setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteMemberTarget.id));
         setAssignments((prev) => (prev ?? []).filter((a) => a.teamMember.id !== deleteMemberTarget.id));
         toast.success("Collaborateur supprimé");
+        router.refresh();
       } else {
         toast.error("Erreur lors de la suppression du collaborateur.");
       }
@@ -164,6 +168,7 @@ export default function DispatchPage() {
         (prev ?? []).map((a) => (a.teamMember.id === data.member.id ? { ...a, teamMember: { id: data.member.id, name: data.member.name } } : a))
       );
       toast.success("Collaborateur mis à jour");
+      router.refresh();
       setEditMemberTarget(null);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
@@ -204,6 +209,7 @@ export default function DispatchPage() {
       }
       setAssignForm({ teamMemberId: "", projectId: "", date: todayKey, note: "" });
       toast.success("Affectation créée");
+      router.refresh();
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setAssignError(message);
@@ -222,6 +228,7 @@ export default function DispatchPage() {
       if (res.ok) {
         setAssignments((prev) => (prev ?? []).filter((a) => a.id !== deleteAssignmentTarget.id));
         toast.success("Affectation supprimée");
+        router.refresh();
       } else {
         toast.error("Erreur lors de la suppression de l'affectation.");
       }
@@ -262,6 +269,7 @@ export default function DispatchPage() {
         setAssignments((prev) => (prev ?? []).filter((a) => a.id !== data.assignment.id));
       }
       toast.success("Affectation mise à jour");
+      router.refresh();
       setEditAssignmentTarget(null);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");

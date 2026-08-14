@@ -105,6 +105,7 @@ export default function NewDevisPage() {
       }
       const data = await res.json();
       toast.success("Devis créé");
+      router.refresh();
       router.push(`/dashboard/devis/${data.devis.id}`);
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";

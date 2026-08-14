@@ -29,6 +29,7 @@ export default function NewClientPage() {
       }
       const data = await res.json();
       toast.success("Client créé");
+      router.refresh();
       router.push(`/dashboard/clients/${data.client.id}`);
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";

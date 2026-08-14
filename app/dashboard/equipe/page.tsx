@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { Button, ConfirmModal, EditModal, EmptyState, Field, useToast } from "@/components/ui";
 
@@ -9,6 +10,7 @@ type Member = { id: string; name: string; role: string | null; email: string | n
 const EMPTY_FORM = { name: "", role: "", email: "", phone: "" };
 
 export default function EquipePage() {
+  const router = useRouter();
   const toast = useToast();
   const [members, setMembers] = useState<Member[] | null>(null);
 
@@ -54,6 +56,7 @@ export default function EquipePage() {
       const data = await res.json();
       setMembers((prev) => [...(prev ?? []), data.member]);
       toast.success("Collaborateur ajouté");
+      router.refresh();
       setAdding(false);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
@@ -88,6 +91,7 @@ export default function EquipePage() {
       const data = await res.json();
       setMembers((prev) => (prev ?? []).map((m) => (m.id === data.member.id ? data.member : m)));
       toast.success("Collaborateur mis à jour");
+      router.refresh();
       setEditTarget(null);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
@@ -105,6 +109,7 @@ export default function EquipePage() {
       if (res.ok) {
         setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteTarget.id));
         toast.success("Collaborateur supprimé");
+        router.refresh();
       } else {
         toast.error("Erreur lors de la suppression du collaborateur.");
       }

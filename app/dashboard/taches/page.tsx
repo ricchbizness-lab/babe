@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { ConfirmModal, EmptyState, TableSkeleton, useToast } from "@/components/ui";
 
@@ -21,6 +22,7 @@ const FILTERS: { key: "all" | "pending" | "done"; label: string }[] = [
 ];
 
 export default function TachesPage() {
+  const router = useRouter();
   const toast = useToast();
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -64,6 +66,7 @@ export default function TachesPage() {
       setNewText("");
       setNewProjectId("");
       toast.success("Tâche ajoutée");
+      router.refresh();
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setError(message);
@@ -87,6 +90,7 @@ export default function TachesPage() {
         return;
       }
       toast.success(task.done ? "Tâche marquée comme non faite" : "Tâche cochée comme faite");
+      router.refresh();
     } catch {
       setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
       toast.error("Impossible de joindre le serveur — réessayez.");
@@ -102,6 +106,7 @@ export default function TachesPage() {
       if (res.ok) {
         setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));
         toast.success("Tâche supprimée");
+        router.refresh();
       } else {
         toast.error("Erreur lors de la suppression de la tâche.");
       }
