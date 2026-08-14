@@ -104,6 +104,36 @@ export function BackLink({ href, label = "Retour" }: { href: string; label?: str
 }
 
 // ---------------------------------------------------------------------------
+// Breadcrumb — fil d'Ariane pour les pages de détail et de création
+// ---------------------------------------------------------------------------
+
+export type BreadcrumbItem = { label: string; href?: string };
+
+export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
+  return (
+    <nav className="nova-breadcrumb" aria-label="Fil d'Ariane">
+      {items.map((item, i) => {
+        const isLast = i === items.length - 1;
+        return (
+          <span key={i} className="nova-breadcrumb-item">
+            {item.href ? (
+              <Link href={item.href} className="nova-breadcrumb-link">
+                {item.label}
+              </Link>
+            ) : (
+              <span className="nova-breadcrumb-current" aria-current={isLast ? "page" : undefined}>
+                {item.label}
+              </span>
+            )}
+            {!isLast && <ChevronRight size={13} strokeWidth={1.75} className="nova-breadcrumb-sep" aria-hidden="true" />}
+          </span>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Carte — bordure teal en haut par défaut (identité NOVA v7)
 // ---------------------------------------------------------------------------
 

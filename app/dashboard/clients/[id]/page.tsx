@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, FileText, Trash2 } from "lucide-react";
-import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { BackLink, Badge, Breadcrumb, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
 type ClientDetail = {
   id: string;
@@ -130,7 +130,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/clients" label="Retour aux clients" />
+      <Breadcrumb items={[{ label: "Clients", href: "/dashboard/clients" }, { label: client.name }]} />
 
       <header className="nova-page-header-row">
         <div>

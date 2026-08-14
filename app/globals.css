@@ -566,6 +566,21 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-back-link:hover { color: var(--nova-teal-deep); }
 
+/* --- Breadcrumb --- */
+
+.nova-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nova-breadcrumb-item { display: inline-flex; align-items: center; gap: var(--nova-space-1); }
+.nova-breadcrumb-link { color: var(--nova-ink-soft); transition: color var(--nova-transition-color); }
+.nova-breadcrumb-link:hover { color: var(--nova-teal-deep); }
+.nova-breadcrumb-current { color: var(--nova-ink); }
+.nova-breadcrumb-sep { color: var(--nova-ink-faint); flex-shrink: 0; }
+
 /* --- Filtres (chips) --- */
 
 .nova-filter-row { display: flex; gap: var(--nova-space-1); flex-wrap: wrap; }

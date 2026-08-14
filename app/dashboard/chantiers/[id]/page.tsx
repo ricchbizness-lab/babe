@@ -7,6 +7,7 @@ import { Copy, Pencil, Share2, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
+  Breadcrumb,
   Button,
   Card,
   CardTitle,
@@ -254,7 +255,15 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/chantiers" label="Retour aux chantiers" />
+      <Breadcrumb
+        items={[
+          { label: "Chantiers", href: "/dashboard/chantiers" },
+          editing
+            ? { label: project.name, href: `/dashboard/chantiers/${project.id}` }
+            : { label: project.name },
+          ...(editing ? [{ label: "Modifier" }] : []),
+        ]}
+      />
 
       <header className="nova-page-header-row">
         <div>

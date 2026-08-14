@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { Badge, BackLink, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
+import { Badge, Breadcrumb, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 type GenError = "no-key" | "no-subscription" | "other" | null;
@@ -118,7 +118,7 @@ export default function NewDevisPage() {
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/devis" label="Retour aux devis" />
+      <Breadcrumb items={[{ label: "Devis", href: "/dashboard/devis" }, { label: "Nouveau devis" }]} />
 
       <header className="nova-page-header">
         <h1>Nouveau devis</h1>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { BackLink, Badge, Card, CardTitle, EmptyState, Timestamp, useToast } from "@/components/ui";
+import { Badge, Breadcrumb, Card, CardTitle, EmptyState, Timestamp, useToast } from "@/components/ui";
 
 type Report = {
   id: string;
@@ -87,7 +87,7 @@ export function RapportView() {
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/copilote" label="Retour au copilote" />
+      <Breadcrumb items={[{ label: "Copilote", href: "/dashboard/copilote" }, { label: "Rapport stratégique" }]} />
 
       <header className="nova-page-header">
         <h1>Rapport stratégique</h1>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
-import { Badge, BackLink, Button, Card, useToast } from "@/components/ui";
+import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 
 type DevisDetail = {
@@ -122,7 +122,7 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
   return (
     <div className="nova-page">
       <div className="nova-no-print">
-        <BackLink href="/dashboard/facturation" label="Retour à la facturation" />
+        <Breadcrumb items={[{ label: "Facturation", href: "/dashboard/facturation" }, { label: numero }]} />
       </div>
 
       <div className="nova-invoice-actions nova-no-print">

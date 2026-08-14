@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { BackLink, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
+import { Breadcrumb, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function NewClientPage() {
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/clients" label="Retour aux clients" />
+      <Breadcrumb items={[{ label: "Clients", href: "/dashboard/clients" }, { label: "Nouveau client" }]} />
 
       <header className="nova-page-header">
         <h1>Nouveau client</h1>

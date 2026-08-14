@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square } from "lucide-react";
-import { Badge, BackLink, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { Badge, Breadcrumb, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
 type Mode = "texte" | "audio";
@@ -159,7 +159,7 @@ export function VoiceReportForm({
   if (result) {
     return (
       <div className="nova-page">
-        <BackLink href="/dashboard/rapports-vocaux" label="Retour aux rapports vocaux" />
+        <Breadcrumb items={[{ label: "Rapports vocaux", href: "/dashboard/rapports-vocaux" }, { label: "Rapport enregistré" }]} />
         <header className="nova-page-header">
           <h1>Rapport enregistré</h1>
         </header>
@@ -178,7 +178,7 @@ export function VoiceReportForm({
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/rapports-vocaux" label="Retour aux rapports vocaux" />
+      <Breadcrumb items={[{ label: "Rapports vocaux", href: "/dashboard/rapports-vocaux" }, { label: "Nouveau rapport vocal" }]} />
 
       <header className="nova-page-header">
         <h1>Nouveau rapport vocal</h1>

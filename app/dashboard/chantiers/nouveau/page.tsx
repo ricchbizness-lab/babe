@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BackLink, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
+import { Breadcrumb, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 
@@ -66,7 +66,7 @@ export default function NewChantierPage() {
 
   return (
     <div className="nova-page">
-      <BackLink href="/dashboard/chantiers" label="Retour aux chantiers" />
+      <Breadcrumb items={[{ label: "Chantiers", href: "/dashboard/chantiers" }, { label: "Nouveau chantier" }]} />
 
       <header className="nova-page-header">
         <h1>Nouveau chantier</h1>
