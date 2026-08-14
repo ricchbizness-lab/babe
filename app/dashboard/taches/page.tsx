@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ConfirmModal, EmptyState, TableSkeleton, useToast } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
@@ -21,6 +21,14 @@ const FILTERS: { key: "all" | "pending" | "done"; label: string }[] = [
   { key: "done", label: "Terminées" },
 ];
 
+type SortKey = "status" | "project";
+type SortState = { key: SortKey; direction: "asc" | "desc" };
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "status", label: "Statut" },
+  { key: "project", label: "Chantier rattaché" },
+];
+
 export default function TachesPage() {
   const router = useRouter();
   const toast = useToast();
@@ -33,6 +41,7 @@ export default function TachesPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<TaskRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sort, setSort] = useState<SortState | null>(null);
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -123,6 +132,31 @@ export default function TachesPage() {
     return true;
   });
 
+  function toggleSort(key: SortKey) {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: "asc" };
+      if (prev.direction === "asc") return { key, direction: "desc" };
+      return null;
+    });
+  }
+
+  const sortedTasks = useMemo(() => {
+    if (!sort) return filtered;
+    const dir = sort.direction === "asc" ? 1 : -1;
+    if (sort.key === "status") {
+      return [...filtered].sort((a, b) => ((a.done ? 1 : 0) - (b.done ? 1 : 0)) * dir);
+    }
+    return [...filtered].sort((a, b) => {
+      const na = a.project?.name || "";
+      const nb = b.project?.name || "";
+      if (!na && !nb) return 0;
+      if (!na) return 1;
+      if (!nb) return -1;
+      return na.localeCompare(nb, "fr", { sensitivity: "base" }) * dir;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, sort]);
+
   return (
     <div className="nova-page">
       <header className="nova-page-header">
@@ -167,6 +201,32 @@ export default function TachesPage() {
         ))}
       </div>
 
+      {tasks !== null && filtered.length > 0 && (
+        <div className="nova-task-sort-row">
+          <span className="nova-task-sort-label">Trier par</span>
+          {SORT_OPTIONS.map((opt) => {
+            const active = sort?.key === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                className={`nova-table-sort-btn ${active ? "nova-table-sort-btn-active" : ""}`}
+                onClick={() => toggleSort(opt.key)}
+              >
+                {opt.label}
+                {active ? (
+                  sort?.direction === "asc" ? (
+                    <ChevronUp size={13} strokeWidth={2} />
+                  ) : (
+                    <ChevronDown size={13} strokeWidth={2} />
+                  )
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {tasks === null ? (
         <TableSkeleton columns={3} />
       ) : filtered.length === 0 ? (
@@ -177,7 +237,7 @@ export default function TachesPage() {
         />
       ) : (
         <ul className="nova-task-list">
-          {filtered.map((t) => (
+          {sortedTasks.map((t) => (
             <li
               key={t.id}
               className="nova-task-row"

@@ -22,6 +22,8 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Contact,
   FileBarChart,
   FileSignature,
@@ -686,7 +688,11 @@ export type TableColumn<T> = {
   label: string;
   align?: "left" | "right";
   render?: (row: T) => ReactNode;
+  sortable?: boolean;
+  sortValue?: (row: T) => string | number | null | undefined;
 };
+
+type SortState = { key: string; direction: "asc" | "desc" };
 
 export function Table<T extends { id: string | number }>({
   columns,
@@ -700,23 +706,73 @@ export function Table<T extends { id: string | number }>({
   getRowHref?: (row: T) => string;
 }) {
   const router = useRouter();
+  const [sort, setSort] = useState<SortState | null>(null);
+
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col) return rows;
+    const getValue = (row: T): string | number | null | undefined =>
+      col.sortValue ? col.sortValue(row) : ((row as Record<string, unknown>)[col.key] as string | number | null | undefined);
+    const dir = sort.direction === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), "fr", { sensitivity: "base" }) * dir;
+    });
+  }, [rows, sort, columns]);
+
   if (rows.length === 0) {
     return <div className="nova-table-empty">{emptyLabel}</div>;
   }
+
+  function toggleSort(col: TableColumn<T>) {
+    if (!col.sortable) return;
+    setSort((prev) => {
+      if (!prev || prev.key !== col.key) return { key: col.key, direction: "asc" };
+      if (prev.direction === "asc") return { key: col.key, direction: "desc" };
+      return null;
+    });
+  }
+
   return (
     <div className="nova-table-wrap">
       <table className="nova-table">
         <thead>
           <tr>
-            {columns.map((col) => (
-              <th key={col.key} style={{ textAlign: col.align || "left" }}>
-                {col.label}
-              </th>
-            ))}
+            {columns.map((col) => {
+              const active = sort?.key === col.key;
+              return (
+                <th key={col.key} style={{ textAlign: col.align || "left" }}>
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      className={`nova-table-sort-btn ${active ? "nova-table-sort-btn-active" : ""}`}
+                      onClick={() => toggleSort(col)}
+                    >
+                      {col.label}
+                      {active ? (
+                        sort?.direction === "asc" ? (
+                          <ChevronUp size={13} strokeWidth={2} />
+                        ) : (
+                          <ChevronDown size={13} strokeWidth={2} />
+                        )
+                      ) : null}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {sortedRows.map((row) => (
             <tr
               key={row.id}
               className={getRowHref ? "nova-table-row-clickable" : ""}

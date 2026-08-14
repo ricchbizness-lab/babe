@@ -26,6 +26,12 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
   termine: "success",
   annule: "danger",
 };
+const STATUS_ORDER: Record<string, number> = {
+  planifie: 0,
+  en_cours: 1,
+  termine: 2,
+  annule: 3,
+};
 const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "Tous" },
   { key: "planifie", label: "Planifié" },
@@ -61,8 +67,16 @@ export default function ChantiersPage() {
       key: "status",
       label: "Statut",
       render: (p) => <Badge tone={STATUS_TONE[p.status] || "neutral"}>{STATUS_LABEL[p.status] || p.status}</Badge>,
+      sortable: true,
+      sortValue: (p) => STATUS_ORDER[p.status] ?? 99,
     },
-    { key: "dates", label: "Dates", render: (p) => formatDateRange(p.startDate, p.endDate) },
+    {
+      key: "dates",
+      label: "Dates",
+      render: (p) => formatDateRange(p.startDate, p.endDate),
+      sortable: true,
+      sortValue: (p) => (p.startDate ? new Date(p.startDate).getTime() : null),
+    },
     { key: "createdAt", label: "Créé le", render: (p) => <Timestamp date={p.createdAt} /> },
   ];
 

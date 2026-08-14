@@ -25,6 +25,12 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
   accepte: "success",
   refuse: "danger",
 };
+const STATUS_ORDER: Record<string, number> = {
+  brouillon: 0,
+  envoye: 1,
+  accepte: 2,
+  refuse: 3,
+};
 
 export default function DevisPage() {
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
@@ -49,14 +55,24 @@ export default function DevisPage() {
       key: "status",
       label: "Statut",
       render: (d) => <Badge tone={STATUS_TONE[d.status] || "neutral"}>{STATUS_LABEL[d.status] || d.status}</Badge>,
+      sortable: true,
+      sortValue: (d) => STATUS_ORDER[d.status] ?? 99,
     },
     {
       key: "amount",
       label: "Montant",
       align: "right",
       render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+      sortable: true,
+      sortValue: (d) => d.amount,
     },
-    { key: "createdAt", label: "Créé le", render: (d) => <Timestamp date={d.createdAt} /> },
+    {
+      key: "createdAt",
+      label: "Créé le",
+      render: (d) => <Timestamp date={d.createdAt} />,
+      sortable: true,
+      sortValue: (d) => new Date(d.createdAt).getTime(),
+    },
   ];
 
   return (

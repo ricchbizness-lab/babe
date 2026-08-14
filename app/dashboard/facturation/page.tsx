@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 
 type DevisRow = {
@@ -9,11 +9,28 @@ type DevisRow = {
   label: string;
   amount: number | null;
   status: string;
+  paymentStatus: string;
   updatedAt: string;
   client: { id: string; name: string } | null;
 };
 
 type InvoiceRow = DevisRow & { numero: string };
+
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  en_attente: "En attente",
+  payee: "Payée",
+  en_retard: "En retard",
+};
+const PAYMENT_STATUS_TONE: Record<string, "amber" | "success" | "danger"> = {
+  en_attente: "amber",
+  payee: "success",
+  en_retard: "danger",
+};
+const PAYMENT_STATUS_ORDER: Record<string, number> = {
+  en_attente: 0,
+  en_retard: 1,
+  payee: 2,
+};
 
 export default function FacturationPage() {
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
@@ -37,8 +54,27 @@ export default function FacturationPage() {
       label: "Montant",
       align: "right",
       render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+      sortable: true,
+      sortValue: (d) => d.amount,
     },
-    { key: "updatedAt", label: "Acceptée le", render: (d) => <Timestamp date={d.updatedAt} /> },
+    {
+      key: "paymentStatus",
+      label: "Statut paiement",
+      render: (d) => (
+        <Badge tone={PAYMENT_STATUS_TONE[d.paymentStatus] || "amber"}>
+          {PAYMENT_STATUS_LABEL[d.paymentStatus] || d.paymentStatus}
+        </Badge>
+      ),
+      sortable: true,
+      sortValue: (d) => PAYMENT_STATUS_ORDER[d.paymentStatus] ?? 99,
+    },
+    {
+      key: "updatedAt",
+      label: "Acceptée le",
+      render: (d) => <Timestamp date={d.updatedAt} />,
+      sortable: true,
+      sortValue: (d) => new Date(d.updatedAt).getTime(),
+    },
   ];
 
   return (
@@ -51,7 +87,7 @@ export default function FacturationPage() {
       </header>
 
       {accepted === null ? (
-        <TableSkeleton columns={4} />
+        <TableSkeleton columns={5} />
       ) : accepted.length === 0 ? (
         <EmptyState
           icon="devis"

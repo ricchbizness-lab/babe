@@ -498,6 +498,23 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border-bottom: 1px solid var(--nova-border);
 }
 .nova-table tr:last-child td { border-bottom: none; }
+.nova-table-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color var(--nova-transition-color);
+}
+.nova-table-sort-btn:hover { color: var(--nova-teal); }
+.nova-table-sort-btn-active { color: var(--nova-teal); }
 .nova-table tbody tr {
   transition: background-color var(--nova-transition-color);
 }
@@ -580,6 +597,19 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-breadcrumb-link:hover { color: var(--nova-teal-deep); }
 .nova-breadcrumb-current { color: var(--nova-ink); }
 .nova-breadcrumb-sep { color: var(--nova-ink-faint); flex-shrink: 0; }
+
+/* --- Tri (listes sans Table) --- */
+
+.nova-task-sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+.nova-task-sort-label {
+  font-size: 12.5px;
+  color: var(--nova-ink-faint);
+}
 
 /* --- Filtres (chips) --- */
 

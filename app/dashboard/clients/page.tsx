@@ -34,10 +34,16 @@ export default function ClientsPage() {
   });
 
   const columns: TableColumn<ClientRow>[] = [
-    { key: "name", label: "Nom" },
+    { key: "name", label: "Nom", sortable: true },
     { key: "email", label: "Email", render: (c) => c.email || "—" },
     { key: "phone", label: "Téléphone", render: (c) => c.phone || "—" },
-    { key: "createdAt", label: "Créé le", render: (c) => <Timestamp date={c.createdAt} /> },
+    {
+      key: "createdAt",
+      label: "Créé le",
+      render: (c) => <Timestamp date={c.createdAt} />,
+      sortable: true,
+      sortValue: (c) => new Date(c.createdAt).getTime(),
+    },
   ];
 
   return (
