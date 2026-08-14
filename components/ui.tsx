@@ -702,15 +702,15 @@ export function QuickAction({ label, href, icon }: { label: string; href: string
 
 const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard", label: "Vue d'ensemble", icon: "dashboard" },
-  { href: "/dashboard/clients", label: "CRM", icon: "crm" },
-  { href: "/dashboard/chantiers", label: "Chantiers", icon: "chantiers" },
+  { href: "/dashboard/clients", label: "Clients", icon: "crm" },
   { href: "/dashboard/devis", label: "Devis", icon: "devis" },
+  { href: "/dashboard/chantiers", label: "Chantiers", icon: "chantiers" },
   { href: "/dashboard/facturation", label: "Facturation", icon: "facturation" },
   { href: "/dashboard/taches", label: "Tâches", icon: "taches" },
   { href: "/dashboard/equipe", label: "Équipe", icon: "equipe" },
-  { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
   { href: "/dashboard/planning", label: "Planning", icon: "planning" },
   { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", icon: "dispatch" },
+  { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
   { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", icon: "rapport" },
   { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
