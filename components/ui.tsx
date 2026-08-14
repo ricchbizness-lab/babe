@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
@@ -382,6 +382,69 @@ export function Toast({
         <X size={14} strokeWidth={2} />
       </button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NavigationProgress — barre fine en haut de page pendant la navigation.
+// L'App Router n'expose aucun événement public de "début de navigation" :
+// on la déclenche donc au clic sur un lien interne, et on la complète dès
+// que pathname/searchParams changent (preuve que la nouvelle route a fini
+// de se rendre).
+// ---------------------------------------------------------------------------
+
+export function NavigationProgress() {
+  const pathname = usePathname();
+  const searchParamsString = useSearchParams().toString();
+  const [progress, setProgress] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement)?.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || !href.startsWith("/") || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      const currentUrl = pathname + (searchParamsString ? `?${searchParamsString}` : "");
+      if (href === currentUrl) return;
+
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      setVisible(true);
+      setProgress(8);
+      intervalRef.current = setInterval(() => {
+        setProgress((p) => (p >= 90 ? p : p + Math.random() * 10));
+      }, 200);
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [pathname, searchParamsString]);
+
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setProgress((p) => (p > 0 ? 100 : 0));
+    hideTimeoutRef.current = setTimeout(() => {
+      setVisible(false);
+      setProgress(0);
+    }, 200);
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, searchParamsString]);
+
+  return (
+    <div
+      className={`nova-nav-progress ${visible ? "nova-nav-progress-active" : ""}`}
+      style={{ width: `${progress}%` }}
+      aria-hidden="true"
+    />
   );
 }
 

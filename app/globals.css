@@ -1194,6 +1194,20 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-modal-title { font-family: var(--nova-font-heading); font-size: 16px; font-weight: 700; margin: 0 0 var(--nova-space-2); }
 .nova-modal-edit { max-width: 480px; }
 
+/* --- NavigationProgress --- */
+
+.nova-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--nova-teal);
+  z-index: 1000;
+  opacity: 0;
+  transition: width 200ms ease, opacity 200ms ease;
+}
+.nova-nav-progress-active { opacity: 1; }
+
 /* --- Toasts --- */
 
 .nova-toast-container {
