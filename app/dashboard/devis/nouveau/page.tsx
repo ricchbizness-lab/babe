@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Badge, BackLink, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 
@@ -16,10 +16,11 @@ const GEN_ERROR_MESSAGE: Record<Exclude<GenError, null>, string> = {
 
 export default function NewDevisPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [step, setStep] = useState(1);
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [form, setForm] = useState({ label: "", clientId: "", amount: "", description: "" });
+  const [form, setForm] = useState({ label: "", clientId: searchParams.get("clientId") || "", amount: "", description: "" });
   const [stepError, setStepError] = useState("");
 
   const [content, setContent] = useState("");

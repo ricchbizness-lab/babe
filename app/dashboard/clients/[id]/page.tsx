@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Building2, FileText, Trash2 } from "lucide-react";
 import { BackLink, Badge, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 
 type ClientDetail = {
@@ -137,10 +138,20 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
             Client depuis le {new Date(client.createdAt).toLocaleDateString("fr-FR")}
           </p>
         </div>
-        <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-          <Trash2 size={16} strokeWidth={1.75} />
-          Supprimer le client
-        </Button>
+        <div className="nova-header-actions">
+          <Link href={`/dashboard/devis/nouveau?clientId=${client.id}`} className="nova-btn nova-btn-secondary">
+            <FileText size={16} strokeWidth={1.75} />
+            Nouveau devis
+          </Link>
+          <Link href={`/dashboard/chantiers/nouveau?clientId=${client.id}`} className="nova-btn nova-btn-secondary">
+            <Building2 size={16} strokeWidth={1.75} />
+            Nouveau chantier
+          </Link>
+          <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+            <Trash2 size={16} strokeWidth={1.75} />
+            Supprimer le client
+          </Button>
+        </div>
       </header>
 
       <Card>

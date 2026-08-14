@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BackLink, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
 
 type ClientOption = { id: string; name: string };
 
 export default function NewChantierPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [form, setForm] = useState({
     name: "",
-    clientId: "",
+    clientId: searchParams.get("clientId") || "",
     address: "",
     status: "planifie",
     startDate: "",
