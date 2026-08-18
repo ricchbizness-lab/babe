@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, CardTitle, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type BusinessForm = {
   name: string;
@@ -34,7 +35,7 @@ export default function ParametresPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/business")
+    fetchWithAuth("/api/business")
       .then((res) => res.json())
       .then((data) => {
         const b = data.business;
@@ -57,7 +58,7 @@ export default function ParametresPage() {
     setError("");
     setSaving(true);
     try {
-      const res = await fetch("/api/business", {
+      const res = await fetchWithAuth("/api/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

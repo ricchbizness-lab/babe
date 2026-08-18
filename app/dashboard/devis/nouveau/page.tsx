@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ClientOption = { id: string; name: string };
 type GenError = "no-key" | "no-subscription" | "other" | null;
@@ -32,7 +33,7 @@ export default function NewDevisPage() {
   const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    fetch("/api/clients")
+    fetchWithAuth("/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data.clients ?? []));
   }, []);
@@ -52,7 +53,7 @@ export default function NewDevisPage() {
     setGenError(null);
     const clientName = clients.find((c) => c.id === form.clientId)?.name;
     try {
-      const res = await fetch("/api/agent", {
+      const res = await fetchWithAuth("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,7 +87,7 @@ export default function NewDevisPage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/devis", {
+      const res = await fetchWithAuth("/api/devis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { Badge, Breadcrumb, Card, CardTitle, EmptyState, Timestamp, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Report = {
   id: string;
@@ -29,7 +30,7 @@ export function RapportView() {
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/strategic-reports")
+    fetchWithAuth("/api/strategic-reports")
       .then((res) => res.json())
       .then((data) => setReports(data.reports ?? []));
   }, []);
@@ -42,7 +43,7 @@ export function RapportView() {
     }
     setGenerating(true);
     try {
-      const res = await fetch("/api/strategic-reports", {
+      const res = await fetchWithAuth("/api/strategic-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ period }),
@@ -66,7 +67,7 @@ export function RapportView() {
   async function handleReview(id: string) {
     setReviewingId(id);
     try {
-      const res = await fetch(`/api/strategic-reports/${id}`, {
+      const res = await fetchWithAuth(`/api/strategic-reports/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "en_relecture" }),

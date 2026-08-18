@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { Button, ConfirmModal, EditModal, EmptyState, Field, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
 
@@ -26,7 +27,7 @@ export default function EquipePage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch("/api/team")
+    fetchWithAuth("/api/team")
       .then((res) => res.json())
       .then((data) => setMembers(data.members ?? []));
   }, []);
@@ -43,7 +44,7 @@ export default function EquipePage() {
     }
     setSavingAdd(true);
     try {
-      const res = await fetch("/api/team", {
+      const res = await fetchWithAuth("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(addForm),
@@ -78,7 +79,7 @@ export default function EquipePage() {
     }
     setSavingEdit(true);
     try {
-      const res = await fetch(`/api/team/${editTarget.id}`, {
+      const res = await fetchWithAuth(`/api/team/${editTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -104,7 +105,7 @@ export default function EquipePage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/team/${deleteTarget.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/team/${deleteTarget.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteTarget.id));

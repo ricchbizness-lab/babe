@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FileText, MessageCircle, Trash2 } from "lucide-react";
 import { BackLink, Badge, Breadcrumb, Card, CardTitle, Button, ConfirmModal, RelanceIndicator, Skeleton, Timestamp, useToast } from "@/components/ui";
 import { daysSinceSent } from "@/lib/relance";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type DevisDetail = {
   id: string;
@@ -50,7 +51,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [generatingRelance, setGeneratingRelance] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/devis/${params.id}`).then(async (res) => {
+    fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
         setError("Devis introuvable.");
         return;
@@ -64,7 +65,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     if (!devis) return;
     setUpdating(true);
     try {
-      const res = await fetch(`/api/devis/${devis.id}`, {
+      const res = await fetchWithAuth(`/api/devis/${devis.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -89,7 +90,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     setGeneratingRelance(true);
     setRelanceMessage(null);
     try {
-      const res = await fetch("/api/agent", {
+      const res = await fetchWithAuth("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,7 +122,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   async function confirmDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/devis/${params.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/devis/${params.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         toast.success("Devis supprimé");

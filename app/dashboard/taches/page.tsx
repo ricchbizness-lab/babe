@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ConfirmModal, DatePickerField, EmptyState, TableSkeleton, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectOption = { id: string; name: string };
 type TaskRow = {
@@ -52,10 +53,10 @@ export default function TachesPage() {
   const [sort, setSort] = useState<SortState | null>(null);
 
   useEffect(() => {
-    fetch("/api/tasks")
+    fetchWithAuth("/api/tasks")
       .then((res) => res.json())
       .then((data) => setTasks(data.tasks ?? []));
-    fetch("/api/projects")
+    fetchWithAuth("/api/projects")
       .then((res) => res.json())
       .then((data) => setProjects((data.projects ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))));
   }, []);
@@ -66,7 +67,7 @@ export default function TachesPage() {
     setError("");
     setAdding(true);
     try {
-      const res = await fetch("/api/tasks", {
+      const res = await fetchWithAuth("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -101,7 +102,7 @@ export default function TachesPage() {
   async function handleToggle(task: TaskRow) {
     setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetchWithAuth(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: !task.done }),
@@ -123,7 +124,7 @@ export default function TachesPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/tasks/${deleteTarget.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/tasks/${deleteTarget.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));

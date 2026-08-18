@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type DevisDetail = {
   id: string;
@@ -45,9 +46,9 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/devis/${params.id}`),
-      fetch("/api/devis"),
-      fetch("/api/business"),
+      fetchWithAuth(`/api/devis/${params.id}`),
+      fetchWithAuth("/api/devis"),
+      fetchWithAuth("/api/business"),
     ]).then(async ([devisRes, listRes, businessRes]) => {
       if (!devisRes.ok) {
         setError("Devis introuvable.");
@@ -76,7 +77,7 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
   async function handleMarkPaid() {
     setMarkingPaid(true);
     try {
-      const res = await fetch(`/api/devis/${params.id}`, {
+      const res = await fetchWithAuth(`/api/devis/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentStatus: "payee" }),

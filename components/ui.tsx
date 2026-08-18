@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
 import { relanceLevel } from "@/lib/relance";
+import { SESSION_EXPIRED_EVENT } from "@/lib/fetchClient";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -340,6 +341,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }),
     [push]
   );
+
+  useEffect(() => {
+    function handleSessionExpired() {
+      push("error", "Votre session a expirée, reconnectez-vous.");
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [push]);
 
   return (
     <ToastContext.Provider value={api}>

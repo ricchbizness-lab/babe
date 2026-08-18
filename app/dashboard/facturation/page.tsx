@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type DevisRow = {
   id: string;
@@ -36,7 +37,7 @@ export default function FacturationPage() {
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/devis")
+    fetchWithAuth("/api/devis")
       .then((res) => res.json())
       .then((data) => setDevis(data.devis ?? []));
   }, []);

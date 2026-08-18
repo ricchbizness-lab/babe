@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ClientRow = {
   id: string;
@@ -18,7 +19,7 @@ export default function ClientsPage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    fetch("/api/clients")
+    fetchWithAuth("/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data.clients ?? []));
   }, []);

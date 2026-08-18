@@ -23,6 +23,7 @@ import {
   type TableColumn,
 } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ChantierDetail = {
   id: string;
@@ -85,7 +86,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/projects/${params.id}`).then(async (res) => {
+    fetchWithAuth(`/api/projects/${params.id}`).then(async (res) => {
       if (!res.ok) {
         setError("Chantier introuvable.");
         return;
@@ -93,7 +94,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       setProject(data.project);
     });
-    fetch("/api/clients")
+    fetchWithAuth("/api/clients")
       .then((res) => res.json())
       .then((data) => setClients((data.clients ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }))));
   }, [params.id]);
@@ -101,7 +102,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   async function handleStatusChange(status: string) {
     setUpdatingStatus(true);
     try {
-      const res = await fetch(`/api/projects/${params.id}`, {
+      const res = await fetchWithAuth(`/api/projects/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -114,7 +115,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       // Le changement de statut peut entraîner une mise à jour en cascade des
       // tâches (et des devis pour une annulation) — on recharge la fiche
       // complète pour refléter ces changements plutôt que de deviner l'état.
-      const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
+      const refreshed = await fetchWithAuth(`/api/projects/${params.id}`).then((r) => r.json());
       setProject(refreshed.project);
       toast.success(statusChangeMessage(status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0));
       router.refresh();
@@ -145,7 +146,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     }
     setSavingEdit(true);
     try {
-      const res = await fetch(`/api/projects/${params.id}`, {
+      const res = await fetchWithAuth(`/api/projects/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -163,7 +164,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         return;
       }
       const data = await res.json();
-      const refreshed = await fetch(`/api/projects/${params.id}`).then((r) => r.json());
+      const refreshed = await fetchWithAuth(`/api/projects/${params.id}`).then((r) => r.json());
       setProject(refreshed.project);
       const cascaded = (data.tasksUpdated ?? 0) > 0 || (data.devisUpdated ?? 0) > 0;
       toast.success(cascaded ? statusChangeMessage(data.project.status, data.tasksUpdated ?? 0, data.devisUpdated ?? 0) : "Chantier mis à jour");
@@ -179,7 +180,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   async function handleShare() {
     setSharing(true);
     try {
-      const res = await fetch(`/api/projects/${params.id}/portal-token`, { method: "POST" });
+      const res = await fetchWithAuth(`/api/projects/${params.id}/portal-token`, { method: "POST" });
       setSharing(false);
       if (!res.ok) {
         toast.error("Impossible de générer le lien du portail.");
@@ -202,7 +203,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   async function confirmDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/projects/${params.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         toast.success("Chantier supprimé");

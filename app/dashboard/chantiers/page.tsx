@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectRow = {
   id: string;
@@ -53,7 +54,7 @@ export default function ChantiersPage() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetchWithAuth("/api/projects")
       .then((res) => res.json())
       .then((data) => setProjects(data.projects ?? []));
   }, []);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, EmptyState, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type DevisRow = {
   id: string;
@@ -38,7 +39,7 @@ export default function DevisPage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    fetch("/api/devis")
+    fetchWithAuth("/api/devis")
       .then((res) => res.json())
       .then((data) => setDevis(data.devis ?? []));
   }, []);

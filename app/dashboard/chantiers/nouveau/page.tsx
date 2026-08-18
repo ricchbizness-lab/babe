@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumb, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ClientOption = { id: string; name: string };
 
@@ -23,7 +24,7 @@ export default function NewChantierPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/clients")
+    fetchWithAuth("/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data.clients ?? []));
   }, []);
@@ -33,7 +34,7 @@ export default function NewChantierPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/projects", {
+      const res = await fetchWithAuth("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

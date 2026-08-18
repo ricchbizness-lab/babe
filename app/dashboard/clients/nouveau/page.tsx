@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Breadcrumb, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function NewClientPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/clients", {
+      const res = await fetchWithAuth("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

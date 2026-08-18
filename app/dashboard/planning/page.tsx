@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge, EmptyState, Skeleton } from "@/components/ui";
 import { addDays, formatShortDate, isSameDay, startOfWeek, weekDays } from "@/lib/dates";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectRow = { id: string; name: string; status: string; startDate: string | null; endDate: string | null };
 type AssignmentRow = {
@@ -33,10 +34,10 @@ export default function PlanningPage() {
   const [assignments, setAssignments] = useState<AssignmentRow[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetchWithAuth("/api/projects")
       .then((res) => res.json())
       .then((data) => setProjects(data.projects ?? []));
-    fetch("/api/assignments")
+    fetchWithAuth("/api/assignments")
       .then((res) => res.json())
       .then((data) => setAssignments(data.assignments ?? []));
   }, []);

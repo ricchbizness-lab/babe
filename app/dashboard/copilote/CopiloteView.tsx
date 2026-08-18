@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FileBarChart, Send } from "lucide-react";
 import { Badge, Skeleton, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Registre = {
   devisTotal: number;
@@ -33,10 +34,10 @@ export function CopiloteView() {
   const historyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/registre")
+    fetchWithAuth("/api/registre")
       .then((res) => res.json())
       .then((data) => setRegistre(data.registre));
-    fetch("/api/devis")
+    fetchWithAuth("/api/devis")
       .then((res) => res.json())
       .then((data) => setDevis(data.devis ?? []));
   }, []);
@@ -52,7 +53,7 @@ export function CopiloteView() {
     setInput("");
     setSending(true);
     try {
-      const res = await fetch("/api/copilot", {
+      const res = await fetchWithAuth("/api/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: trimmed }),

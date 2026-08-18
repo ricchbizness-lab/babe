@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic, Trash2 } from "lucide-react";
 import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ReportRow = {
   id: string;
@@ -22,7 +23,7 @@ export default function RapportsVocauxPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch("/api/voice-reports")
+    fetchWithAuth("/api/voice-reports")
       .then((res) => res.json())
       .then((data) => setReports(data.reports ?? []));
   }, []);
@@ -31,7 +32,7 @@ export default function RapportsVocauxPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/voice-reports/${deleteTarget.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/voice-reports/${deleteTarget.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));

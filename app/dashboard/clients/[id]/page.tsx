@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, FileText, Trash2 } from "lucide-react";
 import { BackLink, Badge, Breadcrumb, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ClientDetail = {
   id: string;
@@ -59,7 +60,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/clients/${params.id}`).then(async (res) => {
+    fetchWithAuth(`/api/clients/${params.id}`).then(async (res) => {
       if (!res.ok) {
         setError("Client introuvable.");
         return;
@@ -72,7 +73,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   async function confirmDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/clients/${params.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/clients/${params.id}`, { method: "DELETE" });
       setDeleting(false);
       if (res.ok) {
         toast.success("Client supprimé");

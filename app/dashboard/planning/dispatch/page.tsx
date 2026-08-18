@@ -19,6 +19,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
 type ProjectOption = { id: string; name: string };
@@ -72,13 +73,13 @@ export default function DispatchPage() {
   const [suggestion, setSuggestion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/team")
+    fetchWithAuth("/api/team")
       .then((res) => res.json())
       .then((data) => setMembers(data.members ?? []));
-    fetch("/api/projects")
+    fetchWithAuth("/api/projects")
       .then((res) => res.json())
       .then((data) => setProjects((data.projects ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))));
-    fetch(`/api/assignments?date=${todayKey}`)
+    fetchWithAuth(`/api/assignments?date=${todayKey}`)
       .then((res) => res.json())
       .then((data) => setAssignments(data.assignments ?? []));
   }, []);
@@ -92,7 +93,7 @@ export default function DispatchPage() {
     }
     setMemberSubmitting(true);
     try {
-      const res = await fetch("/api/team", {
+      const res = await fetchWithAuth("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(memberForm),
@@ -122,7 +123,7 @@ export default function DispatchPage() {
     if (!deleteMemberTarget) return;
     setDeletingMember(true);
     try {
-      const res = await fetch(`/api/team/${deleteMemberTarget.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/team/${deleteMemberTarget.id}`, { method: "DELETE" });
       setDeletingMember(false);
       if (res.ok) {
         setMembers((prev) => (prev ?? []).filter((m) => m.id !== deleteMemberTarget.id));
@@ -152,7 +153,7 @@ export default function DispatchPage() {
     }
     setEditingMember(true);
     try {
-      const res = await fetch(`/api/team/${editMemberTarget.id}`, {
+      const res = await fetchWithAuth(`/api/team/${editMemberTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editMemberForm),
@@ -186,7 +187,7 @@ export default function DispatchPage() {
     }
     setAssignSubmitting(true);
     try {
-      const res = await fetch("/api/assignments", {
+      const res = await fetchWithAuth("/api/assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -223,7 +224,7 @@ export default function DispatchPage() {
     if (!deleteAssignmentTarget) return;
     setDeletingAssignment(true);
     try {
-      const res = await fetch(`/api/assignments/${deleteAssignmentTarget.id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/assignments/${deleteAssignmentTarget.id}`, { method: "DELETE" });
       setDeletingAssignment(false);
       if (res.ok) {
         setAssignments((prev) => (prev ?? []).filter((a) => a.id !== deleteAssignmentTarget.id));
@@ -248,7 +249,7 @@ export default function DispatchPage() {
     if (!editAssignmentTarget) return;
     setEditingAssignment(true);
     try {
-      const res = await fetch(`/api/assignments/${editAssignmentTarget.id}`, {
+      const res = await fetchWithAuth(`/api/assignments/${editAssignmentTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -285,7 +286,7 @@ export default function DispatchPage() {
     setSuggesting(true);
     setSuggestion(null);
     try {
-      const res = await fetch("/api/agent", {
+      const res = await fetchWithAuth("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

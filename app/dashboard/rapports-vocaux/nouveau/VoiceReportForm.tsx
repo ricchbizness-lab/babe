@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectOption = { id: string; name: string };
 type Mode = "texte" | "audio";
@@ -52,7 +53,7 @@ export function VoiceReportForm({
   const [result, setResult] = useState<ReportResult | null>(null);
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetchWithAuth("/api/projects")
       .then((res) => res.json())
       .then((data) => setProjects((data.projects ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))));
   }, []);
@@ -124,7 +125,7 @@ export function VoiceReportForm({
     }
 
     try {
-      const res = await fetch("/api/voice-reports", {
+      const res = await fetchWithAuth("/api/voice-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
