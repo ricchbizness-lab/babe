@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, EmptyState, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 
 type DevisRow = {
   id: string;
@@ -10,6 +10,7 @@ type DevisRow = {
   status: string;
   amount: number | null;
   createdAt: string;
+  updatedAt: string;
   client: { id: string; name: string } | null;
 };
 
@@ -73,6 +74,11 @@ export default function DevisPage() {
       sortable: true,
       sortValue: (d) => new Date(d.createdAt).getTime(),
     },
+    {
+      key: "relance",
+      label: "Relance",
+      render: (d) => <RelanceIndicator status={d.status} updatedAt={d.updatedAt} />,
+    },
   ];
 
   return (
@@ -92,7 +98,7 @@ export default function DevisPage() {
       <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
 
       {devis === null ? (
-        <TableSkeleton columns={5} />
+        <TableSkeleton columns={6} />
       ) : devis.length === 0 ? (
         <EmptyState
           icon="devis"

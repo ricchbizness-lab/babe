@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Trash2 } from "lucide-react";
-import { BackLink, Badge, Breadcrumb, Card, CardTitle, Button, ConfirmModal, Timestamp, useToast } from "@/components/ui";
+import { FileText, MessageCircle, Trash2 } from "lucide-react";
+import { BackLink, Badge, Breadcrumb, Card, CardTitle, Button, ConfirmModal, RelanceIndicator, Skeleton, Timestamp, useToast } from "@/components/ui";
+import { daysSinceSent } from "@/lib/relance";
 
 type DevisDetail = {
   id: string;
@@ -14,6 +15,7 @@ type DevisDetail = {
   status: string;
   content: string;
   createdAt: string;
+  updatedAt: string;
   client: { id: string; name: string } | null;
 };
 
@@ -44,6 +46,8 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [updating, setUpdating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [relanceMessage, setRelanceMessage] = useState<string | null>(null);
+  const [generatingRelance, setGeneratingRelance] = useState(false);
 
   useEffect(() => {
     fetch(`/api/devis/${params.id}`).then(async (res) => {
@@ -77,6 +81,40 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setUpdating(false);
+    }
+  }
+
+  async function handleRelance() {
+    if (!devis) return;
+    setGeneratingRelance(true);
+    setRelanceMessage(null);
+    try {
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          module: "reponse_client",
+          input: {
+            context: "relance devis",
+            clientName: devis.client?.name || "ce client",
+            devisLabel: devis.label,
+            montant: devis.amount,
+            joursEcoules: daysSinceSent(devis.updatedAt),
+          },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Erreur lors de la génération du message de relance.");
+        return;
+      }
+      const data = await res.json();
+      setRelanceMessage(data.result || "");
+      toast.success("Message de relance généré");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setGeneratingRelance(false);
     }
   }
 
@@ -138,7 +176,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             {devis.amount != null && <> · {devis.amount.toLocaleString("fr-FR")} €</>}
           </p>
         </div>
-        <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
+        <div className="nova-page-header-badges">
+          <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
+          <RelanceIndicator status={devis.status} updatedAt={devis.updatedAt} />
+        </div>
       </header>
 
       <div className="nova-status-actions">
@@ -153,11 +194,33 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             Voir la facture
           </Link>
         )}
+        {devis.status === "envoye" && (
+          <Button variant="secondary" disabled={generatingRelance} onClick={handleRelance}>
+            <MessageCircle size={16} strokeWidth={1.75} />
+            {generatingRelance ? "Génération..." : "Relancer le client"}
+          </Button>
+        )}
         <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
           <Trash2 size={16} strokeWidth={1.75} />
           Supprimer
         </Button>
       </div>
+
+      {(generatingRelance || relanceMessage) && (
+        <Card accent={false} className="nova-ai-zone">
+          <div className="nova-ai-zone-header">
+            <Badge tone="teal">Message de relance</Badge>
+          </div>
+          {generatingRelance ? (
+            <div className="nova-ai-loading">
+              <p className="nova-ai-loading-label">Nova rédige un message de relance...</p>
+              <Skeleton style={{ height: 80 }} />
+            </div>
+          ) : (
+            <p className="nova-ai-content">{relanceMessage}</p>
+          )}
+        </Card>
+      )}
 
       {devis.description && (
         <Card>

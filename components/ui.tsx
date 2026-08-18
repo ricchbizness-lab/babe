@@ -20,6 +20,7 @@ import {
   CalendarDays,
   CheckCircle2,
   CheckSquare,
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -46,6 +47,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
+import { relanceLevel } from "@/lib/relance";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -668,6 +670,17 @@ type BadgeTone = "neutral" | "teal" | "amber" | "success" | "danger";
 
 export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; children: ReactNode }) {
   return <span className={`nova-badge nova-badge-${tone}`}>{children}</span>;
+}
+
+export function RelanceIndicator({ status, updatedAt }: { status: string; updatedAt: string }) {
+  const { days, level } = relanceLevel(status, updatedAt);
+  if (level === "none") return null;
+  return (
+    <span className={level === "danger" ? "nova-relance nova-relance-danger" : "nova-relance nova-relance-orange"}>
+      {level === "danger" && <AlertTriangle size={13} strokeWidth={2} />}
+      Envoyé il y a {days} jours
+    </span>
+  );
 }
 
 export function Timestamp({ date }: { date: Date | string }) {
