@@ -117,6 +117,7 @@ model Task {
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   text       String
   done       Boolean  @default(false)
+  dueDate    DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

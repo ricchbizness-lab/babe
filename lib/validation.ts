@@ -52,11 +52,13 @@ export const devisUpdateSchema = z.object({
 export const taskSchema = z.object({
   text: z.string().min(1).max(500),
   projectId: z.string().optional(),
+  dueDate: z.string().datetime().optional(),
 });
 
 export const taskUpdateSchema = z.object({
   done: z.boolean().optional(),
   text: z.string().min(1).max(500).optional(),
+  dueDate: z.string().datetime().optional(),
 });
 
 export const agentSchema = z.object({

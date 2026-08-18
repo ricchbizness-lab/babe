@@ -4,21 +4,28 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { ConfirmModal, EmptyState, TableSkeleton, useToast } from "@/components/ui";
+import { ConfirmModal, DatePickerField, EmptyState, TableSkeleton, useToast } from "@/components/ui";
 
 type ProjectOption = { id: string; name: string };
 type TaskRow = {
   id: string;
   text: string;
   done: boolean;
+  dueDate: string | null;
   createdAt: string;
   project: { id: string; name: string } | null;
 };
 
-const FILTERS: { key: "all" | "pending" | "done"; label: string }[] = [
+function isOverdue(task: TaskRow) {
+  if (!task.dueDate || task.done) return false;
+  return new Date(task.dueDate) < new Date(new Date().toDateString());
+}
+
+const FILTERS: { key: "all" | "pending" | "done" | "late"; label: string }[] = [
   { key: "all", label: "Toutes" },
   { key: "pending", label: "En attente" },
   { key: "done", label: "Terminées" },
+  { key: "late", label: "En retard" },
 ];
 
 type SortKey = "status" | "project";
@@ -34,9 +41,10 @@ export default function TachesPage() {
   const toast = useToast();
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [filter, setFilter] = useState<"all" | "pending" | "done">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "done" | "late">("all");
   const [newText, setNewText] = useState("");
   const [newProjectId, setNewProjectId] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<TaskRow | null>(null);
@@ -61,7 +69,11 @@ export default function TachesPage() {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: newText, projectId: newProjectId || undefined }),
+        body: JSON.stringify({
+          text: newText,
+          projectId: newProjectId || undefined,
+          dueDate: newDueDate ? new Date(newDueDate).toISOString() : undefined,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -74,6 +86,7 @@ export default function TachesPage() {
       setTasks((prev) => [data.task, ...(prev ?? [])]);
       setNewText("");
       setNewProjectId("");
+      setNewDueDate("");
       toast.success("Tâche ajoutée");
       router.refresh();
     } catch {
@@ -129,6 +142,7 @@ export default function TachesPage() {
   const filtered = (tasks ?? []).filter((t) => {
     if (filter === "pending") return !t.done;
     if (filter === "done") return t.done;
+    if (filter === "late") return isOverdue(t);
     return true;
   });
 
@@ -182,6 +196,7 @@ export default function TachesPage() {
             </option>
           ))}
         </select>
+        <DatePickerField label="Échéance (optionnel)" value={newDueDate} onChange={setNewDueDate} />
         <button type="submit" className="nova-btn nova-btn-primary" disabled={adding || !newText.trim()}>
           Ajouter
         </button>
@@ -258,6 +273,11 @@ export default function TachesPage() {
                 aria-label={t.done ? "Marquer comme non faite" : "Marquer comme faite"}
               />
               <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
+              {t.dueDate && (
+                <span className={isOverdue(t) ? "nova-task-due-date nova-task-due-date-late" : "nova-task-due-date"}>
+                  {new Date(t.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                </span>
+              )}
               {t.project && (
                 <Link
                   href={`/dashboard/chantiers/${t.project.id}`}

@@ -1220,6 +1220,15 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-task-text { flex: 1; font-size: 14px; color: var(--nova-ink); }
 .nova-task-text-done { flex: 1; font-size: 14px; color: var(--nova-ink-faint); text-decoration: line-through; }
 .nova-task-project { font-size: 12.5px; flex-shrink: 0; }
+.nova-task-due-date {
+  font-family: var(--nova-font-mono);
+  font-size: 12px;
+  color: var(--nova-ink-faint);
+  flex-shrink: 0;
+}
+.nova-task-due-date-late { color: var(--nova-danger); font-weight: 600; }
+
+.nova-quick-add .nova-field { flex: 1; min-width: 170px; margin: 0; }
 
 /* --- ConfirmModal --- */
 
