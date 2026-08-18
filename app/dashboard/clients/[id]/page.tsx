@@ -14,7 +14,14 @@ type ClientDetail = {
   address: string | null;
   notes: string | null;
   createdAt: string;
-  projects: { id: string; name: string; status: string; createdAt: string }[];
+  projects: {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    tasks: { id: string; text: string; createdAt: string }[];
+    _count: { voiceReports: number };
+  }[];
   devis: { id: string; label: string; status: string; amount: number | null; createdAt: string }[];
 };
 
@@ -112,6 +119,27 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
     { key: "createdAt", label: "Créé le", render: (p) => <Timestamp date={p.createdAt} /> },
   ];
 
+  const caTotal = client.devis
+    .filter((d) => d.status === "accepte")
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+
+  const chantiersEnCours = client.projects.filter((p) => p.status === "en_cours").length;
+  const chantiersTermines = client.projects.filter((p) => p.status === "termine").length;
+
+  const dernieresDates = [
+    ...client.devis.map((d) => d.createdAt),
+    ...client.projects.map((p) => p.createdAt),
+  ];
+  const derniereInteraction =
+    dernieresDates.length > 0
+      ? dernieresDates.reduce((latest, d) => (new Date(d) > new Date(latest) ? d : latest))
+      : null;
+
+  const tachesEnAttente = client.projects.flatMap((p) =>
+    p.tasks.map((t) => ({ ...t, projectId: p.id, projectName: p.name }))
+  );
+  const nombreRapportsVocaux = client.projects.reduce((sum, p) => sum + p._count.voiceReports, 0);
+
   const devisColumns: TableColumn<ClientDetail["devis"][number]>[] = [
     { key: "label", label: "Devis" },
     {
@@ -187,6 +215,50 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       <section>
         <h2 className="nova-section-title">Devis ({client.devis.length})</h2>
         <Table columns={devisColumns} rows={client.devis} emptyLabel="Aucun devis rattaché à ce client." />
+      </section>
+
+      <section>
+        <h2 className="nova-section-title">Résumé d'activité</h2>
+        <Card>
+          <div className="nova-summary-grid">
+            <div>
+              <div className="nova-analyse-value">{caTotal.toLocaleString("fr-FR")} €</div>
+              <div className="nova-analyse-label">CA total (devis acceptés)</div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">{client.projects.length}</div>
+              <div className="nova-analyse-label">
+                Chantiers ({chantiersEnCours} en cours, {chantiersTermines} terminés)
+              </div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">
+                {derniereInteraction ? new Date(derniereInteraction).toLocaleDateString("fr-FR") : "—"}
+              </div>
+              <div className="nova-analyse-label">Dernière interaction</div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">{nombreRapportsVocaux}</div>
+              <div className="nova-analyse-label">Rapports vocaux</div>
+            </div>
+          </div>
+
+          <p className="nova-summary-subtitle">Tâches en attente ({tachesEnAttente.length})</p>
+          {tachesEnAttente.length === 0 ? (
+            <p className="nova-page-subtitle">Aucune tâche en attente sur les chantiers de ce client.</p>
+          ) : (
+            <ul className="nova-summary-task-list">
+              {tachesEnAttente.slice(0, 5).map((t) => (
+                <li key={t.id}>
+                  <span>{t.text}</span>
+                  <Link href={`/dashboard/chantiers/${t.projectId}`} className="nova-inline-link">
+                    {t.projectName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </section>
 
       <ConfirmModal

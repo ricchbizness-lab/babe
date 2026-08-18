@@ -11,7 +11,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const client = await prisma.client.findUnique({
       where: { id: params.id },
       include: {
-        projects: { orderBy: { createdAt: "desc" } },
+        projects: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            tasks: { where: { done: false }, orderBy: { createdAt: "asc" } },
+            _count: { select: { voiceReports: true } },
+          },
+        },
         devis: { orderBy: { createdAt: "desc" } },
       },
     });
