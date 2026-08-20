@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
     const devis = await prisma.devis.findUnique({
       where: { id: params.id },
-      include: { client: true },
+      include: { client: true, lines: { orderBy: { createdAt: "asc" } } },
     });
     await assertOwnedByBusiness(devis, businessId);
 
@@ -38,7 +38,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const devis = await prisma.devis.update({
       where: { id: params.id, businessId },
       data: parsed.data,
-      include: { client: true },
+      include: { client: true, lines: { orderBy: { createdAt: "asc" } } },
     });
 
     // Envoi de l'email au client jamais bloquant : un échec Resend ne doit

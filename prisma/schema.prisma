@@ -102,12 +102,31 @@ model Devis {
   amount     Float?
   status     String   @default("brouillon") // brouillon | envoye | accepte | refuse
   paymentStatus String @default("en_attente") // en_attente | payee | en_retard — pertinent une fois le devis accepté (facture)
-  content    String   // texte du devis généré
+  content    String   // texte du devis généré (génération IA en texte libre — coexiste avec les lignes détaillées)
+  remise     Float?   // pourcentage de remise appliqué au total
+  notesDevis String?  // conditions, délais, remarques affichés sur le devis
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  lines DevisLine[]
+
   @@index([businessId])
   @@index([clientId])
+}
+
+model DevisLine {
+  id            String   @id @default(cuid())
+  devisId       String
+  devis         Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  type          String   // prestation | materiel | deplacement | maindoeuvre | autre
+  description   String
+  quantite      Float    @default(1)
+  unite         String?  // h, m², m³, forfait, unité...
+  prixUnitaire  Float
+  tva           Float    @default(20)
+  createdAt     DateTime @default(now())
+
+  @@index([devisId])
 }
 
 model Task {

@@ -1342,6 +1342,40 @@ button.primary:hover { background: var(--nova-teal-deep); }
   transition: color var(--nova-transition-color);
 }
 .nova-icon-btn:hover { color: var(--nova-danger); }
+.nova-icon-btn-edit:hover { color: var(--nova-teal); }
+.nova-table-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--nova-space-1); }
+
+/* --- Totaux devis (lignes détaillées) --- */
+
+.nova-devis-totals {
+  margin-top: var(--nova-space-2);
+  margin-left: auto;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+}
+.nova-devis-totals-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: var(--nova-ink-soft);
+}
+.nova-devis-totals-ttc {
+  border-top: 1px solid var(--nova-border);
+  margin-top: var(--nova-space-1);
+  padding-top: var(--nova-space-1);
+  font-family: var(--nova-font-heading);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--nova-ink);
+}
 
 /* --- Tâches --- */
 

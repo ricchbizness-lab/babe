@@ -34,12 +34,26 @@ export const projectSchema = z.object({
   endDate: z.string().datetime().optional(),
 });
 
+export const devisLineSchema = z.object({
+  type: z.enum(["prestation", "materiel", "deplacement", "maindoeuvre", "autre"]),
+  description: z.string().min(1).max(500),
+  quantite: z.number().min(0).default(1),
+  unite: z.string().max(20).optional(),
+  prixUnitaire: z.number().min(0),
+  tva: z.number().min(0).max(100).default(20),
+});
+
+export const devisLineUpdateSchema = devisLineSchema.partial();
+
 export const devisSchema = z.object({
   label: z.string().min(1).max(200),
   clientId: z.string().optional(),
   description: z.string().max(2000).optional(),
   amount: z.number().min(0).optional(),
   content: z.string().max(20000).optional(),
+  remise: z.number().min(0).max(100).optional(),
+  notesDevis: z.string().max(2000).optional(),
+  lines: z.array(devisLineSchema).optional(),
 });
 
 export const devisUpdateSchema = z.object({
@@ -48,6 +62,8 @@ export const devisUpdateSchema = z.object({
   label: z.string().min(1).max(200).optional(),
   amount: z.number().min(0).optional(),
   content: z.string().max(20000).optional(),
+  remise: z.number().min(0).max(100).optional(),
+  notesDevis: z.string().max(2000).optional(),
 });
 
 export const taskSchema = z.object({

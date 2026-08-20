@@ -49,8 +49,12 @@ export async function POST(req: Request) {
         description: parsed.data.description,
         amount: parsed.data.amount,
         content: parsed.data.content || "",
+        remise: parsed.data.remise,
+        notesDevis: parsed.data.notesDevis,
         businessId,
+        lines: parsed.data.lines ? { create: parsed.data.lines } : undefined,
       },
+      include: { lines: true },
     });
     return NextResponse.json({ devis }, { status: 201 });
   } catch (err) {
