@@ -3,13 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { clientSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await requireSession();
     const businessId = await requireBusinessId(userId);
+    const search = new URL(req.url).searchParams.get("search")?.trim();
     const clients = await prisma.client.findMany({
-      where: { businessId },
+      where: search
+        ? {
+            businessId,
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+              { phone: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : { businessId },
       orderBy: { createdAt: "desc" },
+      take: search ? 8 : undefined,
     });
     return NextResponse.json({ clients });
   } catch (err) {

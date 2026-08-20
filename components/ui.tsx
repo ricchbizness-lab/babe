@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
 import { relanceLevel } from "@/lib/relance";
-import { SESSION_EXPIRED_EVENT } from "@/lib/fetchClient";
+import { SESSION_EXPIRED_EVENT, fetchWithAuth } from "@/lib/fetchClient";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -868,6 +868,202 @@ export function QuickAction({ label, href, icon }: { label: string; href: string
 }
 
 // ---------------------------------------------------------------------------
+// GlobalSearch — recherche transverse Clients / Chantiers / Devis
+// ---------------------------------------------------------------------------
+
+type GlobalSearchResults = {
+  clients: { id: string; name: string; email: string | null }[];
+  projects: { id: string; name: string }[];
+  devis: { id: string; label: string }[];
+};
+
+const SEARCH_MIN_LENGTH = 2;
+const SEARCH_DEBOUNCE_MS = 250;
+
+function useGlobalSearchResults(query: string) {
+  const [results, setResults] = useState<GlobalSearchResults | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < SEARCH_MIN_LENGTH) {
+      setResults(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const qs = `?search=${encodeURIComponent(q)}`;
+        const [clientsRes, projectsRes, devisRes] = await Promise.all([
+          fetchWithAuth(`/api/clients${qs}`),
+          fetchWithAuth(`/api/projects${qs}`),
+          fetchWithAuth(`/api/devis${qs}`),
+        ]);
+        const [clientsData, projectsData, devisData] = await Promise.all([
+          clientsRes.json(),
+          projectsRes.json(),
+          devisRes.json(),
+        ]);
+        if (!cancelled) {
+          setResults({
+            clients: clientsData.clients ?? [],
+            projects: projectsData.projects ?? [],
+            devis: devisData.devis ?? [],
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [query]);
+
+  return { results, loading };
+}
+
+export function GlobalSearch() {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { results, loading } = useGlobalSearchResults(query);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (paletteRef.current && !paletteRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  function goTo(href: string) {
+    setOpen(false);
+    setQuery("");
+    router.push(href);
+  }
+
+  const hasQuery = query.trim().length >= SEARCH_MIN_LENGTH;
+  const resultCount = results ? results.clients.length + results.projects.length + results.devis.length : 0;
+
+  return (
+    <div className="nova-global-search">
+      <div className="nova-global-search-trigger">
+        <Search size={15} strokeWidth={1.75} />
+        <input
+          type="text"
+          placeholder="Rechercher..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          aria-label="Recherche globale"
+        />
+      </div>
+
+      {open && (
+        <div className="nova-search-overlay">
+          <div className="nova-search-palette" ref={paletteRef} role="dialog" aria-modal="true" aria-label="Recherche globale">
+            <div className="nova-search-palette-input">
+              <Search size={18} strokeWidth={1.75} />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Rechercher un client, un chantier, un devis..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query && (
+                <button type="button" className="nova-icon-btn" onClick={() => setQuery("")} aria-label="Effacer la recherche">
+                  <X size={15} strokeWidth={1.75} />
+                </button>
+              )}
+            </div>
+
+            <div className="nova-search-results">
+              {!hasQuery ? (
+                <p className="nova-search-hint">Tapez au moins {SEARCH_MIN_LENGTH} caractères pour rechercher.</p>
+              ) : loading ? (
+                <p className="nova-search-hint">Recherche...</p>
+              ) : resultCount === 0 ? (
+                <p className="nova-search-hint">Aucun résultat pour « {query.trim()} ».</p>
+              ) : (
+                <>
+                  {results!.clients.length > 0 && (
+                    <div className="nova-search-group">
+                      <div className="nova-search-group-title">Clients</div>
+                      {results!.clients.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="nova-search-result"
+                          onClick={() => goTo(`/dashboard/clients/${c.id}`)}
+                        >
+                          <span>{c.name}</span>
+                          {c.email && <span className="nova-search-result-sub">{c.email}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {results!.projects.length > 0 && (
+                    <div className="nova-search-group">
+                      <div className="nova-search-group-title">Chantiers</div>
+                      {results!.projects.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="nova-search-result"
+                          onClick={() => goTo(`/dashboard/chantiers/${p.id}`)}
+                        >
+                          <span>{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {results!.devis.length > 0 && (
+                    <div className="nova-search-group">
+                      <div className="nova-search-group-title">Devis</div>
+                      {results!.devis.map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          className="nova-search-result"
+                          onClick={() => goTo(`/dashboard/devis/${d.id}`)}
+                        >
+                          <span>{d.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Sidebar — navigation fixe de la plateforme
 // ---------------------------------------------------------------------------
 
@@ -917,6 +1113,7 @@ export function Sidebar({ businessName }: { businessName: string }) {
         <span className="nova-sidebar-logo-mark">N</span>
         <span>NOVA</span>
       </div>
+      <GlobalSearch />
       <div className="nova-sidebar-scroll">
         <nav className="nova-sidebar-nav">
           {NAV_ITEMS.map(({ href, label, icon }) => {

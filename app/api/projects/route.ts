@@ -3,14 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { projectSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await requireSession();
     const businessId = await requireBusinessId(userId);
+    const search = new URL(req.url).searchParams.get("search")?.trim();
     const projects = await prisma.project.findMany({
-      where: { businessId },
+      where: search
+        ? { businessId, name: { contains: search, mode: "insensitive" } }
+        : { businessId },
       include: { client: true },
       orderBy: { createdAt: "desc" },
+      take: search ? 8 : undefined,
     });
     return NextResponse.json({ projects });
   } catch (err) {

@@ -3,15 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { devisSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await requireSession();
     const businessId = await requireBusinessId(userId);
+    const search = new URL(req.url).searchParams.get("search")?.trim();
     const devis = await prisma.devis.findMany({
-      where: { businessId },
+      where: search
+        ? { businessId, label: { contains: search, mode: "insensitive" } }
+        : { businessId },
       include: { client: true },
       orderBy: { createdAt: "desc" },
-      take: 100, // pagination simple — évite un payload illimité qui grossit avec l'usage
+      take: search ? 8 : 100, // pagination simple — évite un payload illimité qui grossit avec l'usage
     });
     return NextResponse.json({ devis });
   } catch (err) {
