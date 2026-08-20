@@ -4,6 +4,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumb, Button, Card, DatePickerField, Field, SelectField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
+
+const DRAFT_KEY = "nova_draft_chantier";
 
 type ClientOption = { id: string; name: string };
 
@@ -22,6 +25,8 @@ export default function NewChantierPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useFormDraft(DRAFT_KEY, form, setForm);
 
   useEffect(() => {
     fetchWithAuth("/api/clients")
@@ -53,6 +58,7 @@ export default function NewChantierPage() {
         return;
       }
       const data = await res.json();
+      clearFormDraft(DRAFT_KEY);
       toast.success("Chantier créé");
       router.refresh();
       router.push(`/dashboard/chantiers/${data.project.id}`);

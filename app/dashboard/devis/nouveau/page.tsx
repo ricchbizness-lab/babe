@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
+
+const DRAFT_KEY = "nova_draft_devis";
 
 type ClientOption = { id: string; name: string };
 type GenError = "no-key" | "no-subscription" | "other" | null;
@@ -23,6 +26,8 @@ export default function NewDevisPage() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [form, setForm] = useState({ label: "", clientId: searchParams.get("clientId") || "", amount: "", description: "" });
   const [stepError, setStepError] = useState("");
+
+  useFormDraft(DRAFT_KEY, form, setForm);
 
   const [content, setContent] = useState("");
   const [aiGenerated, setAiGenerated] = useState(false);
@@ -105,6 +110,7 @@ export default function NewDevisPage() {
         return;
       }
       const data = await res.json();
+      clearFormDraft(DRAFT_KEY);
       toast.success("Devis créé");
       router.refresh();
       router.push(`/dashboard/devis/${data.devis.id}`);

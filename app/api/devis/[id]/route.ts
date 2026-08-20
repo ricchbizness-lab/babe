@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { devisUpdateSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
+import { sendEmail } from "@/lib/email";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
@@ -26,8 +27,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const { userId } = await requireSession();
     const businessId = await requireBusinessId(userId);
 
-    const existing = await prisma.devis.findUnique({ where: { id: params.id } });
-    await assertOwnedByBusiness(existing, businessId);
+    const existing = await assertOwnedByBusiness(await prisma.devis.findUnique({ where: { id: params.id } }), businessId);
 
     const body = await req.json();
     const parsed = devisUpdateSchema.safeParse(body);
@@ -38,7 +38,28 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const devis = await prisma.devis.update({
       where: { id: params.id, businessId },
       data: parsed.data,
+      include: { client: true },
     });
+
+    // Envoi de l'email au client jamais bloquant : un échec Resend ne doit
+    // pas empêcher la mise à jour du statut, seulement être loggé.
+    if (parsed.data.status === "envoye" && existing.status !== "envoye" && devis.client?.email) {
+      const business = await prisma.business.findUnique({ where: { id: businessId } });
+      const businessName = business?.name || "votre artisan";
+      sendEmail(
+        [devis.client.email],
+        `Devis ${devis.label} — ${businessName}`,
+        `<div style="font-family:sans-serif; white-space:pre-wrap;">
+          <p>Bonjour ${devis.client.name},</p>
+          <p>Voici le devis « ${devis.label} » établi par ${businessName}.</p>
+          <div style="margin:16px 0; padding:16px; background:#f5f5f5; border-radius:8px;">${devis.content}</div>
+          <p>N'hésitez pas à nous contacter pour toute question.</p>
+        </div>`
+      ).catch((err) => {
+        console.error(`Échec de l'envoi de l'email pour le devis ${devis.id}:`, err);
+      });
+    }
+
     return NextResponse.json({ devis });
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);

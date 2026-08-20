@@ -4,6 +4,9 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Breadcrumb, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
+
+const DRAFT_KEY = "nova_draft_client";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -11,6 +14,8 @@ export default function NewClientPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useFormDraft(DRAFT_KEY, form, setForm);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,6 +34,7 @@ export default function NewClientPage() {
         return;
       }
       const data = await res.json();
+      clearFormDraft(DRAFT_KEY);
       toast.success("Client créé");
       router.refresh();
       router.push(`/dashboard/clients/${data.client.id}`);
