@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2, Upload } from "lucide-react";
 import { Button, Card, CardTitle, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
@@ -14,6 +15,7 @@ type BusinessForm = {
   accountantEmail: string;
   siret: string;
   conditionsPaiement: string;
+  logoBase64: string;
 };
 
 const EMPTY_FORM: BusinessForm = {
@@ -25,7 +27,11 @@ const EMPTY_FORM: BusinessForm = {
   accountantEmail: "",
   siret: "",
   conditionsPaiement: "",
+  logoBase64: "",
 };
+
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg"];
 
 export default function ParametresPage() {
   const router = useRouter();
@@ -33,6 +39,8 @@ export default function ParametresPage() {
   const [form, setForm] = useState<BusinessForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [logoError, setLogoError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchWithAuth("/api/business")
@@ -48,9 +56,34 @@ export default function ParametresPage() {
           accountantEmail: b?.accountantEmail || "",
           siret: b?.siret || "",
           conditionsPaiement: b?.conditionsPaiement || "",
+          logoBase64: b?.logoBase64 || "",
         });
       });
   }, []);
+
+  function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !form) return;
+    setLogoError("");
+    if (!LOGO_ALLOWED_TYPES.includes(file.type)) {
+      setLogoError("Format non supporté — utilisez un fichier PNG ou JPG.");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoError("Fichier trop volumineux — 2 Mo maximum.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => (prev ? { ...prev, logoBase64: String(reader.result) } : prev));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemoveLogo() {
+    setForm((prev) => (prev ? { ...prev, logoBase64: "" } : prev));
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -70,6 +103,7 @@ export default function ParametresPage() {
           accountantEmail: form.accountantEmail,
           siret: form.siret || undefined,
           conditionsPaiement: form.conditionsPaiement || undefined,
+          logoBase64: form.logoBase64,
         }),
       });
       if (!res.ok) {
@@ -109,6 +143,42 @@ export default function ParametresPage() {
         <h1>Paramètres</h1>
         <p className="nova-page-subtitle">Profil de votre entreprise</p>
       </header>
+
+      <Card>
+        <CardTitle>Logo de l'entreprise</CardTitle>
+        <div className="nova-logo-upload">
+          <div className="nova-logo-upload-preview">
+            {form.logoBase64 ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={form.logoBase64} alt="Logo de l'entreprise" />
+            ) : (
+              <span className="nova-logo-upload-placeholder">Aucun logo</span>
+            )}
+          </div>
+          <div className="nova-logo-upload-actions">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={handleLogoChange}
+              className="nova-visually-hidden"
+              id="logo-upload-input"
+            />
+            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={16} strokeWidth={1.75} />
+              {form.logoBase64 ? "Changer le logo" : "Ajouter un logo"}
+            </Button>
+            {form.logoBase64 && (
+              <Button type="button" variant="ghost" onClick={handleRemoveLogo}>
+                <Trash2 size={16} strokeWidth={1.75} />
+                Retirer
+              </Button>
+            )}
+            <p className="nova-hint-standalone">PNG ou JPG, 2 Mo maximum. Enregistré avec le profil ci-dessous.</p>
+            {logoError && <div className="error">{logoError}</div>}
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <CardTitle>Profil entreprise</CardTitle>

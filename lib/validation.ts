@@ -14,6 +14,7 @@ export const businessSchema = z.object({
   accountantEmail: z.string().email().optional().or(z.literal("")),
   siret: z.string().max(20).optional(),
   conditionsPaiement: z.string().max(500).optional(),
+  logoBase64: z.string().max(2_900_000).optional().or(z.literal("")),
 });
 
 export const clientSchema = z.object({

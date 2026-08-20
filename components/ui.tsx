@@ -1097,7 +1097,7 @@ const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Synchronisation comptable", icon: RefreshCw },
 ];
 
-export function Sidebar({ businessName }: { businessName: string }) {
+export function Sidebar({ businessName, logoBase64 }: { businessName: string; logoBase64?: string | null }) {
   const pathname = usePathname();
   // Plusieurs hrefs peuvent être des préfixes les uns des autres (ex.
   // /dashboard/planning et /dashboard/planning/dispatch) — ne marquer actif
@@ -1110,7 +1110,12 @@ export function Sidebar({ businessName }: { businessName: string }) {
   return (
     <aside className="nova-sidebar">
       <div className="nova-sidebar-logo">
-        <span className="nova-sidebar-logo-mark">N</span>
+        {logoBase64 ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoBase64} alt="" className="nova-sidebar-logo-image" />
+        ) : (
+          <span className="nova-sidebar-logo-mark">N</span>
+        )}
         <span>NOVA</span>
       </div>
       <GlobalSearch />

@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <ToastProvider>
       <NavigationProgress />
       <div className="nova-shell">
-        <Sidebar businessName={business.name} />
+        <Sidebar businessName={business.name} logoBase64={business.logoBase64} />
         <main className="nova-main">{children}</main>
       </div>
     </ToastProvider>

@@ -34,6 +34,7 @@ model Business {
   accountantEmail String? // comptable partenaire ou comptable habituel du client, pour l'envoi du rapport stratégique
   siret        String? // mention légale facture — éditable dans Paramètres (module 7)
   conditionsPaiement String? @default("Paiement sous 30 jours") // pied de page facture
+  logoBase64   String? // logo entreprise, encodé en data URL — affiché en haut de la sidebar
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
