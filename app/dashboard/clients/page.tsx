@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { UserPlus } from "lucide-react";
-import { EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Download, UserPlus } from "lucide-react";
+import { Button, EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { downloadCSV, generateCSV } from "@/lib/csv";
 
 type ClientRow = {
   id: string;
   name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
   createdAt: string;
 };
 
@@ -34,6 +36,14 @@ export default function ClientsPage() {
     );
   });
 
+  function handleExport() {
+    const csv = generateCSV(
+      ["Nom", "Email", "Téléphone", "Adresse"],
+      filtered.map((c) => [c.name, c.email || "", c.phone || "", c.address || ""])
+    );
+    downloadCSV("clients.csv", csv);
+  }
+
   const columns: TableColumn<ClientRow>[] = [
     { key: "name", label: "Nom", sortable: true },
     { key: "email", label: "Email", render: (c) => c.email || "—" },
@@ -56,10 +66,18 @@ export default function ClientsPage() {
             {clients === null ? "…" : `${clients.length} client${clients.length > 1 ? "s" : ""}`}
           </p>
         </div>
-        <Link href="/dashboard/clients/nouveau" className="nova-btn nova-btn-primary">
-          <UserPlus size={16} strokeWidth={1.75} />
-          Nouveau client
-        </Link>
+        <div className="nova-header-actions">
+          {clients !== null && clients.length > 0 && (
+            <Button variant="secondary" onClick={handleExport}>
+              <Download size={16} strokeWidth={1.75} />
+              Exporter CSV
+            </Button>
+          )}
+          <Link href="/dashboard/clients/nouveau" className="nova-btn nova-btn-primary">
+            <UserPlus size={16} strokeWidth={1.75} />
+            Nouveau client
+          </Link>
+        </div>
       </header>
 
       <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />

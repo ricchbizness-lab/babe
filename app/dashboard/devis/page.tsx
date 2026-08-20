@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, EmptyState, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, Button, EmptyState, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { downloadCSV, generateCSV } from "@/lib/csv";
+import { Download } from "lucide-react";
 
 type DevisRow = {
   id: string;
   label: string;
   status: string;
+  paymentStatus: string;
   amount: number | null;
   createdAt: string;
   updatedAt: string;
@@ -20,6 +23,11 @@ const STATUS_LABEL: Record<string, string> = {
   envoye: "Envoyé",
   accepte: "Accepté",
   refuse: "Refusé",
+};
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  en_attente: "En attente",
+  payee: "Payée",
+  en_retard: "En retard",
 };
 const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
   brouillon: "neutral",
@@ -49,6 +57,21 @@ export default function DevisPage() {
     if (!q) return true;
     return d.label.toLowerCase().includes(q) || (d.client?.name || "").toLowerCase().includes(q);
   });
+
+  function handleExport() {
+    const csv = generateCSV(
+      ["Devis", "Client", "Montant", "Statut", "Statut paiement", "Date"],
+      filtered.map((d) => [
+        d.label,
+        d.client?.name || "",
+        d.amount != null ? d.amount : "",
+        STATUS_LABEL[d.status] || d.status,
+        PAYMENT_STATUS_LABEL[d.paymentStatus] || d.paymentStatus,
+        new Date(d.createdAt).toLocaleDateString("fr-FR"),
+      ])
+    );
+    downloadCSV("devis.csv", csv);
+  }
 
   const columns: TableColumn<DevisRow>[] = [
     { key: "label", label: "Devis" },
@@ -91,9 +114,17 @@ export default function DevisPage() {
             {devis === null ? "…" : `${devis.length} devis`}
           </p>
         </div>
-        <Link href="/dashboard/devis/nouveau" className="nova-btn nova-btn-primary">
-          Nouveau devis
-        </Link>
+        <div className="nova-header-actions">
+          {devis !== null && devis.length > 0 && (
+            <Button variant="secondary" onClick={handleExport}>
+              <Download size={16} strokeWidth={1.75} />
+              Exporter CSV
+            </Button>
+          )}
+          <Link href="/dashboard/devis/nouveau" className="nova-btn nova-btn-primary">
+            Nouveau devis
+          </Link>
+        </div>
       </header>
 
       <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />

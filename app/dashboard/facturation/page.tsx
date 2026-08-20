@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
-import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
+import { Download } from "lucide-react";
+import { Badge, Button, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { downloadCSV, generateCSV } from "@/lib/csv";
 
 type DevisRow = {
   id: string;
@@ -47,6 +49,25 @@ export default function FacturationPage() {
   const invoices: InvoiceRow[] = chronological.map((d, i) => ({ ...d, numero: invoiceNumber(i, d.updatedAt) }));
   const displayRows = [...invoices].reverse(); // plus récente en premier
 
+  function handleExport() {
+    const csv = generateCSV(
+      ["Facture", "Client", "Montant HT", "TVA 20%", "TTC", "Statut paiement", "Date"],
+      displayRows.map((d) => {
+        const amounts = computeInvoiceAmounts(d.amount);
+        return [
+          d.numero,
+          d.client?.name || "",
+          amounts ? amounts.ht : "",
+          amounts ? amounts.tva.toFixed(2) : "",
+          amounts ? amounts.ttc.toFixed(2) : "",
+          PAYMENT_STATUS_LABEL[d.paymentStatus] || d.paymentStatus,
+          new Date(d.updatedAt).toLocaleDateString("fr-FR"),
+        ];
+      })
+    );
+    downloadCSV("facturation.csv", csv);
+  }
+
   const columns: TableColumn<InvoiceRow>[] = [
     { key: "numero", label: "Facture", render: (d) => <span className="nova-timestamp">{d.numero}</span> },
     { key: "client", label: "Client", render: (d) => d.client?.name || "—" },
@@ -80,11 +101,19 @@ export default function FacturationPage() {
 
   return (
     <div className="nova-page">
-      <header className="nova-page-header">
-        <h1>Facturation</h1>
-        <p className="nova-page-subtitle">
-          {accepted === null ? "…" : `${accepted.length} facture${accepted.length > 1 ? "s" : ""}`}
-        </p>
+      <header className="nova-page-header-row">
+        <div>
+          <h1>Facturation</h1>
+          <p className="nova-page-subtitle">
+            {accepted === null ? "…" : `${accepted.length} facture${accepted.length > 1 ? "s" : ""}`}
+          </p>
+        </div>
+        {accepted !== null && accepted.length > 0 && (
+          <Button variant="secondary" onClick={handleExport}>
+            <Download size={16} strokeWidth={1.75} />
+            Exporter CSV
+          </Button>
+        )}
       </header>
 
       {accepted === null ? (
