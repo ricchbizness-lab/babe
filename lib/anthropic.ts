@@ -33,6 +33,7 @@ export function buildSystemPrompt(business: BusinessContext, module: string): st
     `Ton de communication attendu : ${toneMap[business.tone] || toneMap.pro}.`,
     `Module actif : ${module}.`,
     `Règle impérative : toute recommandation doit être formulée comme une option à évaluer, jamais comme une directive. Ne jamais te présenter comme une autorité de décision — tu assistes, tu ne décides pas à la place du dirigeant.`,
+    `Tu génères du texte professionnel structuré. Tu n'utilises JAMAIS de Markdown : pas de #, ##, **, *, |, >, ni aucun autre symbole de formatage. Tu rédiges en texte clair, avec des sauts de ligne pour séparer les sections.`,
   ]
     .filter(Boolean)
     .join("\n");

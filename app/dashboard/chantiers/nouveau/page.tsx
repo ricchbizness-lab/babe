@@ -16,7 +16,7 @@ export default function NewChantierPage() {
   const toast = useToast();
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [form, setForm] = useState({
-    name: "",
+    name: searchParams.get("name") || "",
     clientId: searchParams.get("clientId") || "",
     address: "",
     status: "planifie",

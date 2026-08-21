@@ -7,7 +7,7 @@ import { checkRateLimit, getRequestKey } from "@/lib/rateLimit";
 
 const MODULE_INSTRUCTIONS: Record<string, string> = {
   brief: "Génère un brief du jour : 3 à 5 priorités concrètes pour aujourd'hui, adaptées au secteur de l'entreprise.",
-  devis: "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails).",
+  devis: "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. Texte clair uniquement, sans aucun symbole de formatage Markdown.",
   marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
   conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",

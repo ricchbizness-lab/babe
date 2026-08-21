@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, FileText, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -131,6 +131,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [deleting, setDeleting] = useState(false);
   const [relanceMessage, setRelanceMessage] = useState<string | null>(null);
   const [generatingRelance, setGeneratingRelance] = useState(false);
+  const [chantierPromptDismissed, setChantierPromptDismissed] = useState(false);
 
   const [lineForm, setLineForm] = useState<LineFormState | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -471,6 +472,26 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           Supprimer
         </Button>
       </div>
+
+      {devis.status === "accepte" && !chantierPromptDismissed && (
+        <Card accent={false} className="nova-ai-zone">
+          <p className="nova-ai-content">Ce devis est accepté. Souhaitez-vous créer le chantier correspondant ?</p>
+          <div className="nova-status-actions">
+            <Link
+              href={`/dashboard/chantiers/nouveau?name=${encodeURIComponent(devis.label)}${
+                devis.client ? `&clientId=${devis.client.id}` : ""
+              }`}
+              className="nova-btn nova-btn-primary"
+            >
+              <Building2 size={16} strokeWidth={1.75} />
+              Créer le chantier
+            </Link>
+            <Button variant="ghost" onClick={() => setChantierPromptDismissed(true)}>
+              Plus tard
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {(generatingRelance || relanceMessage) && (
         <Card accent={false} className="nova-ai-zone">
