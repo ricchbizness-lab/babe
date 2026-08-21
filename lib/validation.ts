@@ -5,6 +5,11 @@ export const registerSchema = z.object({
   password: z.string().min(8, "8 caractères minimum"),
 });
 
+export const userSchema = z.object({
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+});
+
 export const businessSchema = z.object({
   name: z.string().min(1).max(200),
   sector: z.string().min(1).max(200),

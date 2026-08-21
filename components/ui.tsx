@@ -1097,7 +1097,17 @@ const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Synchronisation comptable", icon: RefreshCw },
 ];
 
-export function Sidebar({ businessName, logoBase64 }: { businessName: string; logoBase64?: string | null }) {
+export function Sidebar({
+  businessName,
+  logoBase64,
+  userName,
+  userInitials,
+}: {
+  businessName: string;
+  logoBase64?: string | null;
+  userName?: string;
+  userInitials?: string;
+}) {
   const pathname = usePathname();
   // Plusieurs hrefs peuvent être des préfixes les uns des autres (ex.
   // /dashboard/planning et /dashboard/planning/dispatch) — ne marquer actif
@@ -1145,7 +1155,13 @@ export function Sidebar({ businessName, logoBase64 }: { businessName: string; lo
           ))}
         </div>
       </div>
-      <div className="nova-sidebar-business">{businessName}</div>
+      <Link href="/dashboard/compte" className="nova-sidebar-account">
+        {userInitials && <span className="nova-sidebar-avatar">{userInitials}</span>}
+        <div className="nova-sidebar-account-text">
+          {userName && <span className="nova-sidebar-account-name">{userName}</span>}
+          <span className="nova-sidebar-business">{businessName}</span>
+        </div>
+      </Link>
     </aside>
   );
 }

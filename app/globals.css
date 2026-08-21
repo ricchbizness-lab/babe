@@ -305,16 +305,80 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-weight: 700;
 }
 .nova-sidebar-link-active::before { opacity: 1; }
-.nova-sidebar-business {
+.nova-sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
   border-top: 1px solid var(--nova-border);
   padding: var(--nova-space-2) var(--nova-space-1) 0;
   margin-top: var(--nova-space-2);
+  color: inherit;
+  border-radius: var(--nova-radius-btn);
+  transition: background-color var(--nova-transition-color);
+}
+.nova-sidebar-account:hover { background: var(--nova-teal-tint); }
+.nova-sidebar-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--nova-teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nova-font-heading);
+  font-weight: 700;
+  font-size: 12px;
+}
+.nova-sidebar-account-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--nova-space-2);
+}
+.nova-sidebar-account-name {
   font-size: 13px;
   font-weight: 700;
   color: var(--nova-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.nova-sidebar-business {
+  font-size: 11.5px;
+  color: var(--nova-ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Page compte --- */
+
+.nova-account-header {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-3);
+}
+.nova-account-avatar {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nova-teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nova-font-heading);
+  font-weight: 700;
+  font-size: 20px;
+}
+.nova-account-name {
+  font-family: var(--nova-font-heading);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--nova-ink);
 }
 
 /* --- Recherche globale (sidebar) --- */
@@ -1692,7 +1756,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-shell { grid-template-columns: 1fr; }
   .nova-sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; }
   .nova-sidebar-nav { flex-direction: row; }
-  .nova-sidebar-business, .nova-sidebar-soon-title, .nova-sidebar-soon, .nova-global-search { display: none; }
+  .nova-sidebar-account, .nova-sidebar-soon-title, .nova-sidebar-soon, .nova-global-search { display: none; }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid, .nova-summary-grid { grid-template-columns: 1fr 1fr; }
   .nova-planning-grid { grid-template-columns: 1fr; }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }
