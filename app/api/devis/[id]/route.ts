@@ -42,25 +42,33 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     });
 
     // Envoi de l'email au client jamais bloquant : un échec Resend ne doit
-    // pas empêcher la mise à jour du statut, seulement être loggé.
+    // pas empêcher la mise à jour du statut (déjà commitée ci-dessus),
+    // seulement être loggé — et signalé au client via un header dédié pour
+    // qu'il puisse afficher un avertissement sans dépendre des logs serveur.
+    let emailError = false;
     if (parsed.data.status === "envoye" && existing.status !== "envoye" && devis.client?.email) {
       const business = await prisma.business.findUnique({ where: { id: businessId } });
       const businessName = business?.name || "votre artisan";
-      sendEmail(
-        [devis.client.email],
-        `Devis ${devis.label} — ${businessName}`,
-        `<div style="font-family:sans-serif; white-space:pre-wrap;">
-          <p>Bonjour ${devis.client.name},</p>
-          <p>Voici le devis « ${devis.label} » établi par ${businessName}.</p>
-          <div style="margin:16px 0; padding:16px; background:#f5f5f5; border-radius:8px;">${devis.content}</div>
-          <p>N'hésitez pas à nous contacter pour toute question.</p>
-        </div>`
-      ).catch((err) => {
+      try {
+        await sendEmail(
+          [devis.client.email],
+          `Devis ${devis.label} — ${businessName}`,
+          `<div style="font-family:sans-serif; white-space:pre-wrap;">
+            <p>Bonjour ${devis.client.name},</p>
+            <p>Voici le devis « ${devis.label} » établi par ${businessName}.</p>
+            <div style="margin:16px 0; padding:16px; background:#f5f5f5; border-radius:8px;">${devis.content}</div>
+            <p>N'hésitez pas à nous contacter pour toute question.</p>
+          </div>`
+        );
+      } catch (err) {
         console.error(`Échec de l'envoi de l'email pour le devis ${devis.id}:`, err);
-      });
+        emailError = true;
+      }
     }
 
-    return NextResponse.json({ devis });
+    const response = NextResponse.json({ devis });
+    if (emailError) response.headers.set("X-Email-Error", "true");
+    return response;
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);
     return NextResponse.json({ error: message }, { status });

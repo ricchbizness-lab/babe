@@ -3,8 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, FileText, Trash2 } from "lucide-react";
-import { BackLink, Badge, Breadcrumb, Button, Card, CardTitle, ConfirmModal, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { Building2, FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  BackLink,
+  Badge,
+  Breadcrumb,
+  Button,
+  Card,
+  CardTitle,
+  ConfirmModal,
+  EditModal,
+  Field,
+  Table,
+  TableSkeleton,
+  TextareaField,
+  Timestamp,
+  useToast,
+  type TableColumn,
+} from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ClientDetail = {
@@ -58,6 +74,9 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   const [error, setError] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchWithAuth(`/api/clients/${params.id}`).then(async (res) => {
@@ -69,6 +88,48 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       setClient(data.client);
     });
   }, [params.id]);
+
+  function openEdit() {
+    if (!client) return;
+    setEditForm({
+      name: client.name,
+      email: client.email || "",
+      phone: client.phone || "",
+      address: client.address || "",
+      notes: client.notes || "",
+    });
+    setEditing(true);
+  }
+
+  async function confirmEdit() {
+    if (!client) return;
+    if (!editForm.name.trim()) {
+      toast.error("Le nom est requis.");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetchWithAuth(`/api/clients/${client.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de modifier ce client.");
+        return;
+      }
+      const data = await res.json();
+      setClient((prev) => (prev ? { ...prev, ...data.client } : prev));
+      toast.success("Client mis à jour");
+      router.refresh();
+      setEditing(false);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   async function confirmDelete() {
     setDeleting(true);
@@ -177,6 +238,10 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
             <Building2 size={16} strokeWidth={1.75} />
             Nouveau chantier
           </Link>
+          <Button variant="secondary" onClick={openEdit}>
+            <Pencil size={16} strokeWidth={1.75} />
+            Modifier
+          </Button>
           <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
             <Trash2 size={16} strokeWidth={1.75} />
             Supprimer le client
@@ -269,6 +334,37 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
         onCancel={() => setConfirmingDelete(false)}
         confirming={deleting}
       />
+
+      <EditModal open={editing} title="Modifier le client" onCancel={() => setEditing(false)} onSave={confirmEdit} saving={savingEdit}>
+        <Field
+          label="Nom"
+          required
+          value={editForm.name}
+          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+        />
+        <Field
+          label="Email"
+          type="email"
+          value={editForm.email}
+          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+        />
+        <Field
+          label="Téléphone"
+          value={editForm.phone}
+          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+        />
+        <Field
+          label="Adresse"
+          value={editForm.address}
+          onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+        />
+        <TextareaField
+          label="Notes"
+          rows={3}
+          value={editForm.notes}
+          onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+        />
+      </EditModal>
     </div>
   );
 }

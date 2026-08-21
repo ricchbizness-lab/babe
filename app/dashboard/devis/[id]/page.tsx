@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Building2, FileText, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Banknote, Building2, FileText, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui";
 import { daysSinceSent } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { computeDevisTotals, lineTotalHT } from "@/lib/devisTotals";
 
 type DevisLineType = "prestation" | "materiel" | "deplacement" | "maindoeuvre" | "autre";
 
@@ -44,6 +45,7 @@ type DevisDetail = {
   description: string | null;
   amount: number | null;
   status: string;
+  paymentStatus: string;
   content: string;
   remise: number | null;
   notesDevis: string | null;
@@ -105,24 +107,9 @@ const EMPTY_LINE_FORM: LineFormState = {
   tva: "20",
 };
 
-function lineTotalHT(line: DevisLine) {
-  return line.quantite * line.prixUnitaire;
-}
-
-function computeTotals(lines: DevisLine[], remisePct: number) {
-  const sousTotalHT = lines.reduce((sum, l) => sum + lineTotalHT(l), 0);
-  const remiseMontant = sousTotalHT * (remisePct / 100);
-  const totalHT = sousTotalHT - remiseMontant;
-  const totalTVA = lines.reduce((sum, l) => {
-    const ligneHTApresRemise = lineTotalHT(l) * (1 - remisePct / 100);
-    return sum + ligneHTApresRemise * (l.tva / 100);
-  }, 0);
-  const totalTTC = totalHT + totalTVA;
-  return { sousTotalHT, remiseMontant, totalHT, totalTVA, totalTTC };
-}
-
 export default function DevisDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [error, setError] = useState("");
@@ -142,6 +129,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [remiseInput, setRemiseInput] = useState("0");
   const [notesInput, setNotesInput] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
+  const [requestingPayment, setRequestingPayment] = useState(false);
 
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
@@ -156,6 +144,28 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     });
   }, [params.id]);
 
+  // Retour de Stripe Checkout (paiement direct depuis un devis accepté).
+  useEffect(() => {
+    if (!devis) return;
+    const payment = searchParams.get("payment");
+    if (payment === "success" && devis.paymentStatus !== "payee") {
+      fetchWithAuth(`/api/devis/${devis.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: "payee" }),
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setDevis(data.devis);
+          toast.success("Paiement reçu");
+          router.refresh();
+        }
+      });
+      router.replace(`/dashboard/devis/${devis.id}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devis?.id, searchParams]);
+
   async function handleStatusChange(status: string) {
     if (!devis) return;
     setUpdating(true);
@@ -169,6 +179,9 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         const data = await res.json();
         setDevis(data.devis);
         toast.success(`Devis marqué comme ${STATUS_LABEL[status]?.toLowerCase() || status}`);
+        if (res.headers.get("X-Email-Error") === "true") {
+          toast.error("Statut mis à jour mais l'email n'a pas pu être envoyé — vérifiez votre configuration Resend.");
+        }
         router.refresh();
         return;
       }
@@ -177,6 +190,29 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setUpdating(false);
+    }
+  }
+
+  async function handleRequestPayment() {
+    if (!devis) return;
+    setRequestingPayment(true);
+    try {
+      const res = await fetchWithAuth("/api/stripe/payment-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ devisId: devis.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer le lien de paiement.");
+        return;
+      }
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setRequestingPayment(false);
     }
   }
 
@@ -374,7 +410,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   }
 
   const remisePct = devis.remise || 0;
-  const totals = computeTotals(devis.lines, remisePct);
+  const totals = computeDevisTotals(devis.lines, remisePct);
 
   const lineColumns: TableColumn<DevisLine>[] = [
     {
@@ -445,6 +481,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         </div>
         <div className="nova-page-header-badges">
           <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
+          {devis.paymentStatus === "payee" && <Badge tone="success">Payé</Badge>}
           <RelanceIndicator status={devis.status} updatedAt={devis.updatedAt} />
         </div>
       </header>
@@ -465,6 +502,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           <Button variant="secondary" disabled={generatingRelance} onClick={handleRelance}>
             <MessageCircle size={16} strokeWidth={1.75} />
             {generatingRelance ? "Génération..." : "Relancer le client"}
+          </Button>
+        )}
+        {devis.status === "accepte" && devis.amount != null && devis.paymentStatus !== "payee" && (
+          <Button variant="secondary" disabled={requestingPayment} onClick={handleRequestPayment}>
+            <Banknote size={16} strokeWidth={1.75} />
+            {requestingPayment ? "Redirection..." : "Demander le paiement"}
           </Button>
         )}
         <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
