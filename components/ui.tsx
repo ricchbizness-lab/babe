@@ -29,6 +29,7 @@ import {
   FileBarChart,
   FileSignature,
   FileText,
+  HelpCircle,
   Info,
   LayoutDashboard,
   MapPin,
@@ -873,7 +874,7 @@ export function QuickAction({ label, href, icon }: { label: string; href: string
 // StatCard — cartes de métriques du nouveau tableau de bord (icône pastel)
 // ---------------------------------------------------------------------------
 
-type StatTone = "teal" | "amber" | "danger" | "neutral";
+type StatTone = "teal" | "amber" | "danger" | "neutral" | "blue" | "orange";
 
 export function StatCard({
   icon,
@@ -896,6 +897,91 @@ export function StatCard({
         <div className="nova-stat-label">{label}</div>
         {sublabel && <div className={`nova-stat-sublabel nova-stat-sublabel-${tone}`}>{sublabel}</div>}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PriorityBadge — "Urgent" / "Important" / "Aujourd'hui" (À faire)
+// ---------------------------------------------------------------------------
+
+export type PriorityLevel = "urgent" | "important" | "today";
+
+const PRIORITY_LABEL: Record<PriorityLevel, string> = {
+  urgent: "Urgent",
+  important: "Important",
+  today: "Aujourd'hui",
+};
+
+export function PriorityBadge({ level }: { level: PriorityLevel }) {
+  return <span className={`nova-priority-badge nova-priority-${level}`}>{PRIORITY_LABEL[level]}</span>;
+}
+
+// ---------------------------------------------------------------------------
+// RowActionsMenu — bouton "..." avec menu Voir / Modifier / Supprimer
+// ---------------------------------------------------------------------------
+
+export function RowActionsMenu({
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="nova-row-actions" ref={ref}>
+      <button
+        type="button"
+        className="nova-icon-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Actions"
+      >
+        <MoreHorizontal size={16} strokeWidth={1.75} />
+      </button>
+      {open && (
+        <div className="nova-row-actions-panel" role="menu" onClick={(e) => e.stopPropagation()}>
+          <button type="button" role="menuitem" className="nova-row-actions-item" onClick={() => { setOpen(false); onView(); }}>
+            Voir
+          </button>
+          <button type="button" role="menuitem" className="nova-row-actions-item" onClick={() => { setOpen(false); onEdit(); }}>
+            Modifier
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="nova-row-actions-item nova-row-actions-item-danger"
+            onClick={() => { setOpen(false); onDelete(); }}
+          >
+            Supprimer
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1386,6 +1472,10 @@ export function Sidebar({
           ))}
         </div>
       </div>
+      <Link href="/dashboard/aide" className="nova-sidebar-help">
+        <HelpCircle size={17} strokeWidth={1.75} />
+        <span>Aide &amp; support</span>
+      </Link>
       <Link href="/dashboard/compte" className="nova-sidebar-account">
         {userInitials && <span className="nova-sidebar-avatar">{userInitials}</span>}
         <div className="nova-sidebar-account-text">

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
-import { relanceLevel } from "@/lib/relance";
+import { daysSinceSent } from "@/lib/relance";
 import { sortByAcceptedDate, invoiceNumber, computeInvoiceAmounts } from "@/lib/facturation";
 import { lastMonths, monthKey } from "@/lib/dates";
 
 type ActivityRow = {
   id: string;
+  rawId: string;
   kind: "devis" | "facture" | "chantier";
   reference: string;
   clientOrChantier: string;
@@ -16,20 +17,25 @@ type ActivityRow = {
   href: string;
 };
 
+type AFairePriority = "urgent" | "important" | "today";
+
 type AFaireItem = {
   id: string;
   kind: "devis" | "facture" | "chantier" | "tache";
   title: string;
   subtitle: string;
   date: string | null;
-  urgent: boolean;
+  priority: AFairePriority;
   href: string;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await requireSession();
     const businessId = await requireBusinessId(userId);
+
+    const monthsParam = Number(new URL(req.url).searchParams.get("months"));
+    const monthsCount = [3, 6, 12].includes(monthsParam) ? monthsParam : 6;
 
     const [user, business, devisAll, projectsAll, tasksOverdue] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } }),
@@ -47,9 +53,12 @@ export async function GET() {
     const devisEnAttente = devisAll.filter((d) => d.status === "envoye");
     const devisAcceptes = devisAll.filter((d) => d.status === "accepte");
     const facturesImpayees = devisAcceptes.filter((d) => d.paymentStatus !== "payee");
-    const relances = devisEnAttente.filter((d) => relanceLevel(d.status, d.updatedAt.toISOString()).level !== "none");
-    const chantiersEnCours = projectsAll.filter((p) => p.status === "en_cours");
-    const chantiersADemarrer = projectsAll.filter((p) => p.status === "planifie");
+    const chantiersActifs = projectsAll.filter((p) => p.status === "en_cours");
+    const now = new Date();
+    const chantiersEnRetard = projectsAll.filter(
+      (p) => p.status === "planifie" && p.startDate != null && p.startDate < now
+    );
+    const caFacture = devisAcceptes.reduce((sum, d) => sum + (d.amount || 0), 0);
 
     // Numérotation des factures identique à /dashboard/facturation — un devis
     // accepté EST la facture, le numéro est recalculé à la volée.
@@ -60,8 +69,8 @@ export async function GET() {
       facturesChronological.map((d, i) => [d.id, invoiceNumber(i, d.updatedAt)])
     );
 
-    // --- Graphique 6 mois : CA (devis acceptés) vs factures encaissées ---
-    const months = lastMonths(6);
+    // --- Graphique : CA (devis acceptés) vs factures encaissées ---
+    const months = lastMonths(monthsCount);
     const chart = months.map(({ key, label }) => {
       const ca = devisAcceptes
         .filter((d) => monthKey(d.updatedAt) === key)
@@ -72,36 +81,39 @@ export async function GET() {
       return { month: label, ca, encaisse };
     });
 
-    // --- À faire ---
+    // --- À faire — priorité attribuée par seuil de jours ---
     const aFaire: AFaireItem[] = [
-      ...relances.map((d) => {
-        const level = relanceLevel(d.status, d.updatedAt.toISOString());
-        return {
+      ...devisEnAttente
+        .map((d) => ({ d, days: daysSinceSent(d.updatedAt.toISOString()) }))
+        .filter(({ days }) => days >= 7)
+        .map(({ d, days }) => ({
           id: `relance-${d.id}`,
           kind: "devis" as const,
           title: `Relancer le devis « ${d.label} »`,
           subtitle: d.client?.name || "Sans client",
           date: d.updatedAt.toISOString(),
-          urgent: level.level === "danger",
+          priority: (days > 14 ? "urgent" : "important") as AFairePriority,
           href: `/dashboard/devis/${d.id}`,
-        };
-      }),
-      ...facturesImpayees.map((d) => ({
-        id: `facture-${d.id}`,
-        kind: "facture" as const,
-        title: `Facture impayée « ${factureNumeroById.get(d.id) || d.label} »`,
-        subtitle: d.client?.name || "Sans client",
-        date: d.updatedAt.toISOString(),
-        urgent: true,
-        href: `/dashboard/facturation/${d.id}`,
-      })),
-      ...chantiersADemarrer.map((p) => ({
+        })),
+      ...facturesImpayees
+        .map((d) => ({ d, days: daysSinceSent(d.updatedAt.toISOString()) }))
+        .filter(({ days }) => days >= 15)
+        .map(({ d, days }) => ({
+          id: `facture-${d.id}`,
+          kind: "facture" as const,
+          title: `Facture impayée « ${factureNumeroById.get(d.id) || d.label} »`,
+          subtitle: d.client?.name || "Sans client",
+          date: d.updatedAt.toISOString(),
+          priority: (days > 30 ? "urgent" : "important") as AFairePriority,
+          href: `/dashboard/facturation/${d.id}`,
+        })),
+      ...chantiersEnRetard.map((p) => ({
         id: `chantier-${p.id}`,
         kind: "chantier" as const,
         title: `Démarrer « ${p.name} »`,
         subtitle: p.client?.name || "Sans client",
         date: p.startDate ? p.startDate.toISOString() : null,
-        urgent: false,
+        priority: "today" as AFairePriority,
         href: `/dashboard/chantiers/${p.id}`,
       })),
       ...tasksOverdue.map((t) => ({
@@ -110,12 +122,12 @@ export async function GET() {
         title: t.text,
         subtitle: t.project?.name || "Sans chantier",
         date: t.dueDate ? t.dueDate.toISOString() : null,
-        urgent: true,
+        priority: "important" as AFairePriority,
         href: "/dashboard/taches",
       })),
     ]
       .sort((a, b) => (a.date && b.date ? new Date(a.date).getTime() - new Date(b.date).getTime() : 0))
-      .slice(0, 6);
+      .slice(0, 8);
 
     // --- Dernières activités : devis non acceptés + factures + chantiers ---
     const activites: ActivityRow[] = [
@@ -123,6 +135,7 @@ export async function GET() {
         .filter((d) => d.status !== "accepte")
         .map((d) => ({
           id: `devis-${d.id}`,
+          rawId: d.id,
           kind: "devis" as const,
           reference: d.label,
           clientOrChantier: d.client?.name || "—",
@@ -133,6 +146,7 @@ export async function GET() {
         })),
       ...devisAcceptes.map((d) => ({
         id: `facture-${d.id}`,
+        rawId: d.id,
         kind: "facture" as const,
         reference: factureNumeroById.get(d.id) || d.label,
         clientOrChantier: d.client?.name || "—",
@@ -143,6 +157,7 @@ export async function GET() {
       })),
       ...projectsAll.map((p) => ({
         id: `chantier-${p.id}`,
+        rawId: p.id,
         kind: "chantier" as const,
         reference: p.name,
         clientOrChantier: p.client?.name || "—",
@@ -159,10 +174,10 @@ export async function GET() {
       businessName: business?.name || "",
       firstName: user?.firstName || null,
       metrics: {
+        caFacture,
         devisEnCours: devisEnAttente.length,
-        facturesEnAttente: facturesImpayees.length,
-        relancesActives: relances.length,
-        chantiersEnCours: chantiersEnCours.length,
+        chantiersActifs: chantiersActifs.length,
+        facturesAEncaisser: facturesImpayees.length,
       },
       chart,
       aFaire,

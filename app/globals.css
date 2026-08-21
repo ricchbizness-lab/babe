@@ -17,6 +17,27 @@
   --nova-danger-tint: #FBEAE6;
   --nova-linen-deep: #F1F1F2; /* fond des bulles Nova du copilote — neutre, plus soutenu que --nova-bg */
 
+  /* Sidebar sombre (refonte design) */
+  --nova-sidebar-bg: #0D3B2E;
+  --nova-sidebar-hover-bg: #1A4A3A;
+  --nova-sidebar-text: var(--nova-bg); /* #FAFAFA */
+
+  /* Cercles pastel des cartes métriques du dashboard */
+  --nova-metric-teal-tint: #E5EEEC;
+  --nova-metric-blue: #3B82F6;
+  --nova-metric-blue-tint: #EBF2FF;
+  --nova-metric-amber-tint: #FFF3E0;
+  --nova-metric-orange: #D97706;
+  --nova-metric-orange-tint: #FFF0E0;
+
+  /* Badges de priorité "À faire aujourd'hui" */
+  --nova-priority-urgent-bg: #FEE2E2;
+  --nova-priority-urgent-text: #B91C1C;
+  --nova-priority-important-bg: #FEF3C7;
+  --nova-priority-important-text: #D97706;
+  --nova-priority-today-bg: #D1FAE5;
+  --nova-priority-today-text: #065F46;
+
   /* NOVA v7 — typographie. --font-sans (Inter) et --font-heading (Manrope)
      et --font-mono (IBM Plex Mono) sont injectées par next/font dans
      app/layout.tsx. */
@@ -183,8 +204,9 @@ button.primary:hover { background: var(--nova-teal-deep); }
 /* --- Sidebar --- */
 
 .nova-sidebar {
-  background: var(--nova-surface);
-  border-right: 1px solid var(--nova-border);
+  background: var(--nova-sidebar-bg);
+  color: var(--nova-sidebar-text);
+  border-right: 1px solid var(--nova-sidebar-bg);
   padding: var(--nova-space-3) var(--nova-space-2);
   display: flex;
   flex-direction: column;
@@ -201,12 +223,13 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-size: 16px;
   letter-spacing: 0.02em;
   padding: 0 var(--nova-space-1) var(--nova-space-3);
+  color: var(--nova-sidebar-text);
 }
 .nova-sidebar-logo-mark {
   width: 28px;
   height: 28px;
   border-radius: var(--nova-radius-btn);
-  background: var(--nova-teal);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
   display: flex;
   align-items: center;
@@ -246,7 +269,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--nova-ink-faint);
+  color: rgba(250, 250, 250, 0.4);
   padding: 0 var(--nova-space-2);
   margin: var(--nova-space-3) 0 var(--nova-space-1);
 }
@@ -260,7 +283,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   align-items: flex-start;
   gap: var(--nova-space-2);
   padding: var(--nova-space-1) var(--nova-space-2);
-  color: var(--nova-ink-faint);
+  color: rgba(250, 250, 250, 0.4);
   font-size: 12.5px;
   font-weight: 500;
   cursor: default;
@@ -281,42 +304,29 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-2);
   padding: var(--nova-space-1) var(--nova-space-2);
   border-radius: var(--nova-radius-btn);
-  color: var(--nova-ink-soft);
+  color: var(--nova-sidebar-text);
   font-size: 13.5px;
   font-weight: 600;
   transition: background-color var(--nova-transition-color), color var(--nova-transition-color);
 }
-.nova-sidebar-link::before {
-  content: "";
-  position: absolute;
-  left: -8px;
-  top: 4px;
-  bottom: 4px;
-  width: 3px;
-  border-radius: var(--nova-radius-badge);
-  background: var(--nova-teal);
-  opacity: 0;
-  transition: opacity var(--nova-transition-color);
-}
-.nova-sidebar-link:hover { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-sidebar-link:hover { background: var(--nova-sidebar-hover-bg); }
 .nova-sidebar-link-active {
-  background: var(--nova-teal-tint);
-  color: var(--nova-teal);
+  background: var(--nova-teal);
+  color: #fff;
   font-weight: 700;
 }
-.nova-sidebar-link-active::before { opacity: 1; }
 .nova-sidebar-account {
   display: flex;
   align-items: center;
   gap: var(--nova-space-1);
-  border-top: 1px solid var(--nova-border);
+  border-top: 1px solid rgba(250, 250, 250, 0.2);
   padding: var(--nova-space-2) var(--nova-space-1) 0;
   margin-top: var(--nova-space-2);
-  color: inherit;
+  color: var(--nova-sidebar-text);
   border-radius: var(--nova-radius-btn);
   transition: background-color var(--nova-transition-color);
 }
-.nova-sidebar-account:hover { background: var(--nova-teal-tint); }
+.nova-sidebar-account:hover { background: var(--nova-sidebar-hover-bg); }
 .nova-sidebar-avatar {
   flex-shrink: 0;
   width: 28px;
@@ -340,18 +350,31 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-sidebar-account-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--nova-ink);
+  color: var(--nova-sidebar-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .nova-sidebar-business {
   font-size: 11.5px;
-  color: var(--nova-ink-faint);
+  color: rgba(250, 250, 250, 0.6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.nova-sidebar-help {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  margin-top: var(--nova-space-2);
+  border-radius: var(--nova-radius-btn);
+  color: rgba(250, 250, 250, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color var(--nova-transition-color), color var(--nova-transition-color);
+}
+.nova-sidebar-help:hover { background: var(--nova-sidebar-hover-bg); color: var(--nova-sidebar-text); }
 
 /* --- Page compte --- */
 
@@ -976,10 +999,12 @@ button.primary:hover { background: var(--nova-teal-deep); }
   align-items: center;
   justify-content: center;
 }
-.nova-stat-icon-teal { background: var(--nova-teal-tint); color: var(--nova-teal); }
-.nova-stat-icon-amber { background: var(--nova-amber-tint); color: var(--nova-amber); }
+.nova-stat-icon-teal { background: var(--nova-metric-teal-tint); color: var(--nova-teal); }
+.nova-stat-icon-amber { background: var(--nova-metric-amber-tint); color: var(--nova-amber); }
 .nova-stat-icon-danger { background: var(--nova-danger-tint); color: var(--nova-danger); }
 .nova-stat-icon-neutral { background: var(--nova-linen-deep); color: var(--nova-ink-soft); }
+.nova-stat-icon-blue { background: var(--nova-metric-blue-tint); color: var(--nova-metric-blue); }
+.nova-stat-icon-orange { background: var(--nova-metric-orange-tint); color: var(--nova-metric-orange); }
 .nova-stat-body { min-width: 0; }
 .nova-stat-value {
   font-family: var(--nova-font-heading);
@@ -988,12 +1013,20 @@ button.primary:hover { background: var(--nova-teal-deep); }
   line-height: 1.1;
   color: var(--nova-ink);
 }
-.nova-stat-label { font-size: 13px; color: var(--nova-ink-soft); margin-top: 2px; }
+.nova-stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--nova-ink-faint);
+  margin-top: 2px;
+}
 .nova-stat-sublabel { font-size: 12px; margin-top: var(--nova-space-1); font-weight: 600; }
 .nova-stat-sublabel-teal { color: var(--nova-teal); }
 .nova-stat-sublabel-amber { color: var(--nova-amber); }
 .nova-stat-sublabel-danger { color: var(--nova-danger); }
 .nova-stat-sublabel-neutral { color: var(--nova-ink-faint); }
+.nova-stat-sublabel-blue { color: var(--nova-metric-blue); }
+.nova-stat-sublabel-orange { color: var(--nova-metric-orange); }
 
 .nova-overview-grid {
   display: grid;
@@ -1009,6 +1042,15 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-chart-legend-swatch-solid { background: var(--nova-teal); }
 .nova-chart-legend-swatch-dashed {
   background-image: repeating-linear-gradient(to right, var(--nova-ink-faint) 0 4px, transparent 4px 8px);
+}
+.nova-chart-period-select {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: 4px var(--nova-space-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
 }
 .nova-chart-svg { width: 100%; height: auto; overflow: visible; }
 .nova-chart-gridline { stroke: var(--nova-border); stroke-width: 1; }
@@ -1050,7 +1092,47 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-todo-subtitle { font-size: 12px; color: var(--nova-ink-faint); }
 .nova-todo-date { font-size: 12px; font-weight: 600; color: var(--nova-ink-faint); flex-shrink: 0; }
 .nova-todo-date-urgent { color: var(--nova-danger); }
+.nova-todo-chevron { flex-shrink: 0; color: var(--nova-ink-faint); }
 .nova-todo-empty { padding: var(--nova-space-3) 0; text-align: center; color: var(--nova-ink-faint); font-size: 13px; }
+
+.nova-priority-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.nova-priority-urgent { background: var(--nova-priority-urgent-bg); color: var(--nova-priority-urgent-text); }
+.nova-priority-important { background: var(--nova-priority-important-bg); color: var(--nova-priority-important-text); }
+.nova-priority-today { background: var(--nova-priority-today-bg); color: var(--nova-priority-today-text); }
+
+.nova-row-actions { position: relative; display: inline-block; }
+.nova-row-actions-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: var(--nova-space-1);
+  z-index: 30;
+}
+.nova-row-actions-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--nova-space-1) var(--nova-space-2);
+  border-radius: var(--nova-radius-btn);
+  font-size: 13px;
+  color: var(--nova-ink);
+  transition: background-color var(--nova-transition-color);
+}
+.nova-row-actions-item:hover { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-row-actions-item-danger:hover { background: var(--nova-danger-tint); color: var(--nova-danger); }
 
 .nova-activity-type { display: flex; align-items: center; gap: var(--nova-space-1); }
 .nova-activity-type-icon {
@@ -1952,7 +2034,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-shell { grid-template-columns: 1fr; }
   .nova-sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; }
   .nova-sidebar-nav { flex-direction: row; }
-  .nova-sidebar-account, .nova-sidebar-soon-title, .nova-sidebar-soon, .nova-global-search { display: none; }
+  .nova-sidebar-account, .nova-sidebar-help, .nova-sidebar-soon-title, .nova-sidebar-soon, .nova-global-search { display: none; }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid, .nova-summary-grid { grid-template-columns: 1fr 1fr; }
   .nova-planning-grid { grid-template-columns: 1fr; }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }

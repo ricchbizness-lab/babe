@@ -2,34 +2,33 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  Banknote,
-  Building2,
-  CheckSquare,
-  FileText,
-  MoreHorizontal,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, DollarSign, FileText, HardHat, Receipt, TrendingUp } from "lucide-react";
 import {
   Badge,
   Card,
   CardTitle,
+  ConfirmModal,
   MiniLineChart,
   NewMenu,
+  PriorityBadge,
+  RowActionsMenu,
   Skeleton,
   StatCard,
   Table,
   Timestamp,
+  useToast,
   WeekRangePicker,
+  type PriorityLevel,
   type TableColumn,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Metrics = {
+  caFacture: number;
   devisEnCours: number;
-  facturesEnAttente: number;
-  relancesActives: number;
-  chantiersEnCours: number;
+  chantiersActifs: number;
+  facturesAEncaisser: number;
 };
 
 type ChartPoint = { month: string; ca: number; encaisse: number };
@@ -40,12 +39,13 @@ type AFaireItem = {
   title: string;
   subtitle: string;
   date: string | null;
-  urgent: boolean;
+  priority: PriorityLevel;
   href: string;
 };
 
 type ActivityRow = {
   id: string;
+  rawId: string;
   kind: "devis" | "facture" | "chantier";
   reference: string;
   clientOrChantier: string;
@@ -97,11 +97,17 @@ const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "dang
   annule: "danger",
 };
 
-const KIND_ICON: Record<AFaireItem["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "neutral" | "danger" }> = {
-  devis: { icon: FileText, tone: "teal" },
-  facture: { icon: Banknote, tone: "amber" },
-  chantier: { icon: Building2, tone: "neutral" },
-  tache: { icon: CheckSquare, tone: "danger" },
+const AFAIRE_KIND_ICON: Record<AFaireItem["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "neutral" | "blue" }> = {
+  devis: { icon: FileText, tone: "blue" },
+  facture: { icon: Receipt, tone: "amber" },
+  chantier: { icon: HardHat, tone: "teal" },
+  tache: { icon: FileText, tone: "neutral" },
+};
+
+const ACTIVITY_KIND_ICON: Record<ActivityRow["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "blue" }> = {
+  devis: { icon: FileText, tone: "blue" },
+  facture: { icon: Receipt, tone: "amber" },
+  chantier: { icon: HardHat, tone: "teal" },
 };
 
 function statusBadge(row: ActivityRow) {
@@ -118,21 +124,53 @@ function formatShortDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
+const PERIOD_OPTIONS: { value: number; label: string }[] = [
+  { value: 3, label: "3 derniers mois" },
+  { value: 6, label: "6 derniers mois" },
+  { value: 12, label: "12 derniers mois" },
+];
+
 export default function DashboardPage() {
+  const router = useRouter();
+  const toast = useToast();
   const [data, setData] = useState<Overview | null>(null);
+  const [months, setMonths] = useState(6);
+  const [deleteTarget, setDeleteTarget] = useState<ActivityRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchWithAuth("/api/dashboard-overview")
+    fetchWithAuth(`/api/dashboard-overview?months=${months}`)
       .then((res) => res.json())
       .then((json) => setData(json));
-  }, []);
+  }, [months]);
+
+  async function confirmDeleteRow() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const url = deleteTarget.kind === "chantier" ? `/api/projects/${deleteTarget.rawId}` : `/api/devis/${deleteTarget.rawId}`;
+      const res = await fetchWithAuth(url, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        setData((prev) => (prev ? { ...prev, activites: prev.activites.filter((a) => a.id !== deleteTarget.id) } : prev));
+        toast.success("Élément supprimé");
+        router.refresh();
+      } else {
+        toast.error("Erreur lors de la suppression.");
+      }
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    }
+    setDeleteTarget(null);
+  }
 
   const columns: TableColumn<ActivityRow>[] = [
     {
       key: "kind",
       label: "Type",
       render: (row) => {
-        const { icon: Icon, tone } = KIND_ICON[row.kind];
+        const { icon: Icon, tone } = ACTIVITY_KIND_ICON[row.kind];
         return (
           <span className="nova-activity-type">
             <span className={`nova-activity-type-icon nova-stat-icon-${tone}`}>
@@ -156,10 +194,12 @@ export default function DashboardPage() {
       key: "actions",
       label: "",
       align: "right",
-      render: () => (
-        <span className="nova-icon-btn" aria-hidden="true">
-          <MoreHorizontal size={16} strokeWidth={1.75} />
-        </span>
+      render: (row) => (
+        <RowActionsMenu
+          onView={() => router.push(row.href)}
+          onEdit={() => router.push(row.href)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
     },
   ];
@@ -168,8 +208,10 @@ export default function DashboardPage() {
     <div className="nova-page">
       <header className="nova-overview-header">
         <div>
-          <h1 className="nova-overview-greeting">Bonjour{data?.firstName ? ` ${data.firstName}` : ""} 👋</h1>
-          <p className="nova-page-subtitle">Voici un aperçu de votre activité</p>
+          <h1 className="nova-overview-greeting">
+            Bonjour{data ? ` ${data.firstName || data.businessName}` : ""} 👋
+          </h1>
+          <p className="nova-page-subtitle">Voici un aperçu de votre activité.</p>
         </div>
         <div className="nova-overview-header-actions">
           <WeekRangePicker />
@@ -192,8 +234,15 @@ export default function DashboardPage() {
       ) : (
         <div className="nova-stats-grid">
           <StatCard
-            icon={<FileText size={20} strokeWidth={1.75} />}
+            icon={<TrendingUp size={20} strokeWidth={1.75} />}
             tone="teal"
+            value={`${data.metrics.caFacture.toLocaleString("fr-FR")} €`}
+            label="CA facturé"
+            sublabel="Devis acceptés"
+          />
+          <StatCard
+            icon={<FileText size={20} strokeWidth={1.75} />}
+            tone="blue"
             value={data.metrics.devisEnCours}
             label="Devis en cours"
             sublabel={
@@ -203,36 +252,47 @@ export default function DashboardPage() {
             }
           />
           <StatCard
-            icon={<Banknote size={20} strokeWidth={1.75} />}
+            icon={<HardHat size={20} strokeWidth={1.75} />}
             tone="amber"
-            value={data.metrics.facturesEnAttente}
-            label="Factures en attente"
+            value={data.metrics.chantiersActifs}
+            label="Chantiers actifs"
             sublabel={
-              data.metrics.facturesEnAttente > 0
-                ? `${data.metrics.facturesEnAttente} facture${data.metrics.facturesEnAttente > 1 ? "s" : ""} impayée${data.metrics.facturesEnAttente > 1 ? "s" : ""}`
-                : "Aucune facture impayée"
+              data.metrics.chantiersActifs > 0
+                ? `${data.metrics.chantiersActifs} chantier${data.metrics.chantiersActifs > 1 ? "s" : ""} actif${data.metrics.chantiersActifs > 1 ? "s" : ""}`
+                : "Aucun chantier actif"
             }
           />
           <StatCard
-            icon={<AlertTriangle size={20} strokeWidth={1.75} />}
-            tone="danger"
-            value={data.metrics.relancesActives}
-            label="Relances actives"
-            sublabel={data.metrics.relancesActives > 0 ? `${data.metrics.relancesActives} relance${data.metrics.relancesActives > 1 ? "s" : ""} en cours` : "Aucune relance en cours"}
-          />
-          <StatCard
-            icon={<Building2 size={20} strokeWidth={1.75} />}
-            tone="neutral"
-            value={data.metrics.chantiersEnCours}
-            label="Chantiers en cours"
-            sublabel={data.metrics.chantiersEnCours > 0 ? `${data.metrics.chantiersEnCours} chantier${data.metrics.chantiersEnCours > 1 ? "s" : ""} actif${data.metrics.chantiersEnCours > 1 ? "s" : ""}` : "Aucun chantier actif"}
+            icon={<DollarSign size={20} strokeWidth={1.75} />}
+            tone="orange"
+            value={data.metrics.facturesAEncaisser}
+            label="Factures à encaisser"
+            sublabel={
+              data.metrics.facturesAEncaisser > 0
+                ? `${data.metrics.facturesAEncaisser} à encaisser`
+                : "Aucune facture en attente"
+            }
           />
         </div>
       )}
 
       <div className="nova-overview-grid">
         <Card>
-          <CardTitle>Activité récente</CardTitle>
+          <div className="nova-section-header-row">
+            <CardTitle>Activité récente</CardTitle>
+            <select
+              className="nova-chart-period-select"
+              value={months}
+              onChange={(e) => setMonths(Number(e.target.value))}
+              aria-label="Période du graphique"
+            >
+              {PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {data === null ? (
             <Skeleton style={{ height: 220 }} />
           ) : (
@@ -241,7 +301,12 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardTitle>À faire</CardTitle>
+          <div className="nova-section-header-row">
+            <CardTitle>À faire aujourd&apos;hui</CardTitle>
+            <Link href="/dashboard/taches" className="nova-inline-link">
+              Voir tout
+            </Link>
+          </div>
           {data === null ? (
             <Skeleton style={{ height: 220 }} />
           ) : data.aFaire.length === 0 ? (
@@ -249,7 +314,7 @@ export default function DashboardPage() {
           ) : (
             <div className="nova-todo-list">
               {data.aFaire.map((item) => {
-                const { icon: Icon, tone } = KIND_ICON[item.kind];
+                const { icon: Icon, tone } = AFAIRE_KIND_ICON[item.kind];
                 return (
                   <Link key={item.id} href={item.href} className="nova-todo-item">
                     <span className={`nova-todo-icon nova-stat-icon-${tone}`}>
@@ -259,11 +324,8 @@ export default function DashboardPage() {
                       <div className="nova-todo-title">{item.title}</div>
                       <div className="nova-todo-subtitle">{item.subtitle}</div>
                     </div>
-                    {item.date && (
-                      <span className={`nova-todo-date ${item.urgent ? "nova-todo-date-urgent" : ""}`}>
-                        {formatShortDate(item.date)}
-                      </span>
-                    )}
+                    <PriorityBadge level={item.priority} />
+                    <ChevronRight size={16} strokeWidth={1.75} className="nova-todo-chevron" />
                   </Link>
                 );
               })}
@@ -294,6 +356,14 @@ export default function DashboardPage() {
           </>
         )}
       </Card>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        itemLabel={deleteTarget ? `« ${deleteTarget.reference} »` : ""}
+        onConfirm={confirmDeleteRow}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
     </div>
   );
 }
