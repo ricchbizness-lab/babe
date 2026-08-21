@@ -37,6 +37,20 @@ export function addMonths(date: Date, months: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
+export function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Les n derniers mois (mois courant inclus), du plus ancien au plus récent. */
+export function lastMonths(n: number): { key: string; label: string }[] {
+  const now = new Date();
+  return Array.from({ length: n }, (_, i) => {
+    const d = addMonths(now, -(n - 1 - i));
+    const raw = d.toLocaleDateString("fr-FR", { month: "short" });
+    return { key: monthKey(d), label: raw.charAt(0).toUpperCase() + raw.slice(1) };
+  });
+}
+
 /** Grille de 6 semaines (42 jours, lundi en première colonne) couvrant tout le mois de monthStart. */
 export function monthGrid(monthStart: Date): { date: Date; inMonth: boolean }[] {
   const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);

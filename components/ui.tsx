@@ -34,7 +34,9 @@ import {
   MapPin,
   MessageCircle,
   Mic,
+  MoreHorizontal,
   Phone,
+  Plus,
   Receipt,
   RefreshCw,
   Search,
@@ -46,7 +48,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
+import { addDays, addMonths, monthGrid, startOfWeek, toDateKey } from "@/lib/dates";
 import { relanceLevel } from "@/lib/relance";
 import { SESSION_EXPIRED_EVENT, fetchWithAuth } from "@/lib/fetchClient";
 
@@ -864,6 +866,235 @@ export function QuickAction({ label, href, icon }: { label: string; href: string
       <Icon size={18} strokeWidth={1.75} />
       <span>{label}</span>
     </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// StatCard — cartes de métriques du nouveau tableau de bord (icône pastel)
+// ---------------------------------------------------------------------------
+
+type StatTone = "teal" | "amber" | "danger" | "neutral";
+
+export function StatCard({
+  icon,
+  tone = "teal",
+  value,
+  label,
+  sublabel,
+}: {
+  icon: ReactNode;
+  tone?: StatTone;
+  value: number | string;
+  label: string;
+  sublabel?: string;
+}) {
+  return (
+    <div className="nova-stat-card">
+      <span className={`nova-stat-icon nova-stat-icon-${tone}`}>{icon}</span>
+      <div className="nova-stat-body">
+        <div className="nova-stat-value">{value}</div>
+        <div className="nova-stat-label">{label}</div>
+        {sublabel && <div className={`nova-stat-sublabel nova-stat-sublabel-${tone}`}>{sublabel}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MiniLineChart — graphique d'activité récente, SVG maison (pas de lib de
+// charting externe : deux séries simples ne justifient pas une dépendance).
+// ---------------------------------------------------------------------------
+
+function niceCeiling(value: number): number {
+  if (value <= 0) return 10;
+  const pow = Math.pow(10, Math.floor(Math.log10(value)));
+  const normalized = value / pow;
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return niceNormalized * pow;
+}
+
+function formatCompactEuro(value: number): string {
+  if (value >= 1000) return `${Math.round(value / 1000)}k`;
+  return `${Math.round(value)}`;
+}
+
+export function MiniLineChart({
+  data,
+  seriesALabel,
+  seriesBLabel,
+}: {
+  data: { month: string; ca: number; encaisse: number }[];
+  seriesALabel: string;
+  seriesBLabel: string;
+}) {
+  const width = 600;
+  const height = 220;
+  const paddingLeft = 40;
+  const paddingBottom = 22;
+  const paddingTop = 10;
+  const paddingRight = 8;
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
+
+  const maxRaw = Math.max(1, ...data.map((d) => Math.max(d.ca, d.encaisse)));
+  const niceMax = niceCeiling(maxRaw);
+  const steps = 4;
+
+  function x(i: number) {
+    return paddingLeft + (data.length <= 1 ? innerWidth / 2 : (innerWidth * i) / (data.length - 1));
+  }
+  function y(value: number) {
+    return paddingTop + innerHeight - (innerHeight * value) / niceMax;
+  }
+
+  const caPoints = data.map((d, i) => `${x(i)},${y(d.ca)}`).join(" ");
+  const encaissePoints = data.map((d, i) => `${x(i)},${y(d.encaisse)}`).join(" ");
+
+  return (
+    <div className="nova-chart">
+      <div className="nova-chart-legend">
+        <span className="nova-chart-legend-item">
+          <span className="nova-chart-legend-swatch nova-chart-legend-swatch-solid" />
+          {seriesALabel}
+        </span>
+        <span className="nova-chart-legend-item">
+          <span className="nova-chart-legend-swatch nova-chart-legend-swatch-dashed" />
+          {seriesBLabel}
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="nova-chart-svg" role="img" aria-label="Graphique d'activité récente">
+        {Array.from({ length: steps + 1 }).map((_, i) => {
+          const value = (niceMax / steps) * i;
+          const yy = y(value);
+          return (
+            <g key={i}>
+              <line x1={paddingLeft} x2={width - paddingRight} y1={yy} y2={yy} className="nova-chart-gridline" />
+              <text x={paddingLeft - 8} y={yy + 3} className="nova-chart-axis-label" textAnchor="end">
+                {formatCompactEuro(value)}
+              </text>
+            </g>
+          );
+        })}
+        {data.map((d, i) => (
+          <text key={d.month} x={x(i)} y={height - 4} className="nova-chart-axis-label" textAnchor="middle">
+            {d.month}
+          </text>
+        ))}
+        <polyline points={encaissePoints} className="nova-chart-line nova-chart-line-dashed" fill="none" />
+        <polyline points={caPoints} className="nova-chart-line nova-chart-line-solid" fill="none" />
+        {data.map((d, i) => (
+          <circle key={`dot-${d.month}`} cx={x(i)} cy={y(d.ca)} r={3} className="nova-chart-dot" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NewMenu — bouton "+ Nouveau" avec dropdown de création rapide (dashboard)
+// ---------------------------------------------------------------------------
+
+export function NewMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const items: { label: string; href: string }[] = [
+    { label: "Nouveau devis", href: "/dashboard/devis/nouveau" },
+    { label: "Nouveau client", href: "/dashboard/clients/nouveau" },
+    { label: "Nouveau chantier", href: "/dashboard/chantiers/nouveau" },
+  ];
+
+  return (
+    <div className="nova-new-menu" ref={ref}>
+      <Button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+        <Plus size={16} strokeWidth={1.75} />
+        Nouveau
+        <ChevronDown size={14} strokeWidth={1.75} />
+      </Button>
+      {open && (
+        <div className="nova-new-menu-panel" role="menu">
+          {items.map((item) => (
+            <Link key={item.href} href={item.href} className="nova-new-menu-item" role="menuitem" onClick={() => setOpen(false)}>
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WeekRangePicker — sélecteur de période affiché en en-tête du dashboard
+// ---------------------------------------------------------------------------
+
+export function WeekRangePicker() {
+  const [offset, setOffset] = useState(0);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const weekStart = addDays(startOfWeek(new Date()), offset * 7);
+  const weekEnd = addDays(weekStart, 6);
+  const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
+  const label = sameMonth
+    ? `${weekStart.getDate()} – ${weekEnd.getDate()} ${weekEnd.toLocaleDateString("fr-FR", { month: "long" })}`
+    : `${weekStart.getDate()} ${weekStart.toLocaleDateString("fr-FR", { month: "short" })} – ${weekEnd.getDate()} ${weekEnd.toLocaleDateString("fr-FR", { month: "short" })}`;
+
+  return (
+    <div className="nova-week-picker" ref={ref}>
+      <button type="button" className="nova-week-picker-trigger" onClick={() => setOpen((o) => !o)} aria-haspopup="dialog" aria-expanded={open}>
+        <CalendarDays size={15} strokeWidth={1.75} />
+        <span>{offset === 0 ? `Cette semaine · ${label}` : label}</span>
+        <ChevronDown size={14} strokeWidth={1.75} />
+      </button>
+      {open && (
+        <div className="nova-week-picker-panel" role="dialog" aria-label="Choisir une période">
+          <button type="button" className="nova-week-picker-option" onClick={() => setOffset((o) => o - 1)}>
+            <ChevronLeft size={15} strokeWidth={1.75} />
+            Semaine précédente
+          </button>
+          <button type="button" className="nova-week-picker-option" onClick={() => setOffset(0)}>
+            Cette semaine
+          </button>
+          <button type="button" className="nova-week-picker-option" onClick={() => setOffset((o) => o + 1)}>
+            Semaine suivante
+            <ChevronRight size={15} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
