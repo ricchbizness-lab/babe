@@ -104,7 +104,8 @@ export default function NewDevisPage() {
         }),
       });
       if (!res.ok) {
-        const message = "Impossible d'enregistrer le devis — vérifiez les champs.";
+        const data = await res.json().catch(() => ({}));
+        const message = data.error || "Impossible d'enregistrer le devis — vérifiez les champs.";
         setSaveError(message);
         toast.error(message);
         return;

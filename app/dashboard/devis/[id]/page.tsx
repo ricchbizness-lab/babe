@@ -134,7 +134,8 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
-        setError("Devis introuvable.");
+        const data = await res.json().catch(() => ({}));
+        setError(res.status === 404 || res.status === 403 ? "Devis introuvable." : data.error || "Erreur lors du chargement du devis.");
         return;
       }
       const data = await res.json();
