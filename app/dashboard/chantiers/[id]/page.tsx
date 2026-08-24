@@ -46,11 +46,11 @@ const STATUS_LABEL: Record<string, string> = {
   termine: "Terminé",
   annule: "Annulé",
 };
-const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   planifie: "neutral",
-  en_cours: "teal",
+  en_cours: "blue",
   termine: "success",
-  annule: "danger",
+  annule: "neutral",
 };
 
 const STATUS_ACTIONS: { status: string; label: string; variant: "secondary" | "primary" | "success" | "danger" }[] = [

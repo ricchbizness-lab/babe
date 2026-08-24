@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
-import { Button, ConfirmModal, EditModal, EmptyState, Field, useToast } from "@/components/ui";
+import { Button, ConfirmModal, EditModal, EmptyState, Field, Pagination, usePagination, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
@@ -121,6 +121,9 @@ export default function EquipePage() {
     setDeleteTarget(null);
   }
 
+  const { page, setPage, totalPages, start, end } = usePagination((members ?? []).length, 10);
+  const pageMembers = (members ?? []).slice(start, end);
+
   return (
     <div className="nova-page">
       <header className="nova-page-header-row">
@@ -144,7 +147,7 @@ export default function EquipePage() {
         />
       ) : (
         <div className="nova-team-grid">
-          {members.map((m) => (
+          {pageMembers.map((m) => (
             <div key={m.id} className="nova-team-card">
               <div className="nova-team-card-head">
                 <div>
@@ -171,6 +174,10 @@ export default function EquipePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {members !== null && members.length > 0 && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={members.length} start={start} end={end} />
       )}
 
       <EditModal open={adding} title="Ajouter un collaborateur" onCancel={() => setAdding(false)} onSave={confirmAdd} saving={savingAdd}>

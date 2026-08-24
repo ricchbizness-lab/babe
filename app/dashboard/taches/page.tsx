@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { ConfirmModal, DatePickerField, EmptyState, TableSkeleton, useToast } from "@/components/ui";
+import { ConfirmModal, DatePickerField, EmptyState, Pagination, TableSkeleton, usePagination, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectOption = { id: string; name: string };
@@ -172,6 +172,9 @@ export default function TachesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, sort]);
 
+  const { page, setPage, totalPages, start, end } = usePagination(sortedTasks.length, 10);
+  const pageTasks = sortedTasks.slice(start, end);
+
   return (
     <div className="nova-page">
       <header className="nova-page-header">
@@ -253,7 +256,7 @@ export default function TachesPage() {
         />
       ) : (
         <ul className="nova-task-list">
-          {sortedTasks.map((t) => (
+          {pageTasks.map((t) => (
             <li
               key={t.id}
               className="nova-task-row"
@@ -302,6 +305,10 @@ export default function TachesPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {tasks !== null && filtered.length > 0 && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={sortedTasks.length} start={start} end={end} />
       )}
 
       <ConfirmModal

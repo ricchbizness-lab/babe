@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, Button, EmptyState, MetricBar, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 import { Download } from "lucide-react";
@@ -29,9 +29,9 @@ const PAYMENT_STATUS_LABEL: Record<string, string> = {
   payee: "Payée",
   en_retard: "En retard",
 };
-const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   brouillon: "neutral",
-  envoye: "teal",
+  envoye: "blue",
   accepte: "success",
   refuse: "danger",
 };
@@ -73,8 +73,17 @@ export default function DevisPage() {
     downloadCSV("devis.csv", csv);
   }
 
+  const montantTotal = (devis ?? []).reduce((sum, d) => sum + (d.amount || 0), 0);
+  const enAttenteMontant = (devis ?? [])
+    .filter((d) => d.status === "envoye")
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+  const tauxConversion =
+    devis && devis.length > 0
+      ? Math.round((devis.filter((d) => d.status === "accepte").length / devis.length) * 100)
+      : 0;
+
   const columns: TableColumn<DevisRow>[] = [
-    { key: "label", label: "Devis" },
+    { key: "label", label: "Devis", emphasis: "title" },
     { key: "client", label: "Client", render: (d) => d.client?.name || "—" },
     {
       key: "status",
@@ -90,6 +99,7 @@ export default function DevisPage() {
       render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
       sortable: true,
       sortValue: (d) => d.amount,
+      emphasis: "amount",
     },
     {
       key: "createdAt",
@@ -127,6 +137,17 @@ export default function DevisPage() {
         </div>
       </header>
 
+      {devis !== null && devis.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total devis", value: devis.length },
+            { label: "Montant total", value: `${montantTotal.toLocaleString("fr-FR")} €` },
+            { label: "En attente de réponse", value: `${enAttenteMontant.toLocaleString("fr-FR")} €` },
+            { label: "Taux de conversion", value: `${tauxConversion}%` },
+          ]}
+        />
+      )}
+
       <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
 
       {devis === null ? (
@@ -145,6 +166,7 @@ export default function DevisPage() {
           rows={filtered}
           getRowHref={(d) => `/dashboard/devis/${d.id}`}
           emptyLabel="Aucun résultat pour cette recherche."
+          pageSize={10}
         />
       )}
     </div>

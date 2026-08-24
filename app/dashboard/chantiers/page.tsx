@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectRow = {
@@ -21,11 +21,11 @@ const STATUS_LABEL: Record<string, string> = {
   termine: "Terminé",
   annule: "Annulé",
 };
-const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   planifie: "neutral",
-  en_cours: "teal",
+  en_cours: "blue",
   termine: "success",
-  annule: "danger",
+  annule: "neutral",
 };
 const STATUS_ORDER: Record<string, number> = {
   planifie: 0,
@@ -61,8 +61,19 @@ export default function ChantiersPage() {
 
   const filtered = (projects ?? []).filter((p) => filter === "all" || p.status === filter);
 
+  const now = new Date();
+  const enCoursCount = (projects ?? []).filter((p) => p.status === "en_cours").length;
+  const planifiesCount = (projects ?? []).filter((p) => p.status === "planifie").length;
+  const termineCeMoisCount = (projects ?? []).filter(
+    (p) =>
+      p.status === "termine" &&
+      p.endDate &&
+      new Date(p.endDate).getMonth() === now.getMonth() &&
+      new Date(p.endDate).getFullYear() === now.getFullYear()
+  ).length;
+
   const columns: TableColumn<ProjectRow>[] = [
-    { key: "name", label: "Chantier" },
+    { key: "name", label: "Chantier", emphasis: "title" },
     { key: "client", label: "Client", render: (p) => p.client?.name || "—" },
     {
       key: "status",
@@ -96,6 +107,17 @@ export default function ChantiersPage() {
       </header>
 
       {projects !== null && projects.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total chantiers", value: projects.length },
+            { label: "En cours", value: enCoursCount },
+            { label: "Planifiés", value: planifiesCount },
+            { label: "Terminés ce mois", value: termineCeMoisCount },
+          ]}
+        />
+      )}
+
+      {projects !== null && projects.length > 0 && (
         <div className="nova-filter-row">
           {STATUS_FILTERS.map((f) => (
             <button
@@ -126,6 +148,7 @@ export default function ChantiersPage() {
           rows={filtered}
           getRowHref={(p) => `/dashboard/chantiers/${p.id}`}
           emptyLabel="Aucun chantier pour ce filtre."
+          pageSize={10}
         />
       )}
     </div>

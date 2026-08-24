@@ -69,9 +69,9 @@ const DEVIS_STATUS_LABEL: Record<string, string> = {
   envoye: "Envoyé",
   refuse: "Refusé",
 };
-const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger" | "amber"> = {
+const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger" | "amber"> = {
   brouillon: "neutral",
-  envoye: "teal",
+  envoye: "blue",
   refuse: "danger",
 };
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
@@ -90,11 +90,11 @@ const PROJECT_STATUS_LABEL: Record<string, string> = {
   termine: "Terminé",
   annule: "Annulé",
 };
-const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   planifie: "neutral",
-  en_cours: "teal",
+  en_cours: "blue",
   termine: "success",
-  annule: "danger",
+  annule: "neutral",
 };
 
 const AFAIRE_KIND_ICON: Record<AFaireItem["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "neutral" | "blue" }> = {

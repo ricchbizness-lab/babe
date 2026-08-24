@@ -61,9 +61,9 @@ const STATUS_LABEL: Record<string, string> = {
   accepte: "Accepté",
   refuse: "Refusé",
 };
-const STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   brouillon: "neutral",
-  envoye: "teal",
+  envoye: "blue",
   accepte: "success",
   refuse: "danger",
 };

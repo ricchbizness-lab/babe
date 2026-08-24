@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
-import { Badge, Button, EmptyState, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
@@ -68,8 +68,29 @@ export default function FacturationPage() {
     downloadCSV("facturation.csv", csv);
   }
 
+  const now = new Date();
+  const caEncaisseCeMois = invoices
+    .filter(
+      (d) =>
+        d.paymentStatus === "payee" &&
+        new Date(d.updatedAt).getMonth() === now.getMonth() &&
+        new Date(d.updatedAt).getFullYear() === now.getFullYear()
+    )
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+  const enAttenteMontant = invoices
+    .filter((d) => d.paymentStatus === "en_attente")
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+  const enRetardMontant = invoices
+    .filter((d) => d.paymentStatus === "en_retard")
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+
   const columns: TableColumn<InvoiceRow>[] = [
-    { key: "numero", label: "Facture", render: (d) => <span className="nova-timestamp">{d.numero}</span> },
+    {
+      key: "numero",
+      label: "Facture",
+      render: (d) => <span className="nova-timestamp">{d.numero}</span>,
+      emphasis: "title",
+    },
     { key: "client", label: "Client", render: (d) => d.client?.name || "—" },
     {
       key: "amount",
@@ -78,6 +99,7 @@ export default function FacturationPage() {
       render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
       sortable: true,
       sortValue: (d) => d.amount,
+      emphasis: "amount",
     },
     {
       key: "paymentStatus",
@@ -116,6 +138,16 @@ export default function FacturationPage() {
         )}
       </header>
 
+      {accepted !== null && accepted.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "CA encaissé ce mois", value: `${caEncaisseCeMois.toLocaleString("fr-FR")} €` },
+            { label: "En attente de paiement", value: `${enAttenteMontant.toLocaleString("fr-FR")} €` },
+            { label: "En retard", value: `${enRetardMontant.toLocaleString("fr-FR")} €` },
+          ]}
+        />
+      )}
+
       {accepted === null ? (
         <TableSkeleton columns={5} />
       ) : accepted.length === 0 ? (
@@ -127,7 +159,7 @@ export default function FacturationPage() {
           actionHref="/dashboard/devis"
         />
       ) : (
-        <Table columns={columns} rows={displayRows} getRowHref={(d) => `/dashboard/facturation/${d.id}`} />
+        <Table columns={columns} rows={displayRows} getRowHref={(d) => `/dashboard/facturation/${d.id}`} pageSize={10} />
       )}
     </div>
   );

@@ -49,7 +49,7 @@ export default function RapportsVocauxPage() {
   }
 
   const columns: TableColumn<ReportRow>[] = [
-    { key: "authorLabel", label: "Auteur" },
+    { key: "authorLabel", label: "Auteur", emphasis: "title" },
     {
       key: "project",
       label: "Chantier",
@@ -107,7 +107,7 @@ export default function RapportsVocauxPage() {
           actionHref="/dashboard/rapports-vocaux/nouveau"
         />
       ) : (
-        <Table columns={columns} rows={reports} />
+        <Table columns={columns} rows={reports} pageSize={10} />
       )}
 
       <ConfirmModal

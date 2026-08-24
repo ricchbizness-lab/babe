@@ -182,7 +182,7 @@ export function EmptyState({
   const Icon = icon ? ICONS[icon] : undefined;
   return (
     <div className="nova-empty-state">
-      {Icon && <Icon size={28} strokeWidth={1.5} className="nova-empty-state-icon" />}
+      {Icon && <Icon size={48} strokeWidth={1.5} className="nova-empty-state-icon" />}
       <p className="nova-empty-state-title">{title}</p>
       {description && <p className="nova-empty-state-description">{description}</p>}
       {actionLabel && actionHref && (
@@ -678,10 +678,17 @@ export function SearchInput({
 // Badge — statuts et timestamps, toujours en police mono (IBM Plex Mono)
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "neutral" | "teal" | "amber" | "success" | "danger";
+type BadgeTone = "neutral" | "teal" | "blue" | "amber" | "success" | "danger";
 
 export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; children: ReactNode }) {
-  return <span className={`nova-badge nova-badge-${tone}`}>{children}</span>;
+  return (
+    <span className={`nova-badge nova-badge-${tone}`}>
+      <span className="nova-badge-dot" aria-hidden="true">
+        •
+      </span>
+      {children}
+    </span>
+  );
 }
 
 export function RelanceIndicator({ status, updatedAt }: { status: string; updatedAt: string }) {
@@ -715,6 +722,7 @@ export type TableColumn<T> = {
   render?: (row: T) => ReactNode;
   sortable?: boolean;
   sortValue?: (row: T) => string | number | null | undefined;
+  emphasis?: "title" | "subtitle" | "amount";
 };
 
 type SortState = { key: string; direction: "asc" | "desc" };
@@ -724,11 +732,14 @@ export function Table<T extends { id: string | number }>({
   rows,
   emptyLabel = "Aucune donnée pour le moment.",
   getRowHref,
+  pageSize,
 }: {
   columns: TableColumn<T>[];
   rows: T[];
   emptyLabel?: string;
   getRowHref?: (row: T) => string;
+  /** Active la pagination interne (triée puis paginée, dans cet ordre). */
+  pageSize?: number;
 }) {
   const router = useRouter();
   const [sort, setSort] = useState<SortState | null>(null);
@@ -751,6 +762,9 @@ export function Table<T extends { id: string | number }>({
     });
   }, [rows, sort, columns]);
 
+  const { page, setPage, totalPages, start, end } = usePagination(sortedRows.length, pageSize || sortedRows.length || 1);
+  const pageRows = pageSize ? sortedRows.slice(start, end) : sortedRows;
+
   if (rows.length === 0) {
     return <div className="nova-table-empty">{emptyLabel}</div>;
   }
@@ -765,7 +779,8 @@ export function Table<T extends { id: string | number }>({
   }
 
   return (
-    <div className="nova-table-wrap">
+    <>
+      <div className="nova-table-wrap">
       <table className="nova-table">
         <thead>
           <tr>
@@ -797,14 +812,18 @@ export function Table<T extends { id: string | number }>({
           </tr>
         </thead>
         <tbody>
-          {sortedRows.map((row) => (
+          {pageRows.map((row) => (
             <tr
               key={row.id}
               className={getRowHref ? "nova-table-row-clickable" : ""}
               onClick={getRowHref ? () => router.push(getRowHref(row)) : undefined}
             >
               {columns.map((col) => (
-                <td key={col.key} style={{ textAlign: col.align || "left" }}>
+                <td
+                  key={col.key}
+                  style={{ textAlign: col.align || "left" }}
+                  className={col.emphasis ? `nova-cell-${col.emphasis}` : undefined}
+                >
                   {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? "")}
                 </td>
               ))}
@@ -812,7 +831,18 @@ export function Table<T extends { id: string | number }>({
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+      {pageSize && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={sortedRows.length}
+          start={start}
+          end={end}
+        />
+      )}
+    </>
   );
 }
 
@@ -982,6 +1012,98 @@ export function RowActionsMenu({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MetricBar — bandeau de métriques compactes en haut d'une page liste
+// ---------------------------------------------------------------------------
+
+export function MetricBar({ items }: { items: { label: string; value: string | number }[] }) {
+  return (
+    <div className="nova-metric-bar">
+      {items.map((item) => (
+        <div className="nova-metric-bar-item" key={item.label}>
+          <div className="nova-metric-bar-value">{item.value}</div>
+          <div className="nova-metric-bar-label">{item.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pagination — pagination côté client pour les listes principales
+// ---------------------------------------------------------------------------
+
+export function usePagination(totalItems: number, pageSize = 10) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const clampedPage = Math.min(page, totalPages);
+
+  useEffect(() => {
+    if (page !== clampedPage) setPage(clampedPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clampedPage]);
+
+  const start = (clampedPage - 1) * pageSize;
+  const end = Math.min(start + pageSize, totalItems);
+  return { page: clampedPage, setPage, totalPages, start, end, pageSize };
+}
+
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  totalItems,
+  start,
+  end,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+  start: number;
+  end: number;
+}) {
+  if (totalPages <= 1) return null;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return (
+    <div className="nova-pagination">
+      <span className="nova-pagination-summary">
+        Affichage de {totalItems === 0 ? 0 : start + 1} à {end} sur {totalItems} élément{totalItems > 1 ? "s" : ""}
+      </span>
+      <div className="nova-pagination-controls">
+        <button
+          type="button"
+          className="nova-pagination-btn"
+          disabled={page === 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft size={15} strokeWidth={1.75} />
+          Précédent
+        </button>
+        {pages.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className={`nova-pagination-page ${p === page ? "nova-pagination-page-active" : ""}`}
+            onClick={() => onPageChange(p)}
+          >
+            {p}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="nova-pagination-btn"
+          disabled={page === totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Suivant
+          <ChevronRight size={15} strokeWidth={1.75} />
+        </button>
+      </div>
     </div>
   );
 }

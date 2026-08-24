@@ -19,6 +19,10 @@ export async function GET(req: Request) {
             ],
           }
         : { businessId },
+      include: {
+        devis: { select: { amount: true, status: true } },
+        projects: { select: { status: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: search ? 8 : undefined,
     });

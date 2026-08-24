@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Download, UserPlus } from "lucide-react";
-import { Button, EmptyState, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { Button, EmptyState, MetricBar, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 
@@ -14,6 +14,8 @@ type ClientRow = {
   phone: string | null;
   address: string | null;
   createdAt: string;
+  devis: { amount: number | null; status: string }[];
+  projects: { status: string }[];
 };
 
 export default function ClientsPage() {
@@ -44,8 +46,14 @@ export default function ClientsPage() {
     downloadCSV("clients.csv", csv);
   }
 
+  const caTotal = (clients ?? []).reduce(
+    (sum, c) => sum + c.devis.filter((d) => d.status === "accepte").reduce((s, d) => s + (d.amount || 0), 0),
+    0
+  );
+  const clientsActifs = (clients ?? []).filter((c) => c.projects.some((p) => p.status === "en_cours")).length;
+
   const columns: TableColumn<ClientRow>[] = [
-    { key: "name", label: "Nom", sortable: true },
+    { key: "name", label: "Nom", sortable: true, emphasis: "title" },
     { key: "email", label: "Email", render: (c) => c.email || "—" },
     { key: "phone", label: "Téléphone", render: (c) => c.phone || "—" },
     {
@@ -80,6 +88,16 @@ export default function ClientsPage() {
         </div>
       </header>
 
+      {clients !== null && clients.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total clients", value: clients.length },
+            { label: "CA total généré", value: `${caTotal.toLocaleString("fr-FR")} €` },
+            { label: "Clients actifs", value: clientsActifs },
+          ]}
+        />
+      )}
+
       <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />
 
       {clients === null ? (
@@ -98,6 +116,7 @@ export default function ClientsPage() {
           rows={filtered}
           getRowHref={(c) => `/dashboard/clients/${c.id}`}
           emptyLabel="Aucun résultat pour cette recherche."
+          pageSize={10}
         />
       )}
     </div>

@@ -48,11 +48,11 @@ const PROJECT_STATUS_LABEL: Record<string, string> = {
   termine: "Terminé",
   annule: "Annulé",
 };
-const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   planifie: "neutral",
-  en_cours: "teal",
+  en_cours: "blue",
   termine: "success",
-  annule: "danger",
+  annule: "neutral",
 };
 const DEVIS_STATUS_LABEL: Record<string, string> = {
   brouillon: "Brouillon",
@@ -60,9 +60,9 @@ const DEVIS_STATUS_LABEL: Record<string, string> = {
   accepte: "Accepté",
   refuse: "Refusé",
 };
-const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "success" | "danger"> = {
+const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
   brouillon: "neutral",
-  envoye: "teal",
+  envoye: "blue",
   accepte: "success",
   refuse: "danger",
 };

@@ -53,12 +53,30 @@
   --nova-space-5: 40px;
 
   /* NOVA v7 — rayons, ombre, transitions */
-  --nova-radius-card: 8px;
-  --nova-radius-btn: 6px;
+  --nova-radius-card: 10px;
+  --nova-radius-btn: 8px;
   --nova-radius-badge: 4px;
-  --nova-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --nova-radius-input: 8px;
+  --nova-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
   --nova-transition-color: 150ms ease;
   --nova-transition-transform: 100ms ease;
+
+  /* Passe design global — tables, badges de statut, formulaires */
+  --nova-table-header-bg: #F8F9FA;
+  --nova-table-border: #E2E5E8;
+  --nova-table-hover-bg: #F8FFFE;
+  --nova-input-border: #E2E5E8;
+
+  --nova-badge-neutral-bg: #F1F3F5;
+  --nova-badge-neutral-text: #566072;
+  --nova-badge-blue-bg: #EBF4FF;
+  --nova-badge-blue-text: #1D6FBF;
+  --nova-badge-amber-bg: #FFF3CD;
+  --nova-badge-amber-text: #856404;
+  --nova-badge-success-bg: #D1FAE5;
+  --nova-badge-success-text: #065F46;
+  --nova-badge-danger-bg: #FEE2E2;
+  --nova-badge-danger-text: #991B1B;
 
   /* Alias conservés pour les pages existantes (login/register/onboarding)
      construites avant le design system v7 — pointent vers les mêmes valeurs
@@ -100,19 +118,21 @@ input, select, textarea, button {
 }
 input, select, textarea {
   width: 100%;
-  padding: var(--nova-space-1) var(--nova-space-2);
-  border: 1.5px solid var(--nova-border);
-  border-radius: var(--nova-radius-btn);
+  padding: 10px 14px;
+  border: 1.5px solid var(--nova-input-border);
+  border-radius: var(--nova-radius-input);
   background: var(--nova-surface);
   margin-top: var(--nova-space-1);
   margin-bottom: var(--nova-space-2);
   color: var(--nova-ink);
-  transition: border-color var(--nova-transition-color);
+  transition: border-color var(--nova-transition-color), box-shadow var(--nova-transition-color);
 }
+input::placeholder, textarea::placeholder { color: var(--nova-ink-faint); }
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--nova-teal);
+  box-shadow: 0 0 0 3px rgba(20, 89, 74, 0.08);
 }
-label { font-size: 12.5px; font-weight: 600; color: var(--nova-ink-soft); }
+label { font-size: 12px; font-weight: 600; color: var(--nova-ink-soft); margin-bottom: 6px; display: inline-block; }
 
 button.primary {
   background: var(--nova-teal);
@@ -515,25 +535,25 @@ button.primary:hover { background: var(--nova-teal-deep); }
   align-items: center;
   gap: var(--nova-space-1);
   border-radius: var(--nova-radius-btn);
-  padding: var(--nova-space-1) var(--nova-space-2);
+  padding: 10px 18px;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   border: 1.5px solid transparent;
-  transition: background-color var(--nova-transition-color), border-color var(--nova-transition-color),
-    color var(--nova-transition-color), transform var(--nova-transition-transform);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease,
+    box-shadow 150ms ease;
 }
 .nova-btn:hover { transform: translateY(-1px); }
-.nova-btn-primary { background: var(--nova-teal); color: #fff; }
+.nova-btn-primary { background: var(--nova-teal); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
 .nova-btn-primary:hover { background: var(--nova-teal-deep); }
 .nova-btn-secondary { background: var(--nova-surface); color: var(--nova-ink); border-color: var(--nova-border); }
 .nova-btn-secondary:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
-.nova-btn-ghost { background: transparent; color: var(--nova-ink-soft); }
+.nova-btn-ghost { background: transparent; color: var(--nova-ink-soft); border-color: transparent; }
 .nova-btn-ghost:hover { color: var(--nova-ink); }
 .nova-btn-success { background: var(--nova-success); color: #fff; }
 .nova-btn-success:hover { filter: brightness(0.92); }
-.nova-btn-danger { background: var(--nova-danger); color: #fff; }
-.nova-btn-danger:hover { filter: brightness(0.92); }
+.nova-btn-danger { background: #DC2626; color: #fff; }
+.nova-btn-danger:hover { background: #B91C1C; }
 .nova-btn[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
 
 /* --- Cartes --- */
@@ -659,6 +679,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 3px var(--nova-space-1);
   border-radius: var(--nova-radius-badge);
   font-family: var(--nova-font-mono);
@@ -666,16 +687,18 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-weight: 500;
   letter-spacing: 0.01em;
 }
-.nova-badge-neutral { background: #F1F1F2; color: var(--nova-ink-soft); }
+.nova-badge-dot { font-size: 10px; line-height: 1; color: currentColor; }
+.nova-badge-neutral { background: var(--nova-badge-neutral-bg); color: var(--nova-badge-neutral-text); }
 .nova-badge-teal { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
-.nova-badge-amber { background: var(--nova-amber-tint); color: var(--nova-amber); }
-.nova-badge-success { background: var(--nova-success-tint); color: var(--nova-success); }
-.nova-badge-danger { background: var(--nova-danger-tint); color: var(--nova-danger); }
+.nova-badge-blue { background: var(--nova-badge-blue-bg); color: var(--nova-badge-blue-text); }
+.nova-badge-amber { background: var(--nova-badge-amber-bg); color: var(--nova-badge-amber-text); }
+.nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
+.nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
 
 .nova-timestamp {
   font-family: var(--nova-font-mono);
-  font-size: 12.5px;
-  color: var(--nova-ink-soft);
+  font-size: 12px;
+  color: var(--nova-ink-faint);
 }
 
 /* --- Tables --- */
@@ -689,18 +712,21 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .nova-table th {
   text-align: left;
-  font-size: 11.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.5px;
   color: var(--nova-ink-faint);
-  padding: var(--nova-space-2);
-  border-bottom: 1px solid var(--nova-border);
-  background: #FCFCFC;
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--nova-table-border);
+  background: var(--nova-table-header-bg);
 }
 .nova-table td {
-  padding: var(--nova-space-2);
+  padding: 14px 16px;
   border-bottom: 1px solid var(--nova-border);
 }
+.nova-cell-title { font-size: 14px; font-weight: 600; color: var(--nova-ink); }
+.nova-cell-subtitle { font-size: 13px; font-weight: 400; color: var(--nova-ink-soft); }
+.nova-cell-amount { font-family: var(--nova-font-heading); font-size: 14px; font-weight: 700; color: var(--nova-ink); }
 .nova-table tr:last-child td { border-bottom: none; }
 .nova-table-sort-btn {
   display: inline-flex;
@@ -722,7 +748,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-table tbody tr {
   transition: background-color var(--nova-transition-color);
 }
-.nova-table tbody tr:hover { background: #FAFAFA; }
+.nova-table tbody tr:hover { background: var(--nova-table-hover-bg); }
 .nova-table-row-clickable { cursor: pointer; }
 .nova-table-row-clickable:hover { background: var(--nova-teal-tint) !important; }
 .nova-table-empty {
@@ -733,6 +759,80 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border: 1px dashed var(--nova-border);
   border-radius: var(--nova-radius-card);
 }
+
+/* --- Bandeau de métriques compactes (pages liste) --- */
+
+.nova-metric-bar {
+  display: flex;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+.nova-metric-bar-item {
+  flex: 1;
+  min-width: 150px;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+}
+.nova-metric-bar-value {
+  font-family: var(--nova-font-heading);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--nova-ink);
+}
+.nova-metric-bar-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  margin-top: 4px;
+}
+
+/* --- Pagination --- */
+
+.nova-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--nova-space-2);
+}
+.nova-pagination-summary { font-size: 12.5px; color: var(--nova-ink-faint); }
+.nova-pagination-controls { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.nova-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  transition: border-color var(--nova-transition-color), color var(--nova-transition-color);
+}
+.nova-pagination-btn:hover:not(:disabled) { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+.nova-pagination-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.nova-pagination-page {
+  min-width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--nova-radius-btn);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  transition: background-color var(--nova-transition-color), color var(--nova-transition-color);
+}
+.nova-pagination-page:hover { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
+.nova-pagination-page-active { background: var(--nova-teal); color: #fff; }
 
 /* --- Recherche --- */
 
@@ -771,8 +871,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
   color: var(--nova-ink-soft);
 }
 .nova-empty-state-icon { color: var(--nova-ink-faint); margin-bottom: var(--nova-space-1); }
-.nova-empty-state-title { font-weight: 700; color: var(--nova-ink); margin: 0; }
-.nova-empty-state-description { font-size: 13px; margin: 0 0 var(--nova-space-1); max-width: 360px; }
+.nova-empty-state-title { font-weight: 700; font-size: 16px; color: var(--nova-ink); margin: 0; }
+.nova-empty-state-description { font-size: 14px; color: var(--nova-ink-soft); margin: 0 0 var(--nova-space-1); max-width: 360px; }
 
 /* --- Lien retour --- */
 
