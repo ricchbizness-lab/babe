@@ -678,7 +678,7 @@ export function SearchInput({
 // Badge — statuts et timestamps, toujours en police mono (IBM Plex Mono)
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "neutral" | "teal" | "blue" | "amber" | "success" | "danger";
+export type BadgeTone = "neutral" | "teal" | "blue" | "amber" | "success" | "danger";
 
 export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; children: ReactNode }) {
   return (

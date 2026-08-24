@@ -6,10 +6,12 @@ import { Badge, Button, EmptyState, MetricBar, RelanceIndicator, SearchInput, Ta
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 import { Download } from "lucide-react";
+import { DevisKanban, KanbanSkeleton } from "./DevisKanban";
 
-type DevisRow = {
+export type DevisRow = {
   id: string;
   label: string;
+  description: string | null;
   status: string;
   paymentStatus: string;
   amount: number | null;
@@ -45,6 +47,7 @@ const STATUS_ORDER: Record<string, number> = {
 export default function DevisPage() {
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<"pipeline" | "liste">("pipeline");
 
   useEffect(() => {
     fetchWithAuth("/api/devis")
@@ -137,6 +140,27 @@ export default function DevisPage() {
         </div>
       </header>
 
+      <div className="nova-view-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === "pipeline"}
+          className={`nova-view-tab ${view === "pipeline" ? "nova-view-tab-active" : ""}`}
+          onClick={() => setView("pipeline")}
+        >
+          Vue pipeline
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === "liste"}
+          className={`nova-view-tab ${view === "liste" ? "nova-view-tab-active" : ""}`}
+          onClick={() => setView("liste")}
+        >
+          Vue liste
+        </button>
+      </div>
+
       {devis !== null && devis.length > 0 && (
         <MetricBar
           items={[
@@ -148,26 +172,44 @@ export default function DevisPage() {
         />
       )}
 
-      <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
-
-      {devis === null ? (
-        <TableSkeleton columns={6} />
-      ) : devis.length === 0 ? (
-        <EmptyState
-          icon="devis"
-          title="Aucun devis pour l'instant — créez votre premier devis"
-          description="Nova peut générer le contenu à votre place à partir de quelques informations."
-          actionLabel="Créer un devis"
-          actionHref="/dashboard/devis/nouveau"
-        />
+      {view === "pipeline" ? (
+        devis === null ? (
+          <KanbanSkeleton />
+        ) : devis.length === 0 ? (
+          <EmptyState
+            icon="devis"
+            title="Aucun devis pour l'instant — créez votre premier devis"
+            description="Nova peut générer le contenu à votre place à partir de quelques informations."
+            actionLabel="Créer un devis"
+            actionHref="/dashboard/devis/nouveau"
+          />
+        ) : (
+          <DevisKanban devis={devis} />
+        )
       ) : (
-        <Table
-          columns={columns}
-          rows={filtered}
-          getRowHref={(d) => `/dashboard/devis/${d.id}`}
-          emptyLabel="Aucun résultat pour cette recherche."
-          pageSize={10}
-        />
+        <>
+          <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
+
+          {devis === null ? (
+            <TableSkeleton columns={6} />
+          ) : devis.length === 0 ? (
+            <EmptyState
+              icon="devis"
+              title="Aucun devis pour l'instant — créez votre premier devis"
+              description="Nova peut générer le contenu à votre place à partir de quelques informations."
+              actionLabel="Créer un devis"
+              actionHref="/dashboard/devis/nouveau"
+            />
+          ) : (
+            <Table
+              columns={columns}
+              rows={filtered}
+              getRowHref={(d) => `/dashboard/devis/${d.id}`}
+              emptyLabel="Aucun résultat pour cette recherche."
+              pageSize={10}
+            />
+          )}
+        </>
       )}
     </div>
   );
