@@ -20,6 +20,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const member = await prisma.teamMember.update({
       where: { id: params.id, businessId },
       data: parsed.data,
+      include: {
+        assignments: { include: { project: { select: { id: true, status: true } } } },
+      },
     });
     return NextResponse.json({ member });
   } catch (err) {

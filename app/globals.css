@@ -571,7 +571,11 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-size: 16px;
   font-weight: 700;
   margin: 0 0 var(--nova-space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
 }
+.nova-card-title svg { color: var(--nova-teal); flex-shrink: 0; }
 
 /* --- Champs de formulaire --- */
 
@@ -953,6 +957,73 @@ button.primary:hover { background: var(--nova-teal-deep); }
   transition: border-color var(--nova-transition-color), color var(--nova-transition-color);
 }
 .nova-kanban-add-btn:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+
+/* --- Avatar (initiales) --- */
+
+.nova-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--nova-teal);
+  color: #fff;
+  font-family: var(--nova-font-heading);
+  font-weight: 700;
+  line-height: 1;
+}
+.nova-avatar-stack { display: inline-flex; align-items: center; }
+.nova-avatar-stack-item { display: inline-flex; margin-left: -8px; }
+.nova-avatar-stack-item:first-child { margin-left: 0; }
+.nova-avatar-stack-item .nova-avatar { border: 2px solid var(--nova-surface); }
+.nova-avatar-stack-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: var(--nova-border);
+  color: var(--nova-ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  border: 2px solid var(--nova-surface);
+  flex-shrink: 0;
+}
+.nova-identity-cell { display: flex; align-items: center; gap: var(--nova-space-1); }
+.nova-identity-cell-name { font-size: 14px; font-weight: 600; color: var(--nova-ink); }
+.nova-ink-faint { color: var(--nova-ink-faint); }
+.nova-settings-form { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-report-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--nova-teal-tint);
+  color: var(--nova-teal-deep);
+  flex-shrink: 0;
+}
+
+/* --- Barre de progression --- */
+
+.nova-progress { display: flex; align-items: center; gap: var(--nova-space-1); min-width: 100px; }
+.nova-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--nova-border);
+  overflow: hidden;
+}
+.nova-progress-fill { height: 100%; border-radius: 3px; background: var(--nova-teal); transition: width 200ms ease; }
+.nova-progress-label {
+  font-family: var(--nova-font-mono);
+  font-size: 11.5px;
+  color: var(--nova-ink-faint);
+  flex-shrink: 0;
+  min-width: 30px;
+  text-align: right;
+}
 
 /* --- Recherche --- */
 
@@ -1785,6 +1856,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   flex-direction: column;
   gap: var(--nova-space-2);
 }
+.nova-planning-day-today { border-color: var(--nova-teal); box-shadow: 0 0 0 1px var(--nova-teal), var(--nova-shadow-card); }
 .nova-planning-day-header {
   display: flex;
   align-items: baseline;
@@ -1792,7 +1864,9 @@ button.primary:hover { background: var(--nova-teal-deep); }
   padding-bottom: var(--nova-space-1);
   border-bottom: 1px solid var(--nova-border);
 }
+.nova-planning-day-today .nova-planning-day-header { border-bottom-color: var(--nova-teal); }
 .nova-planning-day-label { font-family: var(--nova-font-heading); font-size: 13px; font-weight: 700; }
+.nova-planning-day-today .nova-planning-day-label { color: var(--nova-teal-deep); }
 .nova-planning-day-date { font-family: var(--nova-font-mono); font-size: 11.5px; color: var(--nova-ink-faint); }
 .nova-planning-day-body { display: flex; flex-direction: column; gap: var(--nova-space-2); }
 .nova-planning-project {
@@ -1826,8 +1900,14 @@ button.primary:hover { background: var(--nova-teal-deep); }
   white-space: nowrap;
 }
 .nova-planning-empty-link:hover { text-decoration: underline; }
-.nova-planning-people { list-style: none; margin: var(--nova-space-1) 0 0; padding: 0; font-size: 13px; color: var(--nova-ink); }
-.nova-planning-people li { padding: 2px 0; }
+.nova-planning-people { list-style: none; margin: var(--nova-space-1) 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.nova-planning-people li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--nova-ink);
+}
 
 /* --- Dispatch --- */
 
@@ -1853,9 +1933,10 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-team-card-edit-link:hover { color: var(--nova-teal-deep); }
 .nova-team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--nova-space-2);
 }
+.nova-team-card-assignment-badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .nova-team-card {
   background: var(--nova-surface);
   border: 1px solid var(--nova-border);
@@ -1867,7 +1948,13 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-2);
 }
 .nova-team-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--nova-space-1); }
+.nova-team-card-identity { display: flex; align-items: center; gap: var(--nova-space-1); }
 .nova-team-card-name { font-weight: 700; font-size: 14.5px; }
+.nova-team-card-count {
+  font-family: var(--nova-font-mono);
+  font-size: 11.5px;
+  color: var(--nova-ink-faint);
+}
 .nova-team-card-role { font-size: 12.5px; color: var(--nova-ink-soft); }
 .nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
 .nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
@@ -1974,8 +2061,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-task-row:last-child { border-bottom: none; }
 .nova-task-row:hover { background: var(--nova-bg); }
 .nova-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   accent-color: var(--nova-teal);
   cursor: pointer;
   flex-shrink: 0;
@@ -1989,6 +2076,9 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-size: 12px;
   color: var(--nova-ink-faint);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .nova-task-due-date-late { color: var(--nova-danger); font-weight: 600; }
 
@@ -2139,21 +2229,19 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 
 .nova-registre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+  position: sticky;
+  top: var(--nova-space-3);
+}
+.nova-registre-estimate {
   background: var(--nova-surface);
   border: 1px solid var(--nova-border);
   border-radius: var(--nova-radius-card);
   box-shadow: var(--nova-shadow-card);
-  padding: var(--nova-space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--nova-space-3);
-  position: sticky;
-  top: var(--nova-space-3);
+  padding: var(--nova-space-2) var(--nova-space-3);
 }
-.nova-registre-item { display: flex; flex-direction: column; gap: 2px; }
-.nova-registre-value { font-family: var(--nova-font-heading); font-size: 26px; font-weight: 800; color: var(--nova-ink); }
-.nova-registre-label { font-size: 12.5px; color: var(--nova-ink-soft); }
-.nova-registre-divider { border-top: 1px dashed var(--nova-border); margin: 0; }
 .nova-registre-estimate-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -2183,12 +2271,25 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-copilot-bubble-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: flex-end;
+  gap: var(--nova-space-1);
   max-width: 80%;
 }
-.nova-copilot-bubble-row-user { align-items: flex-end; align-self: flex-end; }
+.nova-copilot-bubble-row-user { align-self: flex-end; flex-direction: row-reverse; }
+.nova-copilot-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--nova-teal);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nova-copilot-bubble-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.nova-copilot-bubble-row-user .nova-copilot-bubble-col { align-items: flex-end; }
+.nova-copilot-bubble-time { font-family: var(--nova-font-mono); font-size: 11px; color: var(--nova-ink-faint); }
 .nova-copilot-bubble {
   padding: var(--nova-space-1) var(--nova-space-2);
   border-radius: var(--nova-radius-card);
@@ -2267,4 +2368,9 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-overview-grid { grid-template-columns: 1fr; }
   .nova-overview-header { flex-direction: column; align-items: stretch; }
   .nova-overview-header-actions { justify-content: space-between; }
+  .nova-team-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1100px) {
+  .nova-team-grid { grid-template-columns: 1fr 1fr; }
 }

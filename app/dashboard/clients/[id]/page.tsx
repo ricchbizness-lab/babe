@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, FileText, Pencil, Trash2 } from "lucide-react";
 import {
+  Avatar,
   BackLink,
   Badge,
   Breadcrumb,
@@ -16,6 +17,7 @@ import {
   Field,
   Table,
   TableSkeleton,
+  Tabs,
   TextareaField,
   Timestamp,
   useToast,
@@ -77,6 +79,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [tab, setTab] = useState<"info" | "chantiers" | "devis" | "activite">("info");
 
   useEffect(() => {
     fetchWithAuth(`/api/clients/${params.id}`).then(async (res) => {
@@ -223,11 +226,14 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       <Breadcrumb items={[{ label: "Clients", href: "/dashboard/clients" }, { label: client.name }]} />
 
       <header className="nova-page-header-row">
-        <div>
-          <h1>{client.name}</h1>
-          <p className="nova-page-subtitle">
-            Client depuis le {new Date(client.createdAt).toLocaleDateString("fr-FR")}
-          </p>
+        <div className="nova-identity-cell" style={{ gap: 16 }}>
+          <Avatar name={client.name} size={56} />
+          <div>
+            <h1>{client.name}</h1>
+            <p className="nova-page-subtitle">
+              {client.address || client.email || `Client depuis le ${new Date(client.createdAt).toLocaleDateString("fr-FR")}`}
+            </p>
+          </div>
         </div>
         <div className="nova-header-actions">
           <Link href={`/dashboard/devis/nouveau?clientId=${client.id}`} className="nova-btn nova-btn-secondary">
@@ -249,42 +255,59 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
         </div>
       </header>
 
-      <Card>
-        <CardTitle>Coordonnées</CardTitle>
-        <dl className="nova-detail-list">
-          <div>
-            <dt>Email</dt>
-            <dd>{client.email || "—"}</dd>
-          </div>
-          <div>
-            <dt>Téléphone</dt>
-            <dd>{client.phone || "—"}</dd>
-          </div>
-          <div>
-            <dt>Adresse</dt>
-            <dd>{client.address || "—"}</dd>
-          </div>
-        </dl>
-        {client.notes && <p className="nova-detail-notes">{client.notes}</p>}
-      </Card>
+      <div className="nova-header-actions">
+        <Badge tone={chantiersEnCours > 0 ? "blue" : "neutral"}>
+          {chantiersEnCours} chantier{chantiersEnCours > 1 ? "s" : ""} actif{chantiersEnCours > 1 ? "s" : ""}
+        </Badge>
+        <Badge tone="success">{caTotal.toLocaleString("fr-FR")} € CA total</Badge>
+      </div>
 
-      <section>
-        <h2 className="nova-section-title">Chantiers ({client.projects.length})</h2>
+      <Tabs
+        tabs={[
+          { key: "info", label: "Informations" },
+          { key: "chantiers", label: `Chantiers (${client.projects.length})` },
+          { key: "devis", label: `Devis (${client.devis.length})` },
+          { key: "activite", label: "Résumé d'activité" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+
+      {tab === "info" && (
+        <Card>
+          <CardTitle>Coordonnées</CardTitle>
+          <dl className="nova-detail-list">
+            <div>
+              <dt>Email</dt>
+              <dd>{client.email || "—"}</dd>
+            </div>
+            <div>
+              <dt>Téléphone</dt>
+              <dd>{client.phone || "—"}</dd>
+            </div>
+            <div>
+              <dt>Adresse</dt>
+              <dd>{client.address || "—"}</dd>
+            </div>
+          </dl>
+          {client.notes && <p className="nova-detail-notes">{client.notes}</p>}
+        </Card>
+      )}
+
+      {tab === "chantiers" && (
         <Table
           columns={projectColumns}
           rows={client.projects}
           getRowHref={(p) => `/dashboard/chantiers/${p.id}`}
           emptyLabel="Aucun chantier rattaché à ce client."
         />
-      </section>
+      )}
 
-      <section>
-        <h2 className="nova-section-title">Devis ({client.devis.length})</h2>
+      {tab === "devis" && (
         <Table columns={devisColumns} rows={client.devis} emptyLabel="Aucun devis rattaché à ce client." />
-      </section>
+      )}
 
-      <section>
-        <h2 className="nova-section-title">Résumé d'activité</h2>
+      {tab === "activite" && (
         <Card>
           <div className="nova-summary-grid">
             <div>
@@ -325,7 +348,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
             </ul>
           )}
         </Card>
-      </section>
+      )}
 
       <ConfirmModal
         open={confirmingDelete}

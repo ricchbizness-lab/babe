@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { ConfirmModal, DatePickerField, EmptyState, Pagination, TableSkeleton, usePagination, useToast } from "@/components/ui";
+import { AlertTriangle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Badge, ConfirmModal, DatePickerField, EmptyState, MetricBar, Pagination, TableSkeleton, usePagination, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectOption = { id: string; name: string };
@@ -175,6 +175,10 @@ export default function TachesPage() {
   const { page, setPage, totalPages, start, end } = usePagination(sortedTasks.length, 10);
   const pageTasks = sortedTasks.slice(start, end);
 
+  const enAttenteCount = (tasks ?? []).filter((t) => !t.done).length;
+  const enRetardCount = (tasks ?? []).filter((t) => isOverdue(t)).length;
+  const termineesCount = (tasks ?? []).filter((t) => t.done).length;
+
   return (
     <div className="nova-page">
       <header className="nova-page-header">
@@ -183,6 +187,17 @@ export default function TachesPage() {
           {tasks === null ? "…" : `${tasks.filter((t) => !t.done).length} en attente sur ${tasks.length}`}
         </p>
       </header>
+
+      {tasks !== null && tasks.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total", value: tasks.length },
+            { label: "En attente", value: enAttenteCount },
+            { label: "En retard", value: enRetardCount },
+            { label: "Terminées", value: termineesCount },
+          ]}
+        />
+      )}
 
       <form onSubmit={handleAdd} className="nova-quick-add">
         <input
@@ -279,16 +294,17 @@ export default function TachesPage() {
               <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
               {t.dueDate && (
                 <span className={isOverdue(t) ? "nova-task-due-date nova-task-due-date-late" : "nova-task-due-date"}>
+                  {isOverdue(t) && <AlertTriangle size={12} strokeWidth={2} />}
                   {new Date(t.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                 </span>
               )}
               {t.project && (
                 <Link
                   href={`/dashboard/chantiers/${t.project.id}`}
-                  className="nova-inline-link nova-task-project"
+                  className="nova-task-project"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {t.project.name}
+                  <Badge tone="blue">{t.project.name}</Badge>
                 </Link>
               )}
               <button

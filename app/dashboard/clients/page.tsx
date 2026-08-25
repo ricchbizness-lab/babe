@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, UserPlus } from "lucide-react";
-import { Button, EmptyState, MetricBar, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { ChevronRight, Download, Filter, UserPlus } from "lucide-react";
+import { Avatar, Button, EmptyState, MetricBar, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 
@@ -18,9 +18,18 @@ type ClientRow = {
   projects: { status: string }[];
 };
 
+function caTotalFor(c: ClientRow): number {
+  return c.devis.filter((d) => d.status === "accepte").reduce((sum, d) => sum + (d.amount || 0), 0);
+}
+
+function chantiersActifsFor(c: ClientRow): number {
+  return c.projects.filter((p) => p.status === "en_cours").length;
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientRow[] | null>(null);
   const [query, setQuery] = useState("");
+  const [activeOnly, setActiveOnly] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/clients")
@@ -30,12 +39,13 @@ export default function ClientsPage() {
 
   const filtered = (clients ?? []).filter((c) => {
     const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
+    const matchesQuery =
+      !q ||
       c.name.toLowerCase().includes(q) ||
       (c.email || "").toLowerCase().includes(q) ||
-      (c.phone || "").toLowerCase().includes(q)
-    );
+      (c.phone || "").toLowerCase().includes(q);
+    const matchesFilter = !activeOnly || chantiersActifsFor(c) > 0;
+    return matchesQuery && matchesFilter;
   });
 
   function handleExport() {
@@ -46,22 +56,57 @@ export default function ClientsPage() {
     downloadCSV("clients.csv", csv);
   }
 
-  const caTotal = (clients ?? []).reduce(
-    (sum, c) => sum + c.devis.filter((d) => d.status === "accepte").reduce((s, d) => s + (d.amount || 0), 0),
-    0
-  );
-  const clientsActifs = (clients ?? []).filter((c) => c.projects.some((p) => p.status === "en_cours")).length;
+  const now = new Date();
+  const caTotal = (clients ?? []).reduce((sum, c) => sum + caTotalFor(c), 0);
+  const clientsActifs = (clients ?? []).filter((c) => chantiersActifsFor(c) > 0).length;
+  const nouveauxCeMois = (clients ?? []).filter((c) => {
+    const d = new Date(c.createdAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
 
   const columns: TableColumn<ClientRow>[] = [
-    { key: "name", label: "Nom", sortable: true, emphasis: "title" },
+    {
+      key: "name",
+      label: "Nom",
+      sortable: true,
+      render: (c) => (
+        <span className="nova-identity-cell">
+          <Avatar name={c.name} size={30} />
+          <span className="nova-identity-cell-name">{c.name}</span>
+        </span>
+      ),
+    },
     { key: "email", label: "Email", render: (c) => c.email || "—" },
     { key: "phone", label: "Téléphone", render: (c) => c.phone || "—" },
     {
+      key: "caTotal",
+      label: "CA total",
+      align: "right",
+      render: (c) => `${caTotalFor(c).toLocaleString("fr-FR")} €`,
+      sortable: true,
+      sortValue: (c) => caTotalFor(c),
+      emphasis: "amount",
+    },
+    {
+      key: "chantiersActifs",
+      label: "Chantiers actifs",
+      align: "right",
+      render: (c) => chantiersActifsFor(c),
+      sortable: true,
+      sortValue: (c) => chantiersActifsFor(c),
+    },
+    {
       key: "createdAt",
-      label: "Créé le",
+      label: "Date d'ajout",
       render: (c) => <Timestamp date={c.createdAt} />,
       sortable: true,
       sortValue: (c) => new Date(c.createdAt).getTime(),
+    },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: () => <ChevronRight size={16} strokeWidth={1.75} className="nova-ink-faint" />,
     },
   ];
 
@@ -93,15 +138,22 @@ export default function ClientsPage() {
           items={[
             { label: "Total clients", value: clients.length },
             { label: "CA total généré", value: `${caTotal.toLocaleString("fr-FR")} €` },
-            { label: "Clients actifs", value: clientsActifs },
+            { label: "Clients avec chantier actif", value: clientsActifs },
+            { label: "Nouveaux ce mois", value: nouveauxCeMois },
           ]}
         />
       )}
 
-      <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />
+      <div className="nova-header-actions" style={{ justifyContent: "space-between" }}>
+        <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />
+        <Button variant={activeOnly ? "primary" : "secondary"} onClick={() => setActiveOnly((v) => !v)}>
+          <Filter size={15} strokeWidth={1.75} />
+          Chantier actif
+        </Button>
+      </div>
 
       {clients === null ? (
-        <TableSkeleton columns={4} />
+        <TableSkeleton columns={6} />
       ) : clients.length === 0 ? (
         <EmptyState
           icon="crm"

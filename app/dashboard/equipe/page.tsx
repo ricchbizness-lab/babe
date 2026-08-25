@@ -3,10 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
-import { Button, ConfirmModal, EditModal, EmptyState, Field, Pagination, usePagination, useToast } from "@/components/ui";
+import { Avatar, Button, ConfirmModal, EditModal, EmptyState, Field, Pagination, usePagination, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
-type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
+type Member = {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  assignments?: { project: { id: string; status: string } | null }[];
+};
+
+function activeProjectCount(m: Member): number {
+  const ids = new Set<string>();
+  for (const a of m.assignments ?? []) {
+    if (a.project && a.project.status === "en_cours") ids.add(a.project.id);
+  }
+  return ids.size;
+}
 
 const EMPTY_FORM = { name: "", role: "", email: "", phone: "" };
 
@@ -150,9 +165,12 @@ export default function EquipePage() {
           {pageMembers.map((m) => (
             <div key={m.id} className="nova-team-card">
               <div className="nova-team-card-head">
-                <div>
-                  <div className="nova-team-card-name">{m.name}</div>
-                  {m.role && <div className="nova-team-card-role">{m.role}</div>}
+                <div className="nova-team-card-identity">
+                  <Avatar name={m.name} size={48} />
+                  <div>
+                    <div className="nova-team-card-name">{m.name}</div>
+                    {m.role && <div className="nova-team-card-role">{m.role}</div>}
+                  </div>
                 </div>
               </div>
               {(m.email || m.phone) && (
@@ -161,6 +179,9 @@ export default function EquipePage() {
                   {m.phone && <div>{m.phone}</div>}
                 </div>
               )}
+              <div className="nova-team-card-count">
+                {activeProjectCount(m)} chantier{activeProjectCount(m) > 1 ? "s" : ""} affecté{activeProjectCount(m) > 1 ? "s" : ""} actuellement
+              </div>
               <div className="nova-team-card-footer">
                 <Button variant="secondary" onClick={() => openEdit(m)}>
                   <Pencil size={14} strokeWidth={1.75} />

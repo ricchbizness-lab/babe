@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { ChevronRight, Download } from "lucide-react";
 import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -87,18 +87,39 @@ export default function FacturationPage() {
   const columns: TableColumn<InvoiceRow>[] = [
     {
       key: "numero",
-      label: "Facture",
+      label: "Référence",
       render: (d) => <span className="nova-timestamp">{d.numero}</span>,
       emphasis: "title",
     },
     { key: "client", label: "Client", render: (d) => d.client?.name || "—" },
     {
-      key: "amount",
-      label: "Montant",
+      key: "ht",
+      label: "Montant HT",
       align: "right",
-      render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+      render: (d) => {
+        const amounts = computeInvoiceAmounts(d.amount);
+        return amounts ? `${amounts.ht.toLocaleString("fr-FR")} €` : "—";
+      },
       sortable: true,
       sortValue: (d) => d.amount,
+    },
+    {
+      key: "tva",
+      label: "TVA",
+      align: "right",
+      render: (d) => {
+        const amounts = computeInvoiceAmounts(d.amount);
+        return amounts ? `${amounts.tva.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €` : "—";
+      },
+    },
+    {
+      key: "ttc",
+      label: "TTC",
+      align: "right",
+      render: (d) => {
+        const amounts = computeInvoiceAmounts(d.amount);
+        return amounts ? `${amounts.ttc.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €` : "—";
+      },
       emphasis: "amount",
     },
     {
@@ -114,10 +135,16 @@ export default function FacturationPage() {
     },
     {
       key: "updatedAt",
-      label: "Acceptée le",
+      label: "Date",
       render: (d) => <Timestamp date={d.updatedAt} />,
       sortable: true,
       sortValue: (d) => new Date(d.updatedAt).getTime(),
+    },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: () => <ChevronRight size={16} strokeWidth={1.75} className="nova-ink-faint" />,
     },
   ];
 
@@ -144,12 +171,13 @@ export default function FacturationPage() {
             { label: "CA encaissé ce mois", value: `${caEncaisseCeMois.toLocaleString("fr-FR")} €` },
             { label: "En attente de paiement", value: `${enAttenteMontant.toLocaleString("fr-FR")} €` },
             { label: "En retard", value: `${enRetardMontant.toLocaleString("fr-FR")} €` },
+            { label: "Total factures", value: invoices.length },
           ]}
         />
       )}
 
       {accepted === null ? (
-        <TableSkeleton columns={5} />
+        <TableSkeleton columns={8} />
       ) : accepted.length === 0 ? (
         <EmptyState
           icon="devis"

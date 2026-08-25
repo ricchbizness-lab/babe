@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Sparkles, X } from "lucide-react";
 import {
+  Avatar,
   Badge,
   Button,
   Card,
@@ -444,9 +445,12 @@ export default function DispatchPage() {
             {members.map((m) => (
               <div key={m.id} className="nova-team-card">
                 <div className="nova-team-card-head">
-                  <div>
-                    <div className="nova-team-card-name">{m.name}</div>
-                    {m.role && <div className="nova-team-card-role">{m.role}</div>}
+                  <div className="nova-team-card-identity">
+                    <Avatar name={m.name} size={48} />
+                    <div>
+                      <div className="nova-team-card-name">{m.name}</div>
+                      {m.role && <div className="nova-team-card-role">{m.role}</div>}
+                    </div>
                   </div>
                   <div className="nova-team-card-actions">
                     <button
@@ -478,13 +482,13 @@ export default function DispatchPage() {
                   {assignmentsForMember(m.id).length === 0 ? (
                     <p className="nova-planning-empty">Aucune affectation</p>
                   ) : (
-                    <ul className="nova-planning-people">
+                    <div className="nova-team-card-assignment-badges">
                       {assignmentsForMember(m.id).map((a) => (
-                        <li key={a.id} className="nova-assignment-item">
-                          <span>
+                        <span key={a.id} className="nova-assignment-item">
+                          <Badge tone="blue">
                             {a.project?.name || "Sans chantier"}
                             {a.note ? ` — ${a.note}` : ""}
-                          </span>
+                          </Badge>
                           <span className="nova-team-card-actions">
                             <button
                               type="button"
@@ -503,9 +507,9 @@ export default function DispatchPage() {
                               <X size={13} strokeWidth={1.75} />
                             </button>
                           </span>
-                        </li>
+                        </span>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
               </div>

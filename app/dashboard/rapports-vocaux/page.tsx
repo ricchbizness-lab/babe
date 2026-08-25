@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic, Trash2 } from "lucide-react";
-import { ConfirmModal, EmptyState, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import { Badge, ConfirmModal, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ReportRow = {
@@ -48,15 +48,31 @@ export default function RapportsVocauxPage() {
     setDeleteTarget(null);
   }
 
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 86400000);
+  const cetteSemaineCount = (reports ?? []).filter((r) => new Date(r.createdAt) >= oneWeekAgo).length;
+  const chantiersCouverts = new Set((reports ?? []).filter((r) => r.project).map((r) => r.project!.id)).size;
+
   const columns: TableColumn<ReportRow>[] = [
-    { key: "authorLabel", label: "Auteur", emphasis: "title" },
+    {
+      key: "authorLabel",
+      label: "Auteur",
+      render: (r) => (
+        <span className="nova-identity-cell">
+          <span className="nova-report-icon">
+            <Mic size={14} strokeWidth={1.75} />
+          </span>
+          <span className="nova-identity-cell-name">{r.authorLabel}</span>
+        </span>
+      ),
+    },
     {
       key: "project",
       label: "Chantier",
       render: (r) =>
         r.project ? (
-          <Link href={`/dashboard/chantiers/${r.project.id}`} className="nova-inline-link">
-            {r.project.name}
+          <Link href={`/dashboard/chantiers/${r.project.id}`}>
+            <Badge tone="blue">{r.project.name}</Badge>
           </Link>
         ) : (
           "—"
@@ -95,6 +111,16 @@ export default function RapportsVocauxPage() {
           Nouveau rapport
         </Link>
       </header>
+
+      {reports !== null && reports.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total rapports", value: reports.length },
+            { label: "Cette semaine", value: cetteSemaineCount },
+            { label: "Chantiers couverts", value: chantiersCouverts },
+          ]}
+        />
+      )}
 
       {reports === null ? (
         <TableSkeleton columns={4} />

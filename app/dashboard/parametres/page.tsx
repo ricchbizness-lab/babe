@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Upload } from "lucide-react";
+import Link from "next/link";
+import { Banknote, Building2, Mail, Trash2, Upload, UserCog } from "lucide-react";
 import { Button, Card, CardTitle, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
@@ -144,45 +145,44 @@ export default function ParametresPage() {
         <p className="nova-page-subtitle">Profil de votre entreprise</p>
       </header>
 
-      <Card>
-        <CardTitle>Logo de l'entreprise</CardTitle>
-        <div className="nova-logo-upload">
-          <div className="nova-logo-upload-preview">
-            {form.logoBase64 ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.logoBase64} alt="Logo de l'entreprise" />
-            ) : (
-              <span className="nova-logo-upload-placeholder">Aucun logo</span>
-            )}
-          </div>
-          <div className="nova-logo-upload-actions">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg"
-              onChange={handleLogoChange}
-              className="nova-visually-hidden"
-              id="logo-upload-input"
-            />
-            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-              <Upload size={16} strokeWidth={1.75} />
-              {form.logoBase64 ? "Changer le logo" : "Ajouter un logo"}
-            </Button>
-            {form.logoBase64 && (
-              <Button type="button" variant="ghost" onClick={handleRemoveLogo}>
-                <Trash2 size={16} strokeWidth={1.75} />
-                Retirer
+      <form onSubmit={handleSubmit} className="nova-settings-form">
+        <Card>
+          <CardTitle>
+            <Building2 size={16} strokeWidth={1.75} />
+            Profil entreprise
+          </CardTitle>
+          <div className="nova-logo-upload">
+            <div className="nova-logo-upload-preview">
+              {form.logoBase64 ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.logoBase64} alt="Logo de l'entreprise" />
+              ) : (
+                <span className="nova-logo-upload-placeholder">Aucun logo</span>
+              )}
+            </div>
+            <div className="nova-logo-upload-actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={handleLogoChange}
+                className="nova-visually-hidden"
+                id="logo-upload-input"
+              />
+              <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={16} strokeWidth={1.75} />
+                {form.logoBase64 ? "Changer le logo" : "Ajouter un logo"}
               </Button>
-            )}
-            <p className="nova-hint-standalone">PNG ou JPG, 2 Mo maximum. Enregistré avec le profil ci-dessous.</p>
-            {logoError && <div className="error">{logoError}</div>}
+              {form.logoBase64 && (
+                <Button type="button" variant="ghost" onClick={handleRemoveLogo}>
+                  <Trash2 size={16} strokeWidth={1.75} />
+                  Retirer
+                </Button>
+              )}
+              <p className="nova-hint-standalone">PNG ou JPG, 2 Mo maximum. Enregistré avec le profil ci-dessous.</p>
+              {logoError && <div className="error">{logoError}</div>}
+            </div>
           </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Profil entreprise</CardTitle>
-        <form onSubmit={handleSubmit}>
           <Field
             label="Nom de l'entreprise"
             required
@@ -211,6 +211,27 @@ export default function ParametresPage() {
             <option value="chaleureux">Chaleureux</option>
             <option value="direct">Direct</option>
           </SelectField>
+        </Card>
+
+        <Card>
+          <CardTitle>
+            <Mail size={16} strokeWidth={1.75} />
+            Communication
+          </CardTitle>
+          <Field
+            label="Email du comptable"
+            type="email"
+            value={form.accountantEmail}
+            onChange={(e) => setForm({ ...form, accountantEmail: e.target.value })}
+            hint="Pour l'envoi du rapport stratégique (copilote financier)."
+          />
+        </Card>
+
+        <Card>
+          <CardTitle>
+            <Banknote size={16} strokeWidth={1.75} />
+            Facturation
+          </CardTitle>
           <Field
             label="Taux horaire (€)"
             type="number"
@@ -218,13 +239,6 @@ export default function ParametresPage() {
             step="0.5"
             value={form.tauxHoraire}
             onChange={(e) => setForm({ ...form, tauxHoraire: e.target.value })}
-          />
-          <Field
-            label="Email du comptable"
-            type="email"
-            value={form.accountantEmail}
-            onChange={(e) => setForm({ ...form, accountantEmail: e.target.value })}
-            hint="Pour l'envoi du rapport stratégique (copilote financier)."
           />
           <Field
             label="SIRET"
@@ -240,11 +254,23 @@ export default function ParametresPage() {
             placeholder="Paiement sous 30 jours"
             hint="Affiché en pied de page de vos factures."
           />
-          {error && <div className="error">{error}</div>}
-          <Button type="submit" disabled={saving}>
-            {saving ? "Enregistrement..." : "Enregistrer"}
-          </Button>
-        </form>
+        </Card>
+
+        {error && <div className="error">{error}</div>}
+        <Button type="submit" disabled={saving}>
+          {saving ? "Enregistrement..." : "Enregistrer"}
+        </Button>
+      </form>
+
+      <Card>
+        <CardTitle>
+          <UserCog size={16} strokeWidth={1.75} />
+          Compte
+        </CardTitle>
+        <p className="nova-page-subtitle">Email de connexion, mot de passe et informations personnelles.</p>
+        <Link href="/dashboard/compte" className="nova-btn nova-btn-secondary">
+          Gérer mon compte
+        </Link>
       </Card>
     </div>
   );

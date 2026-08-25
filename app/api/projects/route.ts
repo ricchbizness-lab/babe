@@ -12,7 +12,11 @@ export async function GET(req: Request) {
       where: search
         ? { businessId, name: { contains: search, mode: "insensitive" } }
         : { businessId },
-      include: { client: true },
+      include: {
+        client: true,
+        tasks: { select: { done: true } },
+        assignments: { include: { teamMember: { select: { id: true, name: true } } } },
+      },
       orderBy: { createdAt: "desc" },
       take: search ? 8 : undefined,
     });

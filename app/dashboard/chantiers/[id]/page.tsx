@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, Pencil, Share2, Trash2 } from "lucide-react";
 import {
+  Avatar,
   BackLink,
   Badge,
   Breadcrumb,
@@ -15,9 +16,11 @@ import {
   DatePickerField,
   EditModal,
   Field,
+  ProgressBar,
   SelectField,
   Table,
   TableSkeleton,
+  Tabs,
   Timestamp,
   useToast,
   type TableColumn,
@@ -36,6 +39,7 @@ type ChantierDetail = {
   client: { id: string; name: string } | null;
   tasks: { id: string; text: string; done: boolean; createdAt: string }[];
   voiceReports: { id: string; authorLabel: string; summary: string; createdAt: string }[];
+  assignments: { id: string; date: string; note: string | null; teamMember: { id: string; name: string } }[];
 };
 
 type ClientOption = { id: string; name: string };
@@ -84,6 +88,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", address: "", clientId: "", status: "planifie", startDate: "", endDate: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [tab, setTab] = useState<"info" | "taches" | "equipe" | "rapports" | "portail">("info");
 
   useEffect(() => {
     fetchWithAuth(`/api/projects/${params.id}`).then(async (res) => {
@@ -254,6 +259,23 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     { key: "createdAt", label: "Le", render: (r) => <Timestamp date={r.createdAt} /> },
   ];
 
+  const assignmentColumns: TableColumn<ChantierDetail["assignments"][number]>[] = [
+    {
+      key: "teamMember",
+      label: "Collaborateur",
+      render: (a) => (
+        <span className="nova-identity-cell">
+          <Avatar name={a.teamMember.name} size={28} />
+          <span className="nova-identity-cell-name">{a.teamMember.name}</span>
+        </span>
+      ),
+    },
+    { key: "date", label: "Date", render: (a) => <Timestamp date={a.date} /> },
+    { key: "note", label: "Note", render: (a) => a.note || "—" },
+  ];
+
+  const progressValue = project.tasks.length === 0 ? null : (project.tasks.filter((t) => t.done).length / project.tasks.length) * 100;
+
   return (
     <div className="nova-page">
       <Breadcrumb
@@ -292,6 +314,12 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         </div>
       </header>
 
+      {progressValue !== null && (
+        <div className="nova-header-actions">
+          <ProgressBar value={progressValue} label={`${Math.round(progressValue)}% des tâches terminées`} />
+        </div>
+      )}
+
       <div className="nova-status-actions">
         {STATUS_ACTIONS.filter((a) => a.status !== project.status).map((a) => (
           <Button key={a.status} variant={a.variant} disabled={updatingStatus} onClick={() => handleStatusChange(a.status)}>
@@ -300,60 +328,85 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         ))}
       </div>
 
-      <Card>
-        <CardTitle>Portail client</CardTitle>
-        <p className="nova-card-text">
-          Générez un lien public à envoyer à votre client pour qu'il suive l'avancement de ce chantier, sans avoir
-          besoin de compte.
-        </p>
-        {portalUrl ? (
-          <div className="nova-portal-link-row">
-            <code className="nova-portal-link">{portalUrl}</code>
-            <Button variant="secondary" onClick={handleCopy}>
-              <Copy size={16} strokeWidth={1.75} />
-              Copier le lien
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={handleShare} disabled={sharing}>
-            <Share2 size={16} strokeWidth={1.75} />
-            {sharing ? "Génération..." : "Partager avec le client"}
-          </Button>
-        )}
-      </Card>
+      <Tabs
+        tabs={[
+          { key: "info", label: "Informations" },
+          { key: "taches", label: `Tâches (${project.tasks.length})` },
+          { key: "equipe", label: `Équipe affectée (${project.assignments.length})` },
+          { key: "rapports", label: `Rapports vocaux (${project.voiceReports.length})` },
+          { key: "portail", label: "Portail client" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
-      <Card>
-        <CardTitle>Détails</CardTitle>
-        <dl className="nova-detail-list">
-          <div>
-            <dt>Adresse</dt>
-            <dd>{project.address || "—"}</dd>
-          </div>
-          <div>
-            <dt>Début</dt>
-            <dd>{project.startDate ? new Date(project.startDate).toLocaleDateString("fr-FR") : "—"}</dd>
-          </div>
-          <div>
-            <dt>Fin</dt>
-            <dd>{project.endDate ? new Date(project.endDate).toLocaleDateString("fr-FR") : "—"}</dd>
-          </div>
-        </dl>
-      </Card>
+      {tab === "info" && (
+        <Card>
+          <CardTitle>Détails</CardTitle>
+          <dl className="nova-detail-list">
+            <div>
+              <dt>Adresse</dt>
+              <dd>{project.address || "—"}</dd>
+            </div>
+            <div>
+              <dt>Début</dt>
+              <dd>{project.startDate ? new Date(project.startDate).toLocaleDateString("fr-FR") : "—"}</dd>
+            </div>
+            <div>
+              <dt>Fin</dt>
+              <dd>{project.endDate ? new Date(project.endDate).toLocaleDateString("fr-FR") : "—"}</dd>
+            </div>
+          </dl>
+        </Card>
+      )}
 
-      <section>
-        <h2 className="nova-section-title">Tâches ({project.tasks.length})</h2>
+      {tab === "taches" && (
         <Table columns={taskColumns} rows={project.tasks} emptyLabel="Aucune tâche rattachée à ce chantier." />
-      </section>
+      )}
 
-      <section>
-        <div className="nova-section-header-row">
-          <h2 className="nova-section-title">Rapports vocaux ({project.voiceReports.length})</h2>
-          <Link href={`/dashboard/rapports-vocaux/nouveau?projectId=${project.id}`} className="nova-btn nova-btn-secondary">
-            Ajouter un rapport
-          </Link>
-        </div>
-        <Table columns={reportColumns} rows={project.voiceReports} emptyLabel="Aucun rapport vocal rattaché à ce chantier." />
-      </section>
+      {tab === "equipe" && (
+        <Table
+          columns={assignmentColumns}
+          rows={project.assignments}
+          emptyLabel="Aucun collaborateur affecté à ce chantier."
+        />
+      )}
+
+      {tab === "rapports" && (
+        <>
+          <div className="nova-section-header-row">
+            <span />
+            <Link href={`/dashboard/rapports-vocaux/nouveau?projectId=${project.id}`} className="nova-btn nova-btn-secondary">
+              Ajouter un rapport
+            </Link>
+          </div>
+          <Table columns={reportColumns} rows={project.voiceReports} emptyLabel="Aucun rapport vocal rattaché à ce chantier." />
+        </>
+      )}
+
+      {tab === "portail" && (
+        <Card>
+          <CardTitle>Portail client</CardTitle>
+          <p className="nova-card-text">
+            Générez un lien public à envoyer à votre client pour qu'il suive l'avancement de ce chantier, sans avoir
+            besoin de compte.
+          </p>
+          {portalUrl ? (
+            <div className="nova-portal-link-row">
+              <code className="nova-portal-link">{portalUrl}</code>
+              <Button variant="secondary" onClick={handleCopy}>
+                <Copy size={16} strokeWidth={1.75} />
+                Copier le lien
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleShare} disabled={sharing}>
+              <Share2 size={16} strokeWidth={1.75} />
+              {sharing ? "Génération..." : "Partager avec le client"}
+            </Button>
+          )}
+        </Card>
+      )}
 
       <ConfirmModal
         open={confirmingDelete}

@@ -712,6 +712,97 @@ export function Timestamp({ date }: { date: Date | string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Avatar — initiales dans un cercle teal, réutilisé partout (clients,
+// équipe, chantiers, planning) à la place d'un texte simple.
+// ---------------------------------------------------------------------------
+
+export function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  return (
+    <span
+      className="nova-avatar"
+      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.4)) }}
+      aria-hidden="true"
+    >
+      {initialsFromName(name)}
+    </span>
+  );
+}
+
+export function AvatarStack({ names, max = 3, size = 24 }: { names: string[]; max?: number; size?: number }) {
+  if (names.length === 0) return <span className="nova-ink-faint">—</span>;
+  const shown = names.slice(0, max);
+  const extra = names.length - shown.length;
+  return (
+    <span className="nova-avatar-stack">
+      {shown.map((name, i) => (
+        <span key={`${name}-${i}`} className="nova-avatar-stack-item" style={{ zIndex: shown.length - i }} title={name}>
+          <Avatar name={name} size={size} />
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="nova-avatar-stack-more" style={{ width: size, height: size }}>
+          +{extra}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ProgressBar — barre de progression 0-100% (chantiers, tâches)
+// ---------------------------------------------------------------------------
+
+export function ProgressBar({ value, label }: { value: number; label?: string }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <div className="nova-progress" role="progressbar" aria-valuenow={clamped} aria-valuemin={0} aria-valuemax={100}>
+      <div className="nova-progress-track">
+        <div className="nova-progress-fill" style={{ width: `${clamped}%` }} />
+      </div>
+      <span className="nova-progress-label">{label ?? `${clamped}%`}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tabs — onglets horizontaux réutilisés sur les pages liste et fiche
+// ---------------------------------------------------------------------------
+
+export function Tabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { key: T; label: string }[];
+  active: T;
+  onChange: (key: T) => void;
+}) {
+  return (
+    <div className="nova-view-tabs" role="tablist">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.key}
+          className={`nova-view-tab ${active === tab.key ? "nova-view-tab-active" : ""}`}
+          onClick={() => onChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Table — un seul endroit pour le style de toutes les listes (CRM, devis...)
 // ---------------------------------------------------------------------------
 

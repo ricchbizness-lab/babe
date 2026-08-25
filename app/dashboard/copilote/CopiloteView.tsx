@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { FileBarChart, Send } from "lucide-react";
-import { Badge, Skeleton, useToast } from "@/components/ui";
+import { Banknote, Bot, CheckSquare, Clock, FileBarChart, Send } from "lucide-react";
+import { StatCard, Skeleton, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Registre = {
@@ -16,7 +16,11 @@ type Registre = {
 };
 
 type DevisRow = { id: string; status: string; amount: number | null };
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; time: string };
+
+function nowLabel(): string {
+  return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
 
 const SUGGESTIONS = ["Pourquoi ma marge baisse ?", "Quels devis sont en attente ?", "Que dois-je prioriser cette semaine ?"];
 
@@ -49,7 +53,7 @@ export function CopiloteView() {
   async function handleSend(text: string) {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
-    setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
+    setMessages((prev) => [...prev, { role: "user", content: trimmed, time: nowLabel() }]);
     setInput("");
     setSending(true);
     try {
@@ -64,7 +68,7 @@ export function CopiloteView() {
         return;
       }
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: data.reply, time: nowLabel() }]);
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
@@ -103,23 +107,25 @@ export function CopiloteView() {
             </>
           ) : (
             <>
-              <div className="nova-registre-item">
-                <div className="nova-registre-value">{fmtEuro(registre.caFacture)}</div>
-                <div className="nova-registre-label">CA facturé (devis acceptés)</div>
-              </div>
-              <div className="nova-registre-item">
-                <div className="nova-registre-value">{pendingDevis.length}</div>
-                <div className="nova-registre-label">
-                  Devis en attente{pendingTotal > 0 ? ` — ${fmtEuro(pendingTotal)} estimés` : ""}
-                </div>
-              </div>
-              <div className="nova-registre-item">
-                <div className="nova-registre-value">
-                  {registre.tachesTraiteesATemps} / {registre.tachesTraiteesATemps + registre.tachesEnAttente}
-                </div>
-                <div className="nova-registre-label">Tâches traitées</div>
-              </div>
-              <div className="nova-registre-divider" />
+              <StatCard
+                icon={<Banknote size={18} strokeWidth={1.75} />}
+                tone="teal"
+                value={fmtEuro(registre.caFacture)}
+                label="CA facturé (devis acceptés)"
+              />
+              <StatCard
+                icon={<Clock size={18} strokeWidth={1.75} />}
+                tone="amber"
+                value={pendingDevis.length}
+                label="Devis en attente"
+                sublabel={pendingTotal > 0 ? `${fmtEuro(pendingTotal)} estimés` : undefined}
+              />
+              <StatCard
+                icon={<CheckSquare size={18} strokeWidth={1.75} />}
+                tone="blue"
+                value={`${registre.tachesTraiteesATemps} / ${registre.tachesTraiteesATemps + registre.tachesEnAttente}`}
+                label="Tâches traitées"
+              />
               <div className="nova-registre-estimate">
                 <div className="nova-registre-estimate-label">Estimation — non vérifiable</div>
                 <div className="nova-registre-estimate-value">
@@ -144,16 +150,25 @@ export function CopiloteView() {
             ) : (
               messages.map((m, i) => (
                 <div key={i} className={`nova-copilot-bubble-row ${m.role === "user" ? "nova-copilot-bubble-row-user" : ""}`}>
-                  {m.role === "assistant" && <Badge tone="neutral">Nova</Badge>}
-                  <div className={`nova-copilot-bubble ${m.role === "user" ? "nova-copilot-bubble-user" : "nova-copilot-bubble-assistant"}`}>
-                    {m.content}
+                  {m.role === "assistant" && (
+                    <span className="nova-copilot-avatar" aria-hidden="true">
+                      <Bot size={15} strokeWidth={1.75} />
+                    </span>
+                  )}
+                  <div className="nova-copilot-bubble-col">
+                    <div className={`nova-copilot-bubble ${m.role === "user" ? "nova-copilot-bubble-user" : "nova-copilot-bubble-assistant"}`}>
+                      {m.content}
+                    </div>
+                    <span className="nova-copilot-bubble-time">{m.time}</span>
                   </div>
                 </div>
               ))
             )}
             {sending && (
               <div className="nova-copilot-bubble-row">
-                <Badge tone="neutral">Nova</Badge>
+                <span className="nova-copilot-avatar" aria-hidden="true">
+                  <Bot size={15} strokeWidth={1.75} />
+                </span>
                 <div className="nova-copilot-bubble nova-copilot-bubble-assistant">
                   <span className="nova-typing-dots">
                     <span />

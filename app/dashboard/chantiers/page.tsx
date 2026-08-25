@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { ChevronRight } from "lucide-react";
+import { AvatarStack, Badge, EmptyState, MetricBar, ProgressBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectRow = {
@@ -13,6 +14,8 @@ type ProjectRow = {
   endDate: string | null;
   createdAt: string;
   client: { id: string; name: string } | null;
+  tasks: { done: boolean }[];
+  assignments: { teamMember: { id: string; name: string } }[];
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -49,6 +52,23 @@ function formatDateRange(start: string | null, end: string | null) {
   return `Fin ${fmt(end as string)}`;
 }
 
+function progressFor(p: ProjectRow): number | null {
+  if (p.tasks.length === 0) return null;
+  return (p.tasks.filter((t) => t.done).length / p.tasks.length) * 100;
+}
+
+function teamNamesFor(p: ProjectRow): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const a of p.assignments) {
+    if (!seen.has(a.teamMember.id)) {
+      seen.add(a.teamMember.id);
+      names.push(a.teamMember.name);
+    }
+  }
+  return names;
+}
+
 export default function ChantiersPage() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [filter, setFilter] = useState("all");
@@ -83,13 +103,33 @@ export default function ChantiersPage() {
       sortValue: (p) => STATUS_ORDER[p.status] ?? 99,
     },
     {
+      key: "progress",
+      label: "Progression",
+      render: (p) => {
+        const value = progressFor(p);
+        return value === null ? <span className="nova-ink-faint">—</span> : <ProgressBar value={value} />;
+      },
+      sortable: true,
+      sortValue: (p) => progressFor(p) ?? -1,
+    },
+    {
+      key: "equipe",
+      label: "Équipe",
+      render: (p) => <AvatarStack names={teamNamesFor(p)} />,
+    },
+    {
       key: "dates",
       label: "Dates",
       render: (p) => formatDateRange(p.startDate, p.endDate),
       sortable: true,
       sortValue: (p) => (p.startDate ? new Date(p.startDate).getTime() : null),
     },
-    { key: "createdAt", label: "Créé le", render: (p) => <Timestamp date={p.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: () => <ChevronRight size={16} strokeWidth={1.75} className="nova-ink-faint" />,
+    },
   ];
 
   return (
@@ -133,7 +173,7 @@ export default function ChantiersPage() {
       )}
 
       {projects === null ? (
-        <TableSkeleton columns={5} />
+        <TableSkeleton columns={7} />
       ) : projects.length === 0 ? (
         <EmptyState
           icon="chantiers"

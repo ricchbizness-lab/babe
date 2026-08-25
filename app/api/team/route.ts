@@ -9,6 +9,9 @@ export async function GET() {
     const businessId = await requireBusinessId(userId);
     const members = await prisma.teamMember.findMany({
       where: { businessId },
+      include: {
+        assignments: { include: { project: { select: { id: true, status: true } } } },
+      },
       orderBy: { createdAt: "asc" },
     });
     return NextResponse.json({ members });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge, EmptyState, Skeleton } from "@/components/ui";
+import { Avatar, Badge, EmptyState, Skeleton } from "@/components/ui";
 import { addDays, formatShortDate, isSameDay, startOfWeek, weekDays } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
@@ -104,7 +104,7 @@ export default function PlanningPage() {
       ) : (
         <div className="nova-planning-grid">
           {days.map((day) => (
-            <div key={day.label} className="nova-planning-day">
+            <div key={day.label} className={`nova-planning-day ${isSameDay(day.date, new Date()) ? "nova-planning-day-today" : ""}`}>
               <div className="nova-planning-day-header">
                 <span className="nova-planning-day-label">{day.label}</span>
                 <span className="nova-planning-day-date">{formatShortDate(day.date)}</span>
@@ -130,7 +130,10 @@ export default function PlanningPage() {
                       ) : (
                         <ul className="nova-planning-people">
                           {dayAssignments.map((a) => (
-                            <li key={a.id}>{a.teamMember.name}</li>
+                            <li key={a.id}>
+                              <Avatar name={a.teamMember.name} size={20} />
+                              {a.teamMember.name}
+                            </li>
                           ))}
                         </ul>
                       )}
