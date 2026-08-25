@@ -958,6 +958,79 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-kanban-add-btn:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
 
+.nova-kanban-column-name { font-size: 13px; font-weight: 700; color: var(--nova-ink); }
+
+/* --- Kanban tâches --- */
+
+.nova-task-kanban-card { cursor: default; }
+.nova-task-kanban-card:hover { transform: none; border-color: var(--nova-border); }
+.nova-task-kanban-card-top { display: flex; align-items: flex-start; gap: var(--nova-space-1); }
+.nova-task-kanban-text { flex: 1; font-size: 14px; font-weight: 600; color: var(--nova-ink); }
+.nova-task-kanban-card-top .nova-task-text-done { flex: 1; font-size: 14px; font-weight: 600; }
+.nova-task-kanban-card-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nova-space-1);
+  margin-top: var(--nova-space-1);
+  padding-left: 30px;
+}
+
+/* --- Calendrier (tâches) --- */
+
+.nova-calendar-nav { display: flex; align-items: center; gap: var(--nova-space-2); margin-bottom: var(--nova-space-2); }
+.nova-calendar-month-label { font-family: var(--nova-font-heading); font-size: 15px; font-weight: 700; min-width: 160px; text-align: center; }
+.nova-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--nova-border);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  overflow: hidden;
+}
+.nova-calendar-weekday {
+  background: var(--nova-table-header-bg);
+  padding: var(--nova-space-1);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nova-ink-faint);
+  text-align: center;
+}
+.nova-calendar-cell {
+  background: var(--nova-surface);
+  min-height: 96px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nova-calendar-cell-outside { background: var(--nova-bg); }
+.nova-calendar-cell-outside .nova-calendar-cell-date { color: var(--nova-ink-faint); }
+.nova-calendar-cell-today { background: var(--nova-teal-tint); }
+.nova-calendar-cell-date { font-family: var(--nova-font-mono); font-size: 12px; color: var(--nova-ink-soft); }
+.nova-calendar-cell-tasks { display: flex; flex-direction: column; gap: 3px; }
+.nova-calendar-task {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--nova-teal-tint);
+  color: var(--nova-teal-deep);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.nova-calendar-task-late { background: var(--nova-danger-tint); color: var(--nova-danger); }
+.nova-calendar-task-done { background: var(--nova-badge-neutral-bg); color: var(--nova-badge-neutral-text); text-decoration: line-through; }
+.nova-calendar-task-more { font-size: 10.5px; color: var(--nova-ink-faint); padding-left: 5px; }
+
 /* --- Avatar (initiales) --- */
 
 .nova-avatar {

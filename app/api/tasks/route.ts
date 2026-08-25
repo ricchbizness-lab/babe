@@ -9,7 +9,7 @@ export async function GET() {
     const businessId = await requireBusinessId(userId);
     const tasks = await prisma.task.findMany({
       where: { businessId },
-      include: { project: { select: { id: true, name: true } } },
+      include: { project: { select: { id: true, name: true, status: true } } },
       orderBy: { createdAt: "desc" },
       take: 200,
     });
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const task = await prisma.task.create({
       data: { ...parsed.data, businessId },
-      include: { project: { select: { id: true, name: true } } },
+      include: { project: { select: { id: true, name: true, status: true } } },
     });
     return NextResponse.json({ task }, { status: 201 });
   } catch (err) {

@@ -1,20 +1,38 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { Badge, ConfirmModal, DatePickerField, EmptyState, MetricBar, Pagination, TableSkeleton, usePagination, useToast } from "@/components/ui";
+import { AlertTriangle, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import {
+  Badge,
+  Button,
+  ConfirmModal,
+  DatePickerField,
+  EditModal,
+  EmptyState,
+  Field,
+  MetricBar,
+  Pagination,
+  SelectField,
+  Tabs,
+  TableSkeleton,
+  usePagination,
+  useToast,
+} from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { TachesKanban } from "./TachesKanban";
+import { TachesCalendrier } from "./TachesCalendrier";
 
 type ProjectOption = { id: string; name: string };
-type TaskRow = {
+export type TaskRow = {
   id: string;
   text: string;
   done: boolean;
   dueDate: string | null;
   createdAt: string;
-  project: { id: string; name: string } | null;
+  updatedAt: string;
+  project: { id: string; name: string; status: string } | null;
 };
 
 function isOverdue(task: TaskRow) {
@@ -42,12 +60,16 @@ export default function TachesPage() {
   const toast = useToast();
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [view, setView] = useState<"kanban" | "liste" | "calendrier">("kanban");
   const [filter, setFilter] = useState<"all" | "pending" | "done" | "late">("all");
+
+  const [addOpen, setAddOpen] = useState(false);
   const [newText, setNewText] = useState("");
   const [newProjectId, setNewProjectId] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+
   const [deleteTarget, setDeleteTarget] = useState<TaskRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [sort, setSort] = useState<SortState | null>(null);
@@ -61,8 +83,15 @@ export default function TachesPage() {
       .then((data) => setProjects((data.projects ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))));
   }, []);
 
-  async function handleAdd(e: FormEvent) {
-    e.preventDefault();
+  function openAdd() {
+    setNewText("");
+    setNewProjectId("");
+    setNewDueDate("");
+    setError("");
+    setAddOpen(true);
+  }
+
+  async function handleAdd() {
     if (!newText.trim()) return;
     setError("");
     setAdding(true);
@@ -85,11 +114,9 @@ export default function TachesPage() {
       }
       const data = await res.json();
       setTasks((prev) => [data.task, ...(prev ?? [])]);
-      setNewText("");
-      setNewProjectId("");
-      setNewDueDate("");
       toast.success("Tâche ajoutée");
       router.refresh();
+      setAddOpen(false);
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setError(message);
@@ -175,157 +202,184 @@ export default function TachesPage() {
   const { page, setPage, totalPages, start, end } = usePagination(sortedTasks.length, 10);
   const pageTasks = sortedTasks.slice(start, end);
 
-  const enAttenteCount = (tasks ?? []).filter((t) => !t.done).length;
+  const now = new Date();
+  const aFaireCount = (tasks ?? []).filter((t) => !t.done).length;
   const enRetardCount = (tasks ?? []).filter((t) => isOverdue(t)).length;
-  const termineesCount = (tasks ?? []).filter((t) => t.done).length;
+  const termineesCeMoisCount = (tasks ?? []).filter(
+    (t) => t.done && new Date(t.updatedAt).getMonth() === now.getMonth() && new Date(t.updatedAt).getFullYear() === now.getFullYear()
+  ).length;
 
   return (
     <div className="nova-page">
-      <header className="nova-page-header">
-        <h1>Tâches</h1>
-        <p className="nova-page-subtitle">
-          {tasks === null ? "…" : `${tasks.filter((t) => !t.done).length} en attente sur ${tasks.length}`}
-        </p>
+      <header className="nova-page-header-row">
+        <div>
+          <h1>Tâches</h1>
+          <p className="nova-page-subtitle">
+            {tasks === null ? "…" : `${tasks.filter((t) => !t.done).length} en attente sur ${tasks.length}`}
+          </p>
+        </div>
+        <Button onClick={openAdd}>
+          <Plus size={16} strokeWidth={1.75} />
+          Nouvelle tâche
+        </Button>
       </header>
 
-      {tasks !== null && tasks.length > 0 && (
+      <Tabs
+        tabs={[
+          { key: "kanban", label: "Kanban" },
+          { key: "liste", label: "Liste" },
+          { key: "calendrier", label: "Calendrier" },
+        ]}
+        active={view}
+        onChange={setView}
+      />
+
+      {view === "liste" && tasks !== null && tasks.length > 0 && (
         <MetricBar
           items={[
             { label: "Total", value: tasks.length },
-            { label: "En attente", value: enAttenteCount },
+            { label: "À faire", value: aFaireCount },
             { label: "En retard", value: enRetardCount },
-            { label: "Terminées", value: termineesCount },
+            { label: "Terminées ce mois", value: termineesCeMoisCount },
           ]}
         />
       )}
 
-      <form onSubmit={handleAdd} className="nova-quick-add">
-        <input
-          type="text"
+      {error && <div className="error">{error}</div>}
+
+      {tasks === null ? (
+        <TableSkeleton columns={3} />
+      ) : tasks.length === 0 ? (
+        <EmptyState
+          icon="taches"
+          title="Aucune tâche pour l'instant"
+          description="Ajoutez votre première tâche avec le bouton ci-dessus."
+        />
+      ) : view === "kanban" ? (
+        <TachesKanban tasks={tasks} onToggle={handleToggle} onDelete={setDeleteTarget} />
+      ) : view === "calendrier" ? (
+        <TachesCalendrier tasks={tasks} onToggle={handleToggle} />
+      ) : (
+        <>
+          <div className="nova-filter-row">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={`nova-filter-chip ${filter === f.key ? "nova-filter-chip-active" : ""}`}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length > 0 && (
+            <div className="nova-task-sort-row">
+              <span className="nova-task-sort-label">Trier par</span>
+              {SORT_OPTIONS.map((opt) => {
+                const active = sort?.key === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className={`nova-table-sort-btn ${active ? "nova-table-sort-btn-active" : ""}`}
+                    onClick={() => toggleSort(opt.key)}
+                  >
+                    {opt.label}
+                    {active ? (
+                      sort?.direction === "asc" ? (
+                        <ChevronUp size={13} strokeWidth={2} />
+                      ) : (
+                        <ChevronDown size={13} strokeWidth={2} />
+                      )
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <EmptyState icon="taches" title="Aucune tâche pour ce filtre" />
+          ) : (
+            <ul className="nova-task-list">
+              {pageTasks.map((t) => (
+                <li
+                  key={t.id}
+                  className="nova-task-row"
+                  onClick={(e) => {
+                    // Le changement du checkbox déclenche déjà handleToggle via son
+                    // propre onChange (et le clic sur le lien/bouton ne doit pas
+                    // cocher la tâche) — on évite ainsi un double-toggle qui
+                    // annulerait le clic.
+                    if ((e.target as HTMLElement).closest("input, a, button")) return;
+                    handleToggle(t);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    className="nova-checkbox"
+                    checked={t.done}
+                    onChange={() => handleToggle(t)}
+                    aria-label={t.done ? "Marquer comme non faite" : "Marquer comme faite"}
+                  />
+                  <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
+                  {t.dueDate && (
+                    <span className={isOverdue(t) ? "nova-task-due-date nova-task-due-date-late" : "nova-task-due-date"}>
+                      {isOverdue(t) && <AlertTriangle size={12} strokeWidth={2} />}
+                      {new Date(t.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </span>
+                  )}
+                  {t.project && (
+                    <Link
+                      href={`/dashboard/chantiers/${t.project.id}`}
+                      className="nova-task-project"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Badge tone="blue">{t.project.name}</Badge>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    className="nova-icon-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(t);
+                    }}
+                    aria-label="Supprimer la tâche"
+                  >
+                    <Trash2 size={15} strokeWidth={1.75} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {filtered.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={sortedTasks.length} start={start} end={end} />
+          )}
+        </>
+      )}
+
+      <EditModal open={addOpen} title="Nouvelle tâche" onCancel={() => setAddOpen(false)} onSave={handleAdd} saving={adding}>
+        <Field
+          label="Texte de la tâche"
+          required
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Nouvelle tâche..."
-          aria-label="Nouvelle tâche"
+          placeholder="Ex. Commander le carrelage"
         />
-        <select value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)} aria-label="Chantier rattaché">
+        <SelectField label="Chantier rattaché" value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)}>
           <option value="">Aucun chantier</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
-        </select>
-        <DatePickerField label="Échéance (optionnel)" value={newDueDate} onChange={setNewDueDate} />
-        <button type="submit" className="nova-btn nova-btn-primary" disabled={adding || !newText.trim()}>
-          Ajouter
-        </button>
-      </form>
-      {error && <div className="error">{error}</div>}
-
-      <div className="nova-filter-row">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className={`nova-filter-chip ${filter === f.key ? "nova-filter-chip-active" : ""}`}
-            onClick={() => setFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {tasks !== null && filtered.length > 0 && (
-        <div className="nova-task-sort-row">
-          <span className="nova-task-sort-label">Trier par</span>
-          {SORT_OPTIONS.map((opt) => {
-            const active = sort?.key === opt.key;
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                className={`nova-table-sort-btn ${active ? "nova-table-sort-btn-active" : ""}`}
-                onClick={() => toggleSort(opt.key)}
-              >
-                {opt.label}
-                {active ? (
-                  sort?.direction === "asc" ? (
-                    <ChevronUp size={13} strokeWidth={2} />
-                  ) : (
-                    <ChevronDown size={13} strokeWidth={2} />
-                  )
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {tasks === null ? (
-        <TableSkeleton columns={3} />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon="taches"
-          title={tasks.length === 0 ? "Aucune tâche pour l'instant" : "Aucune tâche pour ce filtre"}
-          description={tasks.length === 0 ? "Ajoutez votre première tâche ci-dessus." : undefined}
-        />
-      ) : (
-        <ul className="nova-task-list">
-          {pageTasks.map((t) => (
-            <li
-              key={t.id}
-              className="nova-task-row"
-              onClick={(e) => {
-                // Le changement du checkbox déclenche déjà handleToggle via son
-                // propre onChange (et le clic sur le lien/bouton ne doit pas
-                // cocher la tâche) — on évite ainsi un double-toggle qui
-                // annulerait le clic.
-                if ((e.target as HTMLElement).closest("input, a, button")) return;
-                handleToggle(t);
-              }}
-            >
-              <input
-                type="checkbox"
-                className="nova-checkbox"
-                checked={t.done}
-                onChange={() => handleToggle(t)}
-                aria-label={t.done ? "Marquer comme non faite" : "Marquer comme faite"}
-              />
-              <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
-              {t.dueDate && (
-                <span className={isOverdue(t) ? "nova-task-due-date nova-task-due-date-late" : "nova-task-due-date"}>
-                  {isOverdue(t) && <AlertTriangle size={12} strokeWidth={2} />}
-                  {new Date(t.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                </span>
-              )}
-              {t.project && (
-                <Link
-                  href={`/dashboard/chantiers/${t.project.id}`}
-                  className="nova-task-project"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Badge tone="blue">{t.project.name}</Badge>
-                </Link>
-              )}
-              <button
-                type="button"
-                className="nova-icon-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(t);
-                }}
-                aria-label="Supprimer la tâche"
-              >
-                <Trash2 size={15} strokeWidth={1.75} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {tasks !== null && filtered.length > 0 && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={sortedTasks.length} start={start} end={end} />
-      )}
+        </SelectField>
+        <DatePickerField label="Date d'échéance (optionnel)" value={newDueDate} onChange={setNewDueDate} />
+      </EditModal>
 
       <ConfirmModal
         open={deleteTarget !== null}
