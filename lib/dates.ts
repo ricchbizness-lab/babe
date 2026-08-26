@@ -23,7 +23,7 @@ export function isSameDay(a: Date, b: Date): boolean {
   return toDateKey(a) === toDateKey(b);
 }
 
-const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
 export function weekDays(weekStart: Date): { date: Date; label: string }[] {
   return DAY_LABELS.map((label, i) => ({ date: addDays(weekStart, i), label }));

@@ -1913,6 +1913,100 @@ button.primary:hover { background: var(--nova-teal-deep); }
 /* --- Planning --- */
 
 .nova-week-nav { display: flex; gap: var(--nova-space-1); }
+
+.nova-mode-toggle {
+  display: inline-flex;
+  border: 1.5px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  overflow: hidden;
+}
+.nova-mode-toggle-btn {
+  background: var(--nova-surface);
+  border: none;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nova-ink-soft);
+  cursor: pointer;
+  transition: background-color var(--nova-transition-color), color var(--nova-transition-color);
+}
+.nova-mode-toggle-btn + .nova-mode-toggle-btn { border-left: 1.5px solid var(--nova-border); }
+.nova-mode-toggle-btn:hover { color: var(--nova-ink); }
+.nova-mode-toggle-btn-active { background: var(--nova-teal); color: #fff; }
+.nova-mode-toggle-btn-active:hover { color: #fff; }
+
+/* --- Planning : grille semaine (collaborateurs × jours) --- */
+
+.nova-planning-weekgrid {
+  display: grid;
+  grid-template-columns: 180px repeat(7, minmax(112px, 1fr));
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  overflow: hidden;
+  background: var(--nova-border);
+  gap: 1px;
+}
+.nova-planning-weekgrid-corner { background: var(--nova-table-header-bg); }
+.nova-planning-weekgrid-header-cell {
+  background: var(--nova-table-header-bg);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nova-planning-weekgrid-member-cell {
+  background: var(--nova-table-header-bg);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+}
+.nova-planning-weekgrid-member-name { font-size: 13px; font-weight: 600; color: var(--nova-ink); }
+.nova-planning-weekgrid-member-role { font-size: 11px; color: var(--nova-ink-faint); }
+.nova-planning-weekgrid-cell {
+  background: var(--nova-surface);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 56px;
+}
+.nova-planning-weekgrid-today.nova-planning-weekgrid-header-cell,
+.nova-planning-weekgrid-today.nova-planning-weekgrid-cell {
+  background: var(--nova-teal-tint);
+}
+.nova-planning-block {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: var(--nova-radius-badge);
+  padding: 4px 6px;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 100ms ease;
+}
+.nova-planning-block:hover { transform: translateY(-1px); }
+.nova-planning-block-initials {
+  flex-shrink: 0;
+  font-family: var(--nova-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+.nova-planning-block-project {
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nova-planning-detail-header { display: flex; align-items: center; justify-content: space-between; gap: var(--nova-space-2); }
+.nova-planning-detail-header .nova-modal-title { margin: 0; }
+
 .nova-planning-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

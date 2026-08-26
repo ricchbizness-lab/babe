@@ -723,6 +723,16 @@ export function initialsFromName(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
+/** Couleur stable générée depuis un nom — utilisée pour les blocs du planning (une couleur par collaborateur, sans configuration). */
+export function colorFromName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 60%, 40%)`;
+}
+
 export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
   return (
     <span
