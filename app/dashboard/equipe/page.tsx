@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserPlus } from "lucide-react";
-import { Avatar, Button, ConfirmModal, EditModal, EmptyState, Field, Pagination, usePagination, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, ConfirmModal, EditModal, EmptyState, Field, MetricBar, Pagination, usePagination, useToast } from "@/components/ui";
+import { toDateKey } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Member = {
@@ -12,7 +13,7 @@ type Member = {
   role: string | null;
   email: string | null;
   phone: string | null;
-  assignments?: { project: { id: string; status: string } | null }[];
+  assignments?: { date: string; project: { id: string; status: string } | null }[];
 };
 
 function activeProjectCount(m: Member): number {
@@ -22,6 +23,31 @@ function activeProjectCount(m: Member): number {
   }
   return ids.size;
 }
+
+const todayKey = toDateKey(new Date());
+
+function todaysAssignments(m: Member) {
+  return (m.assignments ?? []).filter((a) => toDateKey(new Date(a.date)) === todayKey);
+}
+
+type MemberStatus = "terrain" | "bureau" | "disponible";
+
+function memberStatus(m: Member): MemberStatus {
+  const today = todaysAssignments(m);
+  if (today.length === 0) return "disponible";
+  return today.some((a) => a.project) ? "terrain" : "bureau";
+}
+
+const STATUS_LABEL: Record<MemberStatus, string> = {
+  terrain: "Terrain",
+  bureau: "Bureau",
+  disponible: "Disponible",
+};
+const STATUS_TONE: Record<MemberStatus, "blue" | "amber" | "success"> = {
+  terrain: "blue",
+  bureau: "amber",
+  disponible: "success",
+};
 
 const EMPTY_FORM = { name: "", role: "", email: "", phone: "" };
 
@@ -139,6 +165,9 @@ export default function EquipePage() {
   const { page, setPage, totalPages, start, end } = usePagination((members ?? []).length, 10);
   const pageMembers = (members ?? []).slice(start, end);
 
+  const sursChantierCount = (members ?? []).filter((m) => memberStatus(m) === "terrain").length;
+  const disponiblesCount = (members ?? []).filter((m) => memberStatus(m) === "disponible").length;
+
   return (
     <div className="nova-page">
       <header className="nova-page-header-row">
@@ -150,9 +179,19 @@ export default function EquipePage() {
         </div>
         <Button onClick={openAdd}>
           <UserPlus size={16} strokeWidth={1.75} />
-          Ajouter un collaborateur
+          Inviter un membre
         </Button>
       </header>
+
+      {members !== null && members.length > 0 && (
+        <MetricBar
+          items={[
+            { label: "Total membres", value: members.length },
+            { label: "Sur chantier aujourd'hui", value: sursChantierCount },
+            { label: "Disponibles", value: disponiblesCount },
+          ]}
+        />
+      )}
 
       {members === null ? null : members.length === 0 ? (
         <EmptyState
@@ -172,6 +211,7 @@ export default function EquipePage() {
                     {m.role && <div className="nova-team-card-role">{m.role}</div>}
                   </div>
                 </div>
+                <Badge tone={STATUS_TONE[memberStatus(m)]}>{STATUS_LABEL[memberStatus(m)]}</Badge>
               </div>
               {(m.email || m.phone) && (
                 <div className="nova-team-card-contact">
@@ -201,7 +241,7 @@ export default function EquipePage() {
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={members.length} start={start} end={end} />
       )}
 
-      <EditModal open={adding} title="Ajouter un collaborateur" onCancel={() => setAdding(false)} onSave={confirmAdd} saving={savingAdd}>
+      <EditModal open={adding} title="Inviter un membre" onCancel={() => setAdding(false)} onSave={confirmAdd} saving={savingAdd}>
         <Field
           label="Nom"
           required
