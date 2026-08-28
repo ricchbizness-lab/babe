@@ -15,6 +15,7 @@ import type {
 import {
   ArrowLeft,
   Banknote,
+  Bell,
   Bot,
   Building2,
   CalendarDays,
@@ -67,6 +68,7 @@ const ICONS = {
   chantiers: Building2,
   devis: FileText,
   facturation: Banknote,
+  relances: Bell,
   planning: CalendarDays,
   dispatch: UserCog,
   taches: CheckSquare,
@@ -1613,6 +1615,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/devis", label: "Devis", icon: "devis" },
   { href: "/dashboard/chantiers", label: "Chantiers", icon: "chantiers" },
   { href: "/dashboard/facturation", label: "Facturation", icon: "facturation" },
+  { href: "/dashboard/relances", label: "Relances", icon: "relances" },
   { href: "/dashboard/taches", label: "Tâches", icon: "taches" },
   { href: "/dashboard/equipe", label: "Équipe", icon: "equipe" },
   { href: "/dashboard/planning", label: "Planning", icon: "planning" },

@@ -6,7 +6,7 @@ export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-type BusinessContext = {
+export type BusinessContext = {
   name: string;
   sector: string;
   mission: string | null;

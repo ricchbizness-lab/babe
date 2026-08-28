@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { anthropic, buildSystemPrompt } from "@/lib/anthropic";
+import { generateAgentText } from "@/lib/agent";
 import { agentSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 import { checkRateLimit, getRequestKey } from "@/lib/rateLimit";
-
-const MODULE_INSTRUCTIONS: Record<string, string> = {
-  brief: "Génère un brief du jour : 3 à 5 priorités concrètes pour aujourd'hui, adaptées au secteur de l'entreprise.",
-  devis: "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. Texte clair uniquement, sans aucun symbole de formatage Markdown.",
-  marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
-  conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
-  reponse_client: "Rédige une réponse professionnelle au message client fourni.",
-  relance: "Rédige un message de relance de paiement courtois mais ferme pour une facture en retard, à partir des informations fournies (client, montant, échéance, nombre de jours de retard).",
-};
 
 export async function POST(req: Request) {
   try {
@@ -50,25 +41,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
-    const systemPrompt = buildSystemPrompt(business, parsed.data.module);
-    const instruction = MODULE_INSTRUCTIONS[parsed.data.module];
-
     // Les données fournies par l'utilisateur sont envoyées comme message
     // utilisateur structuré (JSON), jamais concaténées dans le system prompt.
-    const userMessage = JSON.stringify({
-      instruction,
-      input: parsed.data.input || {},
-    });
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
-    });
-
-    const textBlock = response.content.find((b) => b.type === "text");
-    const text = textBlock && "text" in textBlock ? textBlock.text : "";
+    const text = await generateAgentText(business, parsed.data.module, parsed.data.input || {});
 
     return NextResponse.json({ result: text });
   } catch (err) {
