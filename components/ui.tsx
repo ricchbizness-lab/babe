@@ -30,6 +30,7 @@ import {
   FileBarChart,
   FileSignature,
   FileText,
+  FolderOpen,
   HelpCircle,
   Info,
   LayoutDashboard,
@@ -73,6 +74,7 @@ const ICONS = {
   relances: Bell,
   achats: ShoppingCart,
   analyse: TrendingUp,
+  documents: FolderOpen,
   planning: CalendarDays,
   dispatch: UserCog,
   taches: CheckSquare,
@@ -1687,6 +1689,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
   { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", icon: "rapport" },
   { href: "/dashboard/analyse", label: "Analyse", icon: "analyse" },
+  { href: "/dashboard/documents", label: "Documents", icon: "documents" },
   { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
 ];
 

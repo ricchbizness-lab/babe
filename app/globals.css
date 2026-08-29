@@ -1077,6 +1077,14 @@ button.primary:hover { background: var(--nova-teal-deep); }
   color: var(--nova-teal-deep);
   flex-shrink: 0;
 }
+.nova-doc-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--nova-radius-btn);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--nova-border);
+}
 
 /* --- Barre de progression --- */
 
