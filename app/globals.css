@@ -1424,6 +1424,22 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-chart-line-dashed { stroke: var(--nova-ink-faint); stroke-dasharray: 5 4; }
 .nova-chart-dot { fill: var(--nova-teal); }
 
+.nova-donut { display: flex; align-items: center; gap: var(--nova-space-3); flex-wrap: wrap; }
+.nova-donut-svg { width: 160px; height: 160px; flex-shrink: 0; }
+.nova-donut-total { font-family: var(--nova-font-heading); font-size: 22px; font-weight: 800; fill: var(--nova-ink); }
+.nova-donut-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nova-donut-legend li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--nova-ink); }
+.nova-donut-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.nova-donut-value { font-family: var(--nova-font-mono); color: var(--nova-ink-faint); }
+
+.nova-analyse-tab { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-analyse-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--nova-space-3);
+  align-items: start;
+}
+
 .nova-todo-list { display: flex; flex-direction: column; }
 .nova-todo-item {
   display: flex;
@@ -2606,6 +2622,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid, .nova-summary-grid { grid-template-columns: 1fr 1fr; }
   .nova-planning-grid { grid-template-columns: 1fr; }
   .nova-chantier-week { grid-template-columns: 1fr; }
+  .nova-analyse-grid-2 { grid-template-columns: 1fr; }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }
   .nova-week-nav { justify-content: space-between; }
   .nova-dispatch-forms { grid-template-columns: 1fr; }

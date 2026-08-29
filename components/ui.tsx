@@ -44,6 +44,7 @@ import {
   Search,
   Settings,
   ShoppingCart,
+  TrendingUp,
   UserCog,
   UserPlus,
   Users,
@@ -71,6 +72,7 @@ const ICONS = {
   facturation: Banknote,
   relances: Bell,
   achats: ShoppingCart,
+  analyse: TrendingUp,
   planning: CalendarDays,
   dispatch: UserCog,
   taches: CheckSquare,
@@ -1304,6 +1306,64 @@ export function MiniLineChart({
 }
 
 // ---------------------------------------------------------------------------
+// DonutChart — répartition en anneau, SVG maison (mêmes raisons que
+// MiniLineChart : une poignée de segments ne justifie pas une dépendance).
+// ---------------------------------------------------------------------------
+
+const DONUT_COLORS = ["#14594A", "#1D6FBF", "#C98A2B", "#991B1B", "#566072"];
+
+export function DonutChart({ segments }: { segments: { label: string; value: number }[] }) {
+  const total = segments.reduce((sum, s) => sum + s.value, 0);
+  const size = 160;
+  const radius = 60;
+  const strokeWidth = 22;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="nova-donut">
+      <svg viewBox={`0 0 ${size} ${size}`} className="nova-donut-svg" role="img" aria-label="Répartition">
+        {total === 0 ? (
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--nova-border)" strokeWidth={strokeWidth} />
+        ) : (
+          segments.map((s, i) => {
+            const fraction = s.value / total;
+            const dash = fraction * circumference;
+            const el = (
+              <circle
+                key={s.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${dash} ${circumference - dash}`}
+                strokeDashoffset={-offset}
+                transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              />
+            );
+            offset += dash;
+            return el;
+          })
+        )}
+        <text x={size / 2} y={size / 2 + 5} textAnchor="middle" className="nova-donut-total">
+          {total}
+        </text>
+      </svg>
+      <ul className="nova-donut-legend">
+        {segments.map((s, i) => (
+          <li key={s.label}>
+            <span className="nova-donut-swatch" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+            {s.label} <span className="nova-donut-value">{s.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // NewMenu — bouton "+ Nouveau" avec dropdown de création rapide (dashboard)
 // ---------------------------------------------------------------------------
 
@@ -1626,6 +1686,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
   { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
   { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", icon: "rapport" },
+  { href: "/dashboard/analyse", label: "Analyse", icon: "analyse" },
   { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
 ];
 

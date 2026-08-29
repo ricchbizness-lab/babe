@@ -106,7 +106,7 @@ export const taskUpdateSchema = z.object({
 });
 
 export const agentSchema = z.object({
-  module: z.enum(["brief", "devis", "marketing", "conseil", "reponse_client", "relance", "relance_devis"]),
+  module: z.enum(["brief", "devis", "marketing", "conseil", "reponse_client", "relance", "relance_devis", "analyse"]),
   input: z.record(z.string(), z.unknown()).optional(),
 });
 

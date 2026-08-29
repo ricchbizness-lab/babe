@@ -8,6 +8,7 @@ export const MODULE_INSTRUCTIONS: Record<string, string> = {
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",
   relance: "Rédige un message de relance de paiement courtois mais ferme pour une facture en retard, à partir des informations fournies (client, montant, échéance, nombre de jours de retard).",
   relance_devis: "Rédige un message de relance courtois pour un devis envoyé au client resté sans réponse, à partir des informations fournies (client, devis, montant, nombre de jours depuis l'envoi).",
+  analyse: "Analyse les indicateurs d'activité fournis (chiffre d'affaires, marge, taux de conversion, chantiers) et formule 2 à 3 constats ou pistes à évaluer sur la rentabilité de l'activité, jamais des directives.",
 };
 
 /** Génère un texte via le modèle actif pour un module donné — utilisé par /api/agent (génération affichée) et /api/relances (génération + envoi email). */
