@@ -137,6 +137,36 @@ export const assignmentUpdateSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+export const supplierSchema = z.object({
+  name: z.string().min(1).max(200),
+  contact: z.string().max(200).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().max(30).optional(),
+  category: z.string().max(100).optional(),
+});
+
+export const supplierUpdateSchema = supplierSchema.partial();
+
+export const purchaseSchema = z.object({
+  supplierId: z.string(),
+  projectId: z.string().optional(),
+  description: z.string().min(1).max(500),
+  amount: z.number().min(0),
+  status: z.enum(["en_attente", "en_cours", "recu", "annule"]).default("en_attente"),
+  orderDate: z.string().datetime().optional(),
+  expectedDate: z.string().datetime().optional(),
+});
+
+export const purchaseUpdateSchema = z.object({
+  supplierId: z.string().optional(),
+  projectId: z.string().optional(),
+  description: z.string().min(1).max(500).optional(),
+  amount: z.number().min(0).optional(),
+  status: z.enum(["en_attente", "en_cours", "recu", "annule"]).optional(),
+  orderDate: z.string().datetime().optional(),
+  expectedDate: z.string().datetime().optional(),
+});
+
 export const voiceReportSchema = z.object({
   projectId: z.string().optional(),
   authorLabel: z.string().min(1).max(200),
