@@ -15,8 +15,8 @@ import {
   ConfirmModal,
   DatePickerField,
   EditModal,
+  EmptyState,
   Field,
-  ProgressBar,
   SelectField,
   Table,
   TableSkeleton,
@@ -27,6 +27,9 @@ import {
 } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { ChantierOverviewTab } from "./ChantierOverviewTab";
+import { ChantierPlanningTab } from "./ChantierPlanningTab";
+import { ChantierPhotosTab } from "./ChantierPhotosTab";
 
 type ChantierDetail = {
   id: string;
@@ -36,13 +39,26 @@ type ChantierDetail = {
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
+  budgetPrevu: number | null;
+  photoCouverture: string | null;
   client: { id: string; name: string } | null;
   tasks: { id: string; text: string; done: boolean; createdAt: string }[];
   voiceReports: { id: string; authorLabel: string; summary: string; createdAt: string }[];
-  assignments: { id: string; date: string; note: string | null; teamMember: { id: string; name: string } }[];
+  assignments: { id: string; date: string; note: string | null; teamMember: { id: string; name: string; role: string | null } }[];
+  steps: { id: string; title: string; status: string; order: number }[];
+  photos: { id: string; imageBase64: string; caption: string | null; createdAt: string }[];
 };
 
 type ClientOption = { id: string; name: string };
+type FactureRow = {
+  id: string;
+  label: string;
+  amount: number | null;
+  status: string;
+  paymentStatus: string;
+  updatedAt: string;
+  clientId: string | null;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   planifie: "Planifié",
@@ -86,22 +102,40 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", address: "", clientId: "", status: "planifie", startDate: "", endDate: "" });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    address: "",
+    clientId: "",
+    status: "planifie",
+    startDate: "",
+    endDate: "",
+    budgetPrevu: "",
+  });
   const [savingEdit, setSavingEdit] = useState(false);
-  const [tab, setTab] = useState<"info" | "taches" | "equipe" | "rapports" | "portail">("info");
+  const [tab, setTab] = useState<"overview" | "planning" | "taches" | "photos" | "documents" | "equipe" | "factures" | "rapports" | "portail">(
+    "overview"
+  );
+  const [factures, setFactures] = useState<FactureRow[] | null>(null);
+
+  async function loadProject() {
+    const res = await fetchWithAuth(`/api/projects/${params.id}`);
+    if (!res.ok) {
+      setError("Chantier introuvable.");
+      return;
+    }
+    const data = await res.json();
+    setProject(data.project);
+  }
 
   useEffect(() => {
-    fetchWithAuth(`/api/projects/${params.id}`).then(async (res) => {
-      if (!res.ok) {
-        setError("Chantier introuvable.");
-        return;
-      }
-      const data = await res.json();
-      setProject(data.project);
-    });
+    loadProject();
     fetchWithAuth("/api/clients")
       .then((res) => res.json())
       .then((data) => setClients((data.clients ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }))));
+    fetchWithAuth("/api/devis")
+      .then((res) => res.json())
+      .then((data) => setFactures(data.devis ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   async function handleStatusChange(status: string) {
@@ -140,6 +174,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       status: project.status,
       startDate: project.startDate ? toDateKey(new Date(project.startDate)) : "",
       endDate: project.endDate ? toDateKey(new Date(project.endDate)) : "",
+      budgetPrevu: project.budgetPrevu != null ? String(project.budgetPrevu) : "",
     });
     setEditing(true);
   }
@@ -161,6 +196,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
           status: editForm.status,
           startDate: editForm.startDate ? new Date(`${editForm.startDate}T00:00:00.000Z`).toISOString() : undefined,
           endDate: editForm.endDate ? new Date(`${editForm.endDate}T00:00:00.000Z`).toISOString() : undefined,
+          budgetPrevu: editForm.budgetPrevu ? Number(editForm.budgetPrevu) : undefined,
         }),
       });
       if (!res.ok) {
@@ -274,7 +310,30 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     { key: "note", label: "Note", render: (a) => a.note || "—" },
   ];
 
-  const progressValue = project.tasks.length === 0 ? null : (project.tasks.filter((t) => t.done).length / project.tasks.length) * 100;
+  const factureColumns: TableColumn<FactureRow>[] = [
+    { key: "label", label: "Référence", emphasis: "title" },
+    {
+      key: "amount",
+      label: "Montant",
+      align: "right",
+      render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+      emphasis: "amount",
+    },
+    {
+      key: "paymentStatus",
+      label: "Statut paiement",
+      render: (d) => (
+        <Badge tone={d.paymentStatus === "payee" ? "success" : d.paymentStatus === "en_retard" ? "danger" : "amber"}>
+          {d.paymentStatus === "payee" ? "Payée" : d.paymentStatus === "en_retard" ? "En retard" : "En attente"}
+        </Badge>
+      ),
+    },
+    { key: "updatedAt", label: "Date", render: (d) => <Timestamp date={d.updatedAt} /> },
+  ];
+
+  const factureRows = factures
+    ? factures.filter((d) => d.status === "accepte" && d.clientId && d.clientId === project.client?.id)
+    : null;
 
   return (
     <div className="nova-page">
@@ -314,12 +373,6 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         </div>
       </header>
 
-      {progressValue !== null && (
-        <div className="nova-header-actions">
-          <ProgressBar value={progressValue} label={`${Math.round(progressValue)}% des tâches terminées`} />
-        </div>
-      )}
-
       <div className="nova-status-actions">
         {STATUS_ACTIONS.filter((a) => a.status !== project.status).map((a) => (
           <Button key={a.status} variant={a.variant} disabled={updatingStatus} onClick={() => handleStatusChange(a.status)}>
@@ -330,9 +383,13 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
 
       <Tabs
         tabs={[
-          { key: "info", label: "Informations" },
+          { key: "overview", label: "Vue d'ensemble" },
+          { key: "planning", label: "Planning" },
           { key: "taches", label: `Tâches (${project.tasks.length})` },
-          { key: "equipe", label: `Équipe affectée (${project.assignments.length})` },
+          { key: "photos", label: `Photos (${project.photos.length})` },
+          { key: "documents", label: "Documents" },
+          { key: "equipe", label: `Équipe (${project.assignments.length})` },
+          { key: "factures", label: `Factures (${factureRows?.length ?? 0})` },
           { key: "rapports", label: `Rapports vocaux (${project.voiceReports.length})` },
           { key: "portail", label: "Portail client" },
         ]}
@@ -340,28 +397,45 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         onChange={setTab}
       />
 
-      {tab === "info" && (
-        <Card>
-          <CardTitle>Détails</CardTitle>
-          <dl className="nova-detail-list">
-            <div>
-              <dt>Adresse</dt>
-              <dd>{project.address || "—"}</dd>
-            </div>
-            <div>
-              <dt>Début</dt>
-              <dd>{project.startDate ? new Date(project.startDate).toLocaleDateString("fr-FR") : "—"}</dd>
-            </div>
-            <div>
-              <dt>Fin</dt>
-              <dd>{project.endDate ? new Date(project.endDate).toLocaleDateString("fr-FR") : "—"}</dd>
-            </div>
-          </dl>
-        </Card>
+      {tab === "overview" && (
+        <>
+          <ChantierOverviewTab project={project} onRefresh={loadProject} />
+          <Card>
+            <CardTitle>Détails</CardTitle>
+            <dl className="nova-detail-list">
+              <div>
+                <dt>Adresse</dt>
+                <dd>{project.address || "—"}</dd>
+              </div>
+              <div>
+                <dt>Début</dt>
+                <dd>{project.startDate ? new Date(project.startDate).toLocaleDateString("fr-FR") : "—"}</dd>
+              </div>
+              <div>
+                <dt>Fin</dt>
+                <dd>{project.endDate ? new Date(project.endDate).toLocaleDateString("fr-FR") : "—"}</dd>
+              </div>
+            </dl>
+          </Card>
+        </>
       )}
+
+      {tab === "planning" && <ChantierPlanningTab assignments={project.assignments} />}
 
       {tab === "taches" && (
         <Table columns={taskColumns} rows={project.tasks} emptyLabel="Aucune tâche rattachée à ce chantier." />
+      )}
+
+      {tab === "photos" && (
+        <ChantierPhotosTab projectId={project.id} photos={project.photos} onRefresh={loadProject} />
+      )}
+
+      {tab === "documents" && (
+        <EmptyState
+          icon="rapport"
+          title="Pas encore de documents liés à ce chantier"
+          description="Les documents générés (briefs, contenus marketing...) ne sont pour l'instant pas rattachés à un chantier précis — cette liaison arrivera avec le module Documents."
+        />
       )}
 
       {tab === "equipe" && (
@@ -370,6 +444,14 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
           rows={project.assignments}
           emptyLabel="Aucun collaborateur affecté à ce chantier."
         />
+      )}
+
+      {tab === "factures" && (
+        factureRows === null ? (
+          <TableSkeleton columns={4} />
+        ) : (
+          <Table columns={factureColumns} rows={factureRows} getRowHref={(d) => `/dashboard/facturation/${d.id}`} emptyLabel="Aucune facture liée à ce chantier." />
+        )
       )}
 
       {tab === "rapports" && (
@@ -465,6 +547,14 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
           label="Date de fin"
           value={editForm.endDate}
           onChange={(value) => setEditForm({ ...editForm, endDate: value })}
+        />
+        <Field
+          label="Budget prévu (€)"
+          type="number"
+          min="0"
+          step="100"
+          value={editForm.budgetPrevu}
+          onChange={(e) => setEditForm({ ...editForm, budgetPrevu: e.target.value })}
         />
       </EditModal>
     </div>

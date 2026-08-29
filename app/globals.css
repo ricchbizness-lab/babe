@@ -2123,6 +2123,86 @@ button.primary:hover { background: var(--nova-teal-deep); }
   color: var(--nova-ink-faint);
 }
 .nova-team-card-role { font-size: 12.5px; color: var(--nova-ink-soft); }
+
+/* --- Fiche chantier enrichie (vue d'ensemble, planning, photos) --- */
+
+.nova-overview-tab { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+
+.nova-cover-photo {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border-radius: var(--nova-radius-card);
+  overflow: hidden;
+  background: var(--nova-table-header-bg);
+  border: 1px solid var(--nova-border);
+}
+.nova-cover-photo img { width: 100%; height: 100%; object-fit: cover; }
+.nova-cover-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nova-ink-faint);
+}
+.nova-cover-photo-btn { position: absolute; right: var(--nova-space-2); bottom: var(--nova-space-2); }
+
+.nova-team-onsite { display: flex; flex-wrap: wrap; gap: var(--nova-space-3); }
+
+.nova-steps-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--nova-space-2); }
+.nova-steps-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+}
+.nova-steps-row button:first-child { background: none; border: none; cursor: pointer; padding: 0; }
+.nova-steps-title { flex: 1; font-size: 14px; color: var(--nova-ink); }
+
+.nova-chantier-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--nova-space-2);
+  align-items: start;
+}
+
+.nova-photos-tab { display: flex; flex-direction: column; gap: var(--nova-space-3); align-items: flex-start; }
+.nova-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--nova-space-2);
+  width: 100%;
+}
+.nova-photo-card {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--nova-radius-card);
+  overflow: hidden;
+  border: 1px solid var(--nova-border);
+  background: var(--nova-table-header-bg);
+}
+.nova-photo-card img { width: 100%; height: 100%; object-fit: cover; }
+.nova-photo-card-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(20, 24, 28, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.nova-photo-card-delete:hover { background: var(--nova-danger); }
 .nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
 .nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
 .nova-team-card-footer {
@@ -2525,6 +2605,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-sidebar-account, .nova-sidebar-help, .nova-sidebar-soon-title, .nova-sidebar-soon, .nova-global-search { display: none; }
   .nova-metrics-band, .nova-analyse-grid, .nova-quick-actions-grid, .nova-summary-grid { grid-template-columns: 1fr 1fr; }
   .nova-planning-grid { grid-template-columns: 1fr; }
+  .nova-chantier-week { grid-template-columns: 1fr; }
   .nova-page-header-row { flex-direction: column; align-items: stretch; }
   .nova-week-nav { justify-content: space-between; }
   .nova-dispatch-forms { grid-template-columns: 1fr; }

@@ -37,6 +37,28 @@ export const projectSchema = z.object({
   status: z.enum(["planifie", "en_cours", "termine", "annule"]).default("planifie"),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
+  budgetPrevu: z.number().min(0).optional(),
+  photoCouverture: z.string().max(2_900_000).optional().or(z.literal("")),
+});
+
+export const projectStepSchema = z.object({
+  title: z.string().min(1).max(200),
+  status: z.enum(["a_faire", "en_cours", "termine"]).default("a_faire"),
+  // Pas de défaut ici volontairement : l'absence d'ordre signale à la route
+  // POST qu'elle doit calculer l'ajout en fin de liste, plutôt que de tout
+  // caler silencieusement à 0.
+  order: z.number().int().min(0).optional(),
+});
+
+export const projectStepUpdateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  status: z.enum(["a_faire", "en_cours", "termine"]).optional(),
+  order: z.number().int().min(0).optional(),
+});
+
+export const projectPhotoSchema = z.object({
+  imageBase64: z.string().min(1).max(2_900_000),
+  caption: z.string().max(300).optional(),
 });
 
 export const devisLineSchema = z.object({

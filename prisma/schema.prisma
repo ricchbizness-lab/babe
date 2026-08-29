@@ -82,15 +82,42 @@ model Project {
   startDate  DateTime?
   endDate    DateTime?
   portalToken String?  @unique // portail client (module 4) — généré à la demande, jamais à la création
+  budgetPrevu Float?   // fiche chantier enrichie (module 6) — dépenses réelles viendront du futur module achats
+  photoCouverture String? // encodé en data URL, même pattern que Business.logoBase64
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   tasks Task[]
   voiceReports VoiceReport[]
   assignments  Assignment[]
+  steps  ProjectStep[]
+  photos ProjectPhoto[]
 
   @@index([businessId])
   @@index([clientId])
+}
+
+model ProjectStep {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  status    String   @default("a_faire") // a_faire | en_cours | termine
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model ProjectPhoto {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  imageBase64 String
+  caption     String?
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
 }
 
 model Devis {
