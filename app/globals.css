@@ -1066,6 +1066,25 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-identity-cell-name { font-size: 14px; font-weight: 600; color: var(--nova-ink); }
 .nova-ink-faint { color: var(--nova-ink-faint); }
 .nova-settings-form { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-module-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nova-module-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-2) 0;
+  border-bottom: 1px solid var(--nova-border);
+  font-size: 14px;
+  color: var(--nova-ink);
+}
+.nova-module-list li:last-child { border-bottom: none; }
 .nova-report-icon {
   display: inline-flex;
   align-items: center;

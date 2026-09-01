@@ -18,6 +18,9 @@ export const businessSchema = z.object({
   tauxHoraire: z.number().min(0).max(1000).default(40),
   accountantEmail: z.string().email().optional().or(z.literal("")),
   siret: z.string().max(20).optional(),
+  formeJuridique: z.string().max(50).optional(),
+  capitalSocial: z.number().min(0).optional(),
+  codeAPE: z.string().max(10).optional(),
   conditionsPaiement: z.string().max(500).optional(),
   logoBase64: z.string().max(2_900_000).optional().or(z.literal("")),
 });

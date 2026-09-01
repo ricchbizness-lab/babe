@@ -1673,7 +1673,7 @@ export function GlobalSearch() {
 // Sidebar — navigation fixe de la plateforme
 // ---------------------------------------------------------------------------
 
-const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
+export const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
   { href: "/dashboard", label: "Vue d'ensemble", icon: "dashboard" },
   { href: "/dashboard/clients", label: "Clients", icon: "crm" },
   { href: "/dashboard/devis", label: "Devis", icon: "devis" },
@@ -1698,7 +1698,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
  * consigne du porteur de projet) — jamais cliquables, jamais de route
  * derrière. Uniquement là pour montrer la direction du produit.
  */
-const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
+export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Facturation électronique conforme", icon: Receipt },
   { label: "E-signature de devis", icon: FileSignature },
   { label: "Système téléphonique intégré", icon: Phone },

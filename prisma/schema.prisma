@@ -35,6 +35,9 @@ model Business {
   tauxHoraire  Float     @default(40)
   accountantEmail String? // comptable partenaire ou comptable habituel du client, pour l'envoi du rapport stratégique
   siret        String? // mention légale facture — éditable dans Paramètres (module 7)
+  formeJuridique String? // SARL, SAS, EI, auto-entrepreneur... — mention légale facture
+  capitalSocial  Float?  // mention légale facture, non pertinent en auto-entreprise
+  codeAPE        String? // code APE/NAF — mention légale facture
   conditionsPaiement String? @default("Paiement sous 30 jours") // pied de page facture
   logoBase64   String? // logo entreprise, encodé en data URL — affiché en haut de la sidebar
   createdAt    DateTime  @default(now())
