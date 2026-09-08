@@ -2532,6 +2532,26 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-modal-actions { display: flex; justify-content: flex-end; gap: var(--nova-space-2); }
 .nova-modal-title { font-family: var(--nova-font-heading); font-size: 16px; font-weight: 700; margin: 0 0 var(--nova-space-2); }
 .nova-modal-edit { max-width: 480px; }
+.nova-modal-edit:has(.nova-concurrence-supplier-list) { max-width: 560px; }
+.nova-concurrence-supplier-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  margin: var(--nova-space-2) 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.nova-concurrence-supplier-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.nova-concurrence-supplier-row:hover { border-color: var(--nova-teal); }
 
 /* --- NavigationProgress --- */
 

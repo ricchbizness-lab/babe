@@ -38,7 +38,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         expectedDate: parsed.data.expectedDate ? new Date(parsed.data.expectedDate) : undefined,
       },
       include: {
-        supplier: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true, email: true, category: true } },
         project: { select: { id: true, name: true } },
       },
     });

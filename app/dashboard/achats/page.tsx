@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Handshake, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import {
   Badge,
   Button,
@@ -44,7 +44,7 @@ type Purchase = {
   status: string;
   orderDate: string;
   expectedDate: string | null;
-  supplier: { id: string; name: string };
+  supplier: { id: string; name: string; email: string | null; category: string | null };
   project: { id: string; name: string } | null;
 };
 
@@ -85,6 +85,12 @@ export default function AchatsPage() {
   const [editPurchaseTarget, setEditPurchaseTarget] = useState<Purchase | null>(null);
   const [deletePurchaseTarget, setDeletePurchaseTarget] = useState<Purchase | null>(null);
   const [deletingPurchase, setDeletingPurchase] = useState(false);
+
+  const [concurrenceTarget, setConcurrenceTarget] = useState<Purchase | null>(null);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+  const [concurrenceMessage, setConcurrenceMessage] = useState<string | null>(null);
+  const [generatingConcurrence, setGeneratingConcurrence] = useState(false);
+  const [sendingConcurrence, setSendingConcurrence] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/suppliers")
@@ -307,6 +313,102 @@ export default function AchatsPage() {
     setDeletePurchaseTarget(null);
   }
 
+  // --- Mise en concurrence fournisseurs ---
+
+  function openConcurrence(p: Purchase) {
+    setConcurrenceTarget(p);
+    setSelectedSupplierIds([]);
+    setConcurrenceMessage(null);
+  }
+
+  function closeConcurrence() {
+    setConcurrenceTarget(null);
+    setSelectedSupplierIds([]);
+    setConcurrenceMessage(null);
+  }
+
+  function toggleSupplierSelection(id: string) {
+    setSelectedSupplierIds((prev) => {
+      if (prev.includes(id)) return prev.filter((s) => s !== id);
+      if (prev.length >= 3) return prev;
+      return [...prev, id];
+    });
+  }
+
+  async function handleGenerateConcurrence() {
+    if (!concurrenceTarget || selectedSupplierIds.length === 0) return;
+    setGeneratingConcurrence(true);
+    setConcurrenceMessage(null);
+    try {
+      const res = await fetchWithAuth("/api/achats/mise-en-concurrence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ achatId: concurrenceTarget.id, supplierIds: selectedSupplierIds }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Erreur lors de la génération de la demande de devis.");
+        return;
+      }
+      const data = await res.json();
+      setConcurrenceMessage(data.message || "");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setGeneratingConcurrence(false);
+    }
+  }
+
+  async function handleCopyConcurrence() {
+    if (!concurrenceMessage) return;
+    await navigator.clipboard.writeText(concurrenceMessage);
+    toast.success("Message copié !");
+  }
+
+  async function handleSendConcurrence() {
+    if (!concurrenceTarget || !concurrenceMessage) return;
+    setSendingConcurrence(true);
+    try {
+      const res = await fetchWithAuth("/api/achats/mise-en-concurrence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          achatId: concurrenceTarget.id,
+          supplierIds: selectedSupplierIds,
+          send: true,
+          message: concurrenceMessage,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Erreur lors de l'envoi des emails.");
+        return;
+      }
+      if (data.sent?.length > 0) {
+        toast.success(`Demande envoyée à ${data.sent.length} fournisseur${data.sent.length > 1 ? "s" : ""}`);
+      }
+      if (data.failed?.length > 0) {
+        toast.error(`Échec de l'envoi pour ${data.failed.length} fournisseur${data.failed.length > 1 ? "s" : ""} — vérifiez la configuration email.`);
+      }
+      if (data.sent?.length > 0) closeConcurrence();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSendingConcurrence(false);
+    }
+  }
+
+  const concurrenceCandidates = concurrenceTarget
+    ? (suppliers ?? []).filter(
+        (s) =>
+          s.id !== concurrenceTarget.supplier.id &&
+          (!concurrenceTarget.supplier.category || s.category === concurrenceTarget.supplier.category)
+      )
+    : [];
+  const selectedHaveEmail = selectedSupplierIds.some(
+    (id) => concurrenceCandidates.find((s) => s.id === id)?.email
+  );
+
   // --- Métriques ---
 
   const now = new Date();
@@ -351,6 +453,12 @@ export default function AchatsPage() {
       align: "right",
       render: (p) => (
         <span className="nova-team-card-actions">
+          {p.status === "en_attente" && (
+            <Button variant="secondary" onClick={() => openConcurrence(p)}>
+              <Handshake size={14} strokeWidth={1.75} />
+              Mettre en concurrence
+            </Button>
+          )}
           <button type="button" className="nova-team-card-edit-link" onClick={() => openEditPurchase(p)} aria-label="Modifier l'achat">
             <Pencil size={14} strokeWidth={1.75} />
           </button>
@@ -647,6 +755,83 @@ export default function AchatsPage() {
         onCancel={() => setDeletePurchaseTarget(null)}
         confirming={deletingPurchase}
       />
+
+      {concurrenceTarget && (
+        <div className="nova-modal-overlay" onClick={closeConcurrence}>
+          <div
+            className="nova-modal nova-modal-edit"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mettre en concurrence"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="nova-planning-detail-header">
+              <h3 className="nova-modal-title">Mettre en concurrence — {concurrenceTarget.description}</h3>
+              <button type="button" className="nova-icon-btn" onClick={closeConcurrence} aria-label="Fermer">
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+
+            {concurrenceCandidates.length === 0 ? (
+              <p className="nova-page-subtitle">
+                Aucun autre fournisseur dans la catégorie « {concurrenceTarget.supplier.category || "non précisée"} » —
+                ajoutez-en un dans l'onglet Fournisseurs pour pouvoir comparer des devis.
+              </p>
+            ) : (
+              <>
+                <p className="nova-page-subtitle">Sélectionnez 2 à 3 fournisseurs à contacter pour cette demande de devis.</p>
+                <div className="nova-concurrence-supplier-list">
+                  {concurrenceCandidates.map((s) => (
+                    <label key={s.id} className="nova-concurrence-supplier-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedSupplierIds.includes(s.id)}
+                        onChange={() => toggleSupplierSelection(s.id)}
+                      />
+                      <span>
+                        <strong>{s.name}</strong>
+                        {s.email ? ` — ${s.email}` : " — aucun email renseigné"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {concurrenceMessage && (
+                  <div className="nova-ai-zone" style={{ marginTop: "var(--nova-space-2)" }}>
+                    <div className="nova-ai-zone-header">
+                      <Badge tone="teal">Demande de devis générée</Badge>
+                    </div>
+                    <p className="nova-ai-content">{concurrenceMessage}</p>
+                  </div>
+                )}
+
+                <div className="nova-modal-actions">
+                  <Button variant="secondary" onClick={closeConcurrence}>
+                    Fermer
+                  </Button>
+                  {concurrenceMessage ? (
+                    <>
+                      <Button variant="secondary" onClick={handleCopyConcurrence}>
+                        Copier le message
+                      </Button>
+                      {selectedHaveEmail && (
+                        <Button onClick={handleSendConcurrence} disabled={sendingConcurrence}>
+                          <Send size={15} strokeWidth={1.75} />
+                          {sendingConcurrence ? "Envoi..." : "Envoyer par email"}
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <Button onClick={handleGenerateConcurrence} disabled={selectedSupplierIds.length === 0 || generatingConcurrence}>
+                      {generatingConcurrence ? "Génération..." : "Envoyer une demande de devis"}
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

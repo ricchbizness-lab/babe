@@ -10,7 +10,7 @@ export async function GET() {
     const purchases = await prisma.purchase.findMany({
       where: { businessId },
       include: {
-        supplier: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true, email: true, category: true } },
         project: { select: { id: true, name: true } },
       },
       orderBy: { orderDate: "desc" },
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         businessId,
       },
       include: {
-        supplier: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true, email: true, category: true } },
         project: { select: { id: true, name: true } },
       },
     });
