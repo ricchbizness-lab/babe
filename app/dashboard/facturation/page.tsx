@@ -2,7 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { ChevronRight, Download, Send, X } from "lucide-react";
-import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Tabs, Timestamp, useToast, type TableColumn } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FilterBar,
+  FilterSelect,
+  MetricBar,
+  Table,
+  TableSkeleton,
+  Tabs,
+  Timestamp,
+  useToast,
+  type TableColumn,
+} from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 import { daysSinceSent } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -44,6 +57,20 @@ function echeanceDate(d: DevisRow): Date {
   return d2;
 }
 
+type PeriodeFilter = "all" | "mois" | "trimestre" | "annee";
+
+function matchesPeriode(dateStr: string, filter: PeriodeFilter): boolean {
+  if (filter === "all") return true;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (filter === "mois") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  if (filter === "trimestre") {
+    const quarterOf = (m: number) => Math.floor(m / 3);
+    return quarterOf(d.getMonth()) === quarterOf(now.getMonth()) && d.getFullYear() === now.getFullYear();
+  }
+  return d.getFullYear() === now.getFullYear();
+}
+
 const TABS: { key: "toutes" | "en_attente" | "payees" | "en_retard"; label: string }[] = [
   { key: "toutes", label: "Toutes" },
   { key: "en_attente", label: "En attente" },
@@ -58,6 +85,8 @@ export default function FacturationPage() {
   const [relanceTarget, setRelanceTarget] = useState<InvoiceRow | null>(null);
   const [relanceText, setRelanceText] = useState<string | null>(null);
   const [relanceLoading, setRelanceLoading] = useState(false);
+  const [clientFilter, setClientFilter] = useState("all");
+  const [periodeFilter, setPeriodeFilter] = useState<PeriodeFilter>("all");
 
   useEffect(() => {
     fetchWithAuth("/api/devis")
@@ -70,12 +99,29 @@ export default function FacturationPage() {
   const invoices: InvoiceRow[] = chronological.map((d, i) => ({ ...d, numero: invoiceNumber(i, d.updatedAt) }));
   const displayRows = [...invoices].reverse(); // plus récente en premier
 
+  const clientOptions = Array.from(
+    new Map(displayRows.filter((d) => d.client).map((d) => [d.client!.id, d.client!.name])).entries()
+  );
+
   const filteredRows = displayRows.filter((d) => {
-    if (tab === "en_attente") return d.paymentStatus === "en_attente";
-    if (tab === "payees") return d.paymentStatus === "payee";
-    if (tab === "en_retard") return d.paymentStatus === "en_retard";
-    return true;
+    const matchesTab =
+      tab === "en_attente"
+        ? d.paymentStatus === "en_attente"
+        : tab === "payees"
+          ? d.paymentStatus === "payee"
+          : tab === "en_retard"
+            ? d.paymentStatus === "en_retard"
+            : true;
+    const matchesClient = clientFilter === "all" || d.client?.id === clientFilter;
+    const matchesPeriodeFilter = matchesPeriode(d.updatedAt, periodeFilter);
+    return matchesTab && matchesClient && matchesPeriodeFilter;
   });
+
+  const filtersActive = clientFilter !== "all" || periodeFilter !== "all";
+  function resetFilters() {
+    setClientFilter("all");
+    setPeriodeFilter("all");
+  }
 
   function handleExport() {
     const csv = generateCSV(
@@ -274,6 +320,25 @@ export default function FacturationPage() {
       )}
 
       {accepted !== null && accepted.length > 0 && <Tabs tabs={TABS} active={tab} onChange={setTab} />}
+
+      {accepted !== null && accepted.length > 0 && (
+        <FilterBar onReset={resetFilters} active={filtersActive}>
+          <FilterSelect label="Client" value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+            <option value="all">Tous</option>
+            {clientOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect label="Période" value={periodeFilter} onChange={(e) => setPeriodeFilter(e.target.value as PeriodeFilter)}>
+            <option value="all">Toutes</option>
+            <option value="mois">Ce mois</option>
+            <option value="trimestre">Ce trimestre</option>
+            <option value="annee">Cette année</option>
+          </FilterSelect>
+        </FilterBar>
+      )}
 
       {accepted === null ? (
         <TableSkeleton columns={9} />

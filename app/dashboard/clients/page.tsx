@@ -2,8 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Download, Filter, UserPlus } from "lucide-react";
-import { Avatar, Button, EmptyState, MetricBar, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import { ChevronRight, Download, UserPlus } from "lucide-react";
+import {
+  Avatar,
+  Button,
+  EmptyState,
+  FilterBar,
+  FilterSelect,
+  FilterToggle,
+  MetricBar,
+  SearchInput,
+  Table,
+  TableSkeleton,
+  Timestamp,
+  type TableColumn,
+} from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 
@@ -26,10 +39,20 @@ function chantiersActifsFor(c: ClientRow): number {
   return c.projects.filter((p) => p.status === "en_cours").length;
 }
 
+type CaFilter = "all" | "lt5k" | "5k-20k" | "gt20k";
+
+function matchesCaFilter(ca: number, filter: CaFilter): boolean {
+  if (filter === "lt5k") return ca < 5000;
+  if (filter === "5k-20k") return ca >= 5000 && ca <= 20000;
+  if (filter === "gt20k") return ca > 20000;
+  return true;
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientRow[] | null>(null);
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(false);
+  const [caFilter, setCaFilter] = useState<CaFilter>("all");
 
   useEffect(() => {
     fetchWithAuth("/api/clients")
@@ -45,8 +68,15 @@ export default function ClientsPage() {
       (c.email || "").toLowerCase().includes(q) ||
       (c.phone || "").toLowerCase().includes(q);
     const matchesFilter = !activeOnly || chantiersActifsFor(c) > 0;
-    return matchesQuery && matchesFilter;
+    const matchesCa = matchesCaFilter(caTotalFor(c), caFilter);
+    return matchesQuery && matchesFilter && matchesCa;
   });
+
+  const filtersActive = activeOnly || caFilter !== "all";
+  function resetFilters() {
+    setActiveOnly(false);
+    setCaFilter("all");
+  }
 
   function handleExport() {
     const csv = generateCSV(
@@ -144,13 +174,17 @@ export default function ClientsPage() {
         />
       )}
 
-      <div className="nova-header-actions" style={{ justifyContent: "space-between" }}>
-        <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />
-        <Button variant={activeOnly ? "primary" : "secondary"} onClick={() => setActiveOnly((v) => !v)}>
-          <Filter size={15} strokeWidth={1.75} />
-          Chantier actif
-        </Button>
-      </div>
+      <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un client..." />
+
+      <FilterBar onReset={resetFilters} active={filtersActive}>
+        <FilterToggle label="Avec chantier actif" active={activeOnly} onClick={() => setActiveOnly((v) => !v)} />
+        <FilterSelect label="CA total" value={caFilter} onChange={(e) => setCaFilter(e.target.value as CaFilter)}>
+          <option value="all">Tous</option>
+          <option value="lt5k">Moins de 5k €</option>
+          <option value="5k-20k">5k – 20k €</option>
+          <option value="gt20k">Plus de 20k €</option>
+        </FilterSelect>
+      </FilterBar>
 
       {clients === null ? (
         <TableSkeleton columns={6} />

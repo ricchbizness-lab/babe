@@ -1226,6 +1226,66 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-filter-chip-active { background: var(--nova-teal); border-color: var(--nova-teal); color: #fff; }
 .nova-filter-chip-active:hover { color: #fff; }
 
+.nova-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+}
+.nova-filter-bar-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--nova-space-2); }
+.nova-filter-select-wrap { display: flex; flex-direction: column; gap: 2px; }
+.nova-filter-select-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--nova-ink-faint);
+}
+.nova-filter-select {
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: 7px var(--nova-space-1);
+  font-size: 13px;
+  font-family: var(--nova-font-sans);
+  background: var(--nova-bg);
+  color: var(--nova-ink);
+  min-width: 150px;
+}
+.nova-filter-select:focus { outline: 2px solid var(--nova-teal); outline-offset: 1px; }
+.nova-filter-toggle {
+  border: 1.5px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: 7px var(--nova-space-2);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--nova-surface);
+  color: var(--nova-ink-soft);
+  cursor: pointer;
+  transition: border-color var(--nova-transition-color), color var(--nova-transition-color), background-color var(--nova-transition-color);
+  align-self: flex-end;
+}
+.nova-filter-toggle:hover { border-color: var(--nova-teal); color: var(--nova-teal-deep); }
+.nova-filter-toggle-active { background: var(--nova-teal); border-color: var(--nova-teal); color: #fff; }
+.nova-filter-toggle-active:hover { color: #fff; }
+.nova-filter-reset {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  color: var(--nova-ink-faint);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 6px 8px;
+  align-self: center;
+}
+.nova-filter-reset:hover:not(:disabled) { color: var(--nova-danger); }
+.nova-filter-reset:disabled { opacity: 0.4; cursor: default; }
+
 /* --- Liste de détails (fiches client / chantier) --- */
 
 .nova-detail-list {

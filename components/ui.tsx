@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
+  ChangeEvent,
   CSSProperties,
   HTMLAttributes,
   InputHTMLAttributes,
@@ -679,6 +680,66 @@ export function SearchInput({
         aria-label={placeholder}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FilterBar — barre de filtres réutilisable (clients, devis, chantiers,
+// facturation) : filtres côté client sur des données déjà chargées.
+// ---------------------------------------------------------------------------
+
+export function FilterBar({
+  children,
+  onReset,
+  active = false,
+}: {
+  children: ReactNode;
+  onReset?: () => void;
+  active?: boolean;
+}) {
+  return (
+    <div className="nova-filter-bar">
+      <div className="nova-filter-bar-controls">{children}</div>
+      {onReset && (
+        <button type="button" className="nova-filter-reset" onClick={onReset} disabled={!active}>
+          <X size={13} strokeWidth={1.75} />
+          Réinitialiser les filtres
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function FilterSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="nova-filter-select-wrap">
+      <span className="nova-filter-select-label">{label}</span>
+      <select className="nova-filter-select" value={value} onChange={onChange}>
+        {children}
+      </select>
+    </label>
+  );
+}
+
+export function FilterToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`nova-filter-toggle ${active ? "nova-filter-toggle-active" : ""}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -2,9 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, MetricBar, RelanceIndicator, SearchInput, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FilterBar,
+  FilterSelect,
+  FilterToggle,
+  MetricBar,
+  RelanceIndicator,
+  SearchInput,
+  Table,
+  TableSkeleton,
+  Timestamp,
+  type TableColumn,
+} from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
+import { daysSinceSent } from "@/lib/relance";
 import { Download } from "lucide-react";
 import { DevisKanban, KanbanSkeleton } from "./DevisKanban";
 
@@ -44,10 +59,42 @@ const STATUS_ORDER: Record<string, number> = {
   refuse: 3,
 };
 
+type MontantFilter = "all" | "lt1k" | "1k-5k" | "gt5k";
+type PeriodeFilter = "all" | "mois" | "trimestre" | "annee";
+
+function matchesMontant(amount: number | null, filter: MontantFilter): boolean {
+  if (filter === "all") return true;
+  const a = amount || 0;
+  if (filter === "lt1k") return a < 1000;
+  if (filter === "1k-5k") return a >= 1000 && a <= 5000;
+  return a > 5000;
+}
+
+function matchesPeriode(dateStr: string, filter: PeriodeFilter): boolean {
+  if (filter === "all") return true;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (filter === "mois") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  if (filter === "trimestre") {
+    const quarterOf = (m: number) => Math.floor(m / 3);
+    return quarterOf(d.getMonth()) === quarterOf(now.getMonth()) && d.getFullYear() === now.getFullYear();
+  }
+  return d.getFullYear() === now.getFullYear();
+}
+
+function isRelanceEnRetard(d: DevisRow): boolean {
+  return d.status === "envoye" && daysSinceSent(d.updatedAt) >= 7;
+}
+
 export default function DevisPage() {
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"pipeline" | "liste">("pipeline");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [montantFilter, setMontantFilter] = useState<MontantFilter>("all");
+  const [periodeFilter, setPeriodeFilter] = useState<PeriodeFilter>("all");
+  const [retardOnly, setRetardOnly] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/devis")
@@ -55,11 +102,31 @@ export default function DevisPage() {
       .then((data) => setDevis(data.devis ?? []));
   }, []);
 
+  const clientOptions = Array.from(
+    new Map((devis ?? []).filter((d) => d.client).map((d) => [d.client!.id, d.client!.name])).entries()
+  );
+
   const filtered = (devis ?? []).filter((d) => {
     const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return d.label.toLowerCase().includes(q) || (d.client?.name || "").toLowerCase().includes(q);
+    const matchesQuery = !q || d.label.toLowerCase().includes(q) || (d.client?.name || "").toLowerCase().includes(q);
+    const matchesStatus = statusFilter === "all" || d.status === statusFilter;
+    const matchesClient = clientFilter === "all" || d.client?.id === clientFilter;
+    const matchesMontantFilter = matchesMontant(d.amount, montantFilter);
+    const matchesPeriodeFilter = matchesPeriode(d.createdAt, periodeFilter);
+    const matchesRetard = !retardOnly || isRelanceEnRetard(d);
+    return matchesQuery && matchesStatus && matchesClient && matchesMontantFilter && matchesPeriodeFilter && matchesRetard;
   });
+
+  const filtersActive =
+    statusFilter !== "all" || clientFilter !== "all" || montantFilter !== "all" || periodeFilter !== "all" || retardOnly;
+
+  function resetFilters() {
+    setStatusFilter("all");
+    setClientFilter("all");
+    setMontantFilter("all");
+    setPeriodeFilter("all");
+    setRetardOnly(false);
+  }
 
   function handleExport() {
     const csv = generateCSV(
@@ -189,6 +256,47 @@ export default function DevisPage() {
       ) : (
         <>
           <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un devis..." />
+
+          {devis !== null && devis.length > 0 && (
+            <FilterBar onReset={resetFilters} active={filtersActive}>
+              <FilterSelect label="Statut" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">Tous</option>
+                <option value="brouillon">Brouillon</option>
+                <option value="envoye">Envoyé</option>
+                <option value="accepte">Accepté</option>
+                <option value="refuse">Refusé</option>
+              </FilterSelect>
+              <FilterSelect label="Client" value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+                <option value="all">Tous</option>
+                {clientOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </FilterSelect>
+              <FilterSelect
+                label="Montant"
+                value={montantFilter}
+                onChange={(e) => setMontantFilter(e.target.value as MontantFilter)}
+              >
+                <option value="all">Tous</option>
+                <option value="lt1k">Moins de 1k €</option>
+                <option value="1k-5k">1k – 5k €</option>
+                <option value="gt5k">Plus de 5k €</option>
+              </FilterSelect>
+              <FilterSelect
+                label="Période"
+                value={periodeFilter}
+                onChange={(e) => setPeriodeFilter(e.target.value as PeriodeFilter)}
+              >
+                <option value="all">Toutes</option>
+                <option value="mois">Ce mois</option>
+                <option value="trimestre">Ce trimestre</option>
+                <option value="annee">Cette année</option>
+              </FilterSelect>
+              <FilterToggle label="En retard de relance" active={retardOnly} onClick={() => setRetardOnly((v) => !v)} />
+            </FilterBar>
+          )}
 
           {devis === null ? (
             <TableSkeleton columns={6} />

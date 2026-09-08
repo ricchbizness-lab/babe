@@ -3,7 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { AvatarStack, Badge, EmptyState, MetricBar, ProgressBar, Table, TableSkeleton, Timestamp, type TableColumn } from "@/components/ui";
+import {
+  AvatarStack,
+  Badge,
+  EmptyState,
+  FilterBar,
+  FilterSelect,
+  MetricBar,
+  ProgressBar,
+  Table,
+  TableSkeleton,
+  Timestamp,
+  type TableColumn,
+} from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type ProjectRow = {
@@ -57,6 +69,21 @@ function progressFor(p: ProjectRow): number | null {
   return (p.tasks.filter((t) => t.done).length / p.tasks.length) * 100;
 }
 
+type PeriodeFilter = "all" | "mois" | "trimestre" | "annee";
+
+function matchesPeriode(dateStr: string | null, filter: PeriodeFilter): boolean {
+  if (filter === "all") return true;
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (filter === "mois") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  if (filter === "trimestre") {
+    const quarterOf = (m: number) => Math.floor(m / 3);
+    return quarterOf(d.getMonth()) === quarterOf(now.getMonth()) && d.getFullYear() === now.getFullYear();
+  }
+  return d.getFullYear() === now.getFullYear();
+}
+
 function teamNamesFor(p: ProjectRow): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
@@ -72,6 +99,9 @@ function teamNamesFor(p: ProjectRow): string[] {
 export default function ChantiersPage() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [filter, setFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [collaborateurFilter, setCollaborateurFilter] = useState("all");
+  const [periodeFilter, setPeriodeFilter] = useState<PeriodeFilter>("all");
 
   useEffect(() => {
     fetchWithAuth("/api/projects")
@@ -79,7 +109,29 @@ export default function ChantiersPage() {
       .then((data) => setProjects(data.projects ?? []));
   }, []);
 
-  const filtered = (projects ?? []).filter((p) => filter === "all" || p.status === filter);
+  const clientOptions = Array.from(
+    new Map((projects ?? []).filter((p) => p.client).map((p) => [p.client!.id, p.client!.name])).entries()
+  );
+  const collaborateurOptions = Array.from(
+    new Map((projects ?? []).flatMap((p) => p.assignments.map((a) => [a.teamMember.id, a.teamMember.name] as const))).entries()
+  );
+
+  const filtered = (projects ?? []).filter((p) => {
+    const matchesStatus = filter === "all" || p.status === filter;
+    const matchesClient = clientFilter === "all" || p.client?.id === clientFilter;
+    const matchesCollaborateur =
+      collaborateurFilter === "all" || p.assignments.some((a) => a.teamMember.id === collaborateurFilter);
+    const matchesPeriodeFilter = matchesPeriode(p.startDate, periodeFilter);
+    return matchesStatus && matchesClient && matchesCollaborateur && matchesPeriodeFilter;
+  });
+
+  const filtersActive = filter !== "all" || clientFilter !== "all" || collaborateurFilter !== "all" || periodeFilter !== "all";
+  function resetFilters() {
+    setFilter("all");
+    setClientFilter("all");
+    setCollaborateurFilter("all");
+    setPeriodeFilter("all");
+  }
 
   const now = new Date();
   const enCoursCount = (projects ?? []).filter((p) => p.status === "en_cours").length;
@@ -170,6 +222,37 @@ export default function ChantiersPage() {
             </button>
           ))}
         </div>
+      )}
+
+      {projects !== null && projects.length > 0 && (
+        <FilterBar onReset={resetFilters} active={filtersActive}>
+          <FilterSelect label="Client" value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+            <option value="all">Tous</option>
+            {clientOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            label="Collaborateur"
+            value={collaborateurFilter}
+            onChange={(e) => setCollaborateurFilter(e.target.value)}
+          >
+            <option value="all">Tous</option>
+            {collaborateurOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect label="Période" value={periodeFilter} onChange={(e) => setPeriodeFilter(e.target.value as PeriodeFilter)}>
+            <option value="all">Toutes</option>
+            <option value="mois">Ce mois</option>
+            <option value="trimestre">Ce trimestre</option>
+            <option value="annee">Cette année</option>
+          </FilterSelect>
+        </FilterBar>
       )}
 
       {projects === null ? (
