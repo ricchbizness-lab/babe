@@ -11,6 +11,8 @@ export type BusinessContext = {
   sector: string;
   mission: string | null;
   tone: string;
+  siret?: string | null;
+  address?: string | null;
 };
 
 /**
@@ -30,10 +32,13 @@ export function buildSystemPrompt(business: BusinessContext, module: string): st
   return [
     `Tu es l'assistant IA de "${business.name}", une entreprise du secteur "${business.sector}".`,
     business.mission ? `Mission de l'entreprise : ${business.mission}` : "",
+    module === "devis" && business.siret ? `SIRET de l'entreprise : ${business.siret}.` : "",
+    module === "devis" && business.address ? `Adresse de l'entreprise : ${business.address}.` : "",
     `Ton de communication attendu : ${toneMap[business.tone] || toneMap.pro}.`,
     `Module actif : ${module}.`,
     `Règle impérative : toute recommandation doit être formulée comme une option à évaluer, jamais comme une directive. Ne jamais te présenter comme une autorité de décision — tu assistes, tu ne décides pas à la place du dirigeant.`,
     `Tu génères du texte professionnel structuré. Tu n'utilises JAMAIS de Markdown : pas de #, ##, **, *, |, >, ni aucun autre symbole de formatage. Tu rédiges en texte clair, avec des sauts de ligne pour séparer les sections.`,
+    `N'utilise JAMAIS de crochets de type [À COMPLÉTER] ou [À PRÉCISER]. Si une information manque, omets le champ proprement ou utilise une valeur par défaut professionnelle plutôt qu'un espace réservé visible.`,
   ]
     .filter(Boolean)
     .join("\n");

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateAgentText } from "@/lib/agent";
 import { agentSchema } from "@/lib/validation";
-import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
+import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 import { checkRateLimit, getRequestKey } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
@@ -41,9 +41,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
+    let input = parsed.data.input || {};
+
+    // Module devis : si un client est rattaché, on remplace les infos saisies
+    // à la main par les données réelles de la fiche client (jamais l'inverse
+    // — la fiche client fait foi, pas ce que l'IA pourrait halluciner).
+    if (parsed.data.module === "devis" && typeof input.clientId === "string") {
+      const client = await assertOwnedByBusiness(
+        await prisma.client.findUnique({ where: { id: input.clientId } }),
+        businessId
+      );
+      input = {
+        ...input,
+        client: client.name,
+        clientEmail: client.email || undefined,
+        clientTelephone: client.phone || undefined,
+        clientAdresse: client.address || undefined,
+      };
+    }
+
     // Les données fournies par l'utilisateur sont envoyées comme message
     // utilisateur structuré (JSON), jamais concaténées dans le system prompt.
-    const text = await generateAgentText(business, parsed.data.module, parsed.data.input || {});
+    const text = await generateAgentText(business, parsed.data.module, input);
 
     return NextResponse.json({ result: text });
   } catch (err) {

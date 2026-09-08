@@ -80,6 +80,8 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [tab, setTab] = useState<"info" | "chantiers" | "devis" | "activite">("info");
+  const [deleteDevisTarget, setDeleteDevisTarget] = useState<ClientDetail["devis"][number] | null>(null);
+  const [deletingDevis, setDeletingDevis] = useState(false);
 
   useEffect(() => {
     fetchWithAuth(`/api/clients/${params.id}`).then(async (res) => {
@@ -134,6 +136,26 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
     }
   }
 
+  async function confirmDeleteDevis() {
+    if (!deleteDevisTarget) return;
+    setDeletingDevis(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${deleteDevisTarget.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Erreur lors de la suppression du devis.");
+        return;
+      }
+      setClient((prev) => (prev ? { ...prev, devis: prev.devis.filter((d) => d.id !== deleteDevisTarget.id) } : prev));
+      toast.success("Devis supprimé");
+      router.refresh();
+      setDeleteDevisTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setDeletingDevis(false);
+    }
+  }
+
   async function confirmDelete() {
     setDeleting(true);
     try {
@@ -182,6 +204,16 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       ),
     },
     { key: "createdAt", label: "Créé le", render: (p) => <Timestamp date={p.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (p) => (
+        <Link href={`/dashboard/chantiers/${p.id}`} className="nova-inline-link">
+          Voir →
+        </Link>
+      ),
+    },
   ];
 
   const caTotal = client.devis
@@ -219,6 +251,23 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
     },
     { key: "createdAt", label: "Créé le", render: (d) => <Timestamp date={d.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (d) => (
+        <div className="nova-table-row-actions" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/dashboard/devis/${d.id}`} className="nova-inline-link">
+            Voir →
+          </Link>
+          {d.status === "brouillon" && (
+            <Button variant="ghost" onClick={() => setDeleteDevisTarget(d)} aria-label="Supprimer le devis">
+              <Trash2 size={14} strokeWidth={1.75} />
+            </Button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -304,7 +353,12 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       )}
 
       {tab === "devis" && (
-        <Table columns={devisColumns} rows={client.devis} emptyLabel="Aucun devis rattaché à ce client." />
+        <Table
+          columns={devisColumns}
+          rows={client.devis}
+          getRowHref={(d) => `/dashboard/devis/${d.id}`}
+          emptyLabel="Aucun devis rattaché à ce client."
+        />
       )}
 
       {tab === "activite" && (
@@ -356,6 +410,14 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
         onConfirm={confirmDelete}
         onCancel={() => setConfirmingDelete(false)}
         confirming={deleting}
+      />
+
+      <ConfirmModal
+        open={deleteDevisTarget != null}
+        itemLabel={deleteDevisTarget ? `le devis « ${deleteDevisTarget.label} »` : ""}
+        onConfirm={confirmDeleteDevis}
+        onCancel={() => setDeleteDevisTarget(null)}
+        confirming={deletingDevis}
       />
 
       <EditModal open={editing} title="Modifier le client" onCancel={() => setEditing(false)} onSave={confirmEdit} saving={savingEdit}>

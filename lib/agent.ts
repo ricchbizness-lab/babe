@@ -2,7 +2,10 @@ import { anthropic, buildSystemPrompt, type BusinessContext } from "@/lib/anthro
 
 export const MODULE_INSTRUCTIONS: Record<string, string> = {
   brief: "Génère un brief du jour : 3 à 5 priorités concrètes pour aujourd'hui, adaptées au secteur de l'entreprise.",
-  devis: "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. Texte clair uniquement, sans aucun symbole de formatage Markdown.",
+  devis:
+    "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. " +
+    "Si les modalités de paiement ne sont pas fournies, utilise par défaut \"30% à la commande, solde à réception\". Si le délai d'exécution n'est pas fourni, utilise par défaut \"À convenir selon planning\". " +
+    "Structure le texte en sections séparées par une ligne vide (double saut de ligne). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points, par exemple \"PRESTATIONS :\". Le détail des prestations est présenté sous forme de tableau simple aligné avec des tirets (par exemple \"- Pose de tuiles ........ 3 200 €\"). Limite chaque ligne à environ 80 caractères. Texte clair uniquement, sans aucun symbole de formatage Markdown.",
   marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
   conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",

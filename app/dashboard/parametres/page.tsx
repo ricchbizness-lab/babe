@@ -28,6 +28,7 @@ type BusinessForm = {
   tone: "pro" | "chaleureux" | "direct";
   tauxHoraire: string;
   accountantEmail: string;
+  address: string;
   siret: string;
   formeJuridique: string;
   capitalSocial: string;
@@ -43,6 +44,7 @@ const EMPTY_FORM: BusinessForm = {
   tone: "pro",
   tauxHoraire: "40",
   accountantEmail: "",
+  address: "",
   siret: "",
   formeJuridique: "",
   capitalSocial: "",
@@ -96,6 +98,7 @@ export default function ParametresPage() {
           tone: b?.tone || "pro",
           tauxHoraire: String(b?.tauxHoraire ?? 40),
           accountantEmail: b?.accountantEmail || "",
+          address: b?.address || "",
           siret: b?.siret || "",
           formeJuridique: b?.formeJuridique || "",
           capitalSocial: b?.capitalSocial != null ? String(b.capitalSocial) : "",
@@ -155,6 +158,7 @@ export default function ParametresPage() {
           tone: form.tone,
           tauxHoraire: Number(form.tauxHoraire) || 0,
           accountantEmail: form.accountantEmail,
+          address: form.address || undefined,
           siret: form.siret || undefined,
           formeJuridique: form.formeJuridique || undefined,
           capitalSocial: form.capitalSocial ? Number(form.capitalSocial) : undefined,
@@ -271,6 +275,13 @@ export default function ParametresPage() {
               value={form.sector}
               onChange={(e) => setForm({ ...form, sector: e.target.value })}
               placeholder="Plomberie, menuiserie..."
+            />
+            <Field
+              label="Adresse"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              placeholder="12 rue des Lilas, 75011 Paris"
+              hint="Affichée sur vos devis et factures."
             />
             <TextareaField
               label="Ce que vous faites au quotidien"

@@ -755,6 +755,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-table tbody tr:hover { background: var(--nova-table-hover-bg); }
 .nova-table-row-clickable { cursor: pointer; }
 .nova-table-row-clickable:hover { background: var(--nova-teal-tint) !important; }
+.nova-table-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--nova-space-1); }
 .nova-table-empty {
   padding: var(--nova-space-4);
   text-align: center;

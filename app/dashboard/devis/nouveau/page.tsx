@@ -66,6 +66,7 @@ export default function NewDevisPage() {
           input: {
             label: form.label,
             client: clientName,
+            clientId: form.clientId || undefined,
             montant: form.amount ? Number(form.amount) : undefined,
             description: form.description,
           },
