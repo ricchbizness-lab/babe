@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
 import { PrintableDocument } from "@/components/PrintableDocument";
 import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
@@ -143,7 +143,16 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
           <Printer size={16} strokeWidth={1.75} />
           Imprimer / Télécharger PDF
         </Button>
+        <a href={`/api/factures/${devis.id}/facturx`} className="nova-btn nova-btn-secondary">
+          <Download size={16} strokeWidth={1.75} />
+          Télécharger Factur-X
+        </a>
       </div>
+
+      <p className="nova-page-subtitle nova-no-print">
+        Format Factur-X — conforme à la réforme française de facturation électronique (réception obligatoire depuis
+        le 1er septembre 2026, émission via plateforme agréée prévue avant septembre 2027).
+      </p>
 
       <PrintableDocument
         kind="facture"

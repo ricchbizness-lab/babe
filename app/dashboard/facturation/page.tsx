@@ -238,6 +238,11 @@ export default function FacturationPage() {
       emphasis: "amount",
     },
     {
+      key: "facturx",
+      label: "Factur-X",
+      render: () => <Badge tone="success">Factur-X ✓</Badge>,
+    },
+    {
       key: "paymentStatus",
       label: "Statut paiement",
       render: (d) => (
@@ -309,6 +314,13 @@ export default function FacturationPage() {
       </header>
 
       {accepted !== null && accepted.length > 0 && (
+        <p className="nova-page-subtitle">
+          Format Factur-X — conforme à la réforme française de facturation électronique (réception obligatoire
+          depuis le 1er septembre 2026, émission via plateforme agréée prévue avant septembre 2027).
+        </p>
+      )}
+
+      {accepted !== null && accepted.length > 0 && (
         <MetricBar
           items={[
             { label: "CA encaissé ce mois", value: `${caEncaisseCeMois.toLocaleString("fr-FR")} €` },
@@ -341,7 +353,7 @@ export default function FacturationPage() {
       )}
 
       {accepted === null ? (
-        <TableSkeleton columns={9} />
+        <TableSkeleton columns={10} />
       ) : accepted.length === 0 ? (
         <EmptyState
           icon="devis"
