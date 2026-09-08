@@ -1846,28 +1846,86 @@ button.primary:hover { background: var(--nova-teal-deep); }
   padding-bottom: var(--nova-space-3);
   border-bottom: 2px solid var(--nova-ink);
 }
+.nova-invoice-identity { display: flex; align-items: flex-start; gap: var(--nova-space-2); }
+.nova-invoice-logo { width: 48px; height: 48px; border-radius: var(--nova-radius-card); object-fit: contain; }
+.nova-invoice-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nova-teal);
+  color: #fff;
+  font-family: var(--nova-font-heading);
+  font-weight: 800;
+  font-size: 16px;
+}
 .nova-invoice-business {
   font-family: var(--nova-font-heading);
   font-size: 20px;
   font-weight: 800;
 }
+.nova-invoice-doc-title {
+  font-family: var(--nova-font-heading);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink);
+}
 .nova-invoice-meta { font-size: 12.5px; color: var(--nova-ink-soft); margin-top: var(--nova-space-1); }
 .nova-invoice-number-block { text-align: right; }
 .nova-invoice-number {
   font-family: var(--nova-font-mono);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--nova-teal-deep);
+  margin-top: var(--nova-space-1);
 }
 .nova-invoice-client { font-size: 13.5px; }
+.nova-invoice-client-box {
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  background: var(--nova-bg);
+}
 .nova-invoice-client-name { font-weight: 700; font-size: 14.5px; margin: 2px 0 var(--nova-space-1); }
 .nova-invoice-table th, .nova-invoice-table td { vertical-align: top; }
 .nova-invoice-label { font-weight: 600; }
+.nova-invoice-totals-block {
+  align-self: flex-end;
+  min-width: 260px;
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+}
+.nova-invoice-totals-row { display: flex; justify-content: space-between; font-size: 13.5px; }
+.nova-invoice-totals-ttc {
+  font-weight: 800;
+  font-size: 16px;
+  padding-top: var(--nova-space-1);
+  border-top: 1px solid var(--nova-border);
+}
 .nova-invoice-footer {
   padding-top: var(--nova-space-3);
   border-top: 1px solid var(--nova-border);
   font-size: 12.5px;
   color: var(--nova-ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nova-invoice-closing { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-invoice-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--nova-space-3);
+}
+.nova-invoice-signature-box {
+  border: 1px dashed var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  height: 90px;
+  padding: var(--nova-space-2);
 }
 
 @media print {
@@ -1875,14 +1933,19 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-shell { display: block; }
   .nova-sidebar { display: none !important; }
   .nova-main { padding: 0; }
-  body { background: #fff; }
+  body { background: #fff; color: #000; }
   .nova-invoice {
     box-shadow: none;
     border: none;
     padding: 0;
     max-width: 100%;
   }
-  @page { size: A4; margin: 18mm; }
+  .nova-invoice-table tr,
+  .nova-invoice-totals-block,
+  .nova-invoice-closing {
+    break-inside: avoid;
+  }
+  @page { size: A4; margin: 20mm; }
 }
 
 /* --- Portail client (page publique, hors dashboard) --- */

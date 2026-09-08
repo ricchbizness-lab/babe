@@ -18,6 +18,15 @@ export function invoiceNumber(positionZeroBased: number, acceptedAt: string): st
   return `F-${year}-${String(positionZeroBased + 1).padStart(3, "0")}`;
 }
 
+/** Référence lisible d'un devis (vue impression) — même principe que invoiceNumber mais basé sur la date de création, tous statuts confondus (voir aussi DevisKanban qui affiche la même référence sur les cartes). */
+export function devisReference<T extends { id: string; createdAt: string }>(devis: T[], targetId: string): string {
+  const chronological = [...devis].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const index = chronological.findIndex((d) => d.id === targetId);
+  const target = chronological[index] ?? devis.find((d) => d.id === targetId);
+  const year = new Date(target?.createdAt || Date.now()).getFullYear();
+  return `D-${year}-${String((index === -1 ? 0 : index) + 1).padStart(3, "0")}`;
+}
+
 const TVA_RATE = 0.2;
 
 export function computeInvoiceAmounts(montantHT: number | null) {

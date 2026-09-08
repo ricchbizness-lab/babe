@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
-import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
+import { PrintableDocument } from "@/components/PrintableDocument";
+import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
 import { fetchWithAuth } from "@/lib/fetchClient";
+
+type DevisLine = { id: string; description: string; quantite: number; unite: string | null; prixUnitaire: number; tva: number };
 
 type DevisDetail = {
   id: string;
@@ -14,13 +17,17 @@ type DevisDetail = {
   amount: number | null;
   status: string;
   paymentStatus: string;
+  remise: number | null;
   updatedAt: string;
   client: { id: string; name: string; email: string | null; phone: string | null; address: string | null } | null;
+  lines: DevisLine[];
 };
 
 type Business = {
   name: string;
   siret: string | null;
+  address: string | null;
+  logoBase64: string | null;
   conditionsPaiement: string | null;
 };
 
@@ -117,9 +124,6 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
     );
   }
 
-  const amounts = computeInvoiceAmounts(devis.amount);
-  const fmt = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
   return (
     <div className="nova-page">
       <div className="nova-no-print">
@@ -141,58 +145,18 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
         </Button>
       </div>
 
-      <div className="nova-invoice">
-        <header className="nova-invoice-header">
-          <div>
-            <div className="nova-invoice-business">{business.name}</div>
-            {business.siret && <div className="nova-invoice-meta">SIRET : {business.siret}</div>}
-          </div>
-          <div className="nova-invoice-number-block">
-            <div className="nova-invoice-number">{numero}</div>
-            <div className="nova-invoice-meta">
-              Date d'acceptation : {new Date(devis.updatedAt).toLocaleDateString("fr-FR")}
-            </div>
-          </div>
-        </header>
-
-        {devis.client && (
-          <div className="nova-invoice-client">
-            <div className="nova-invoice-meta">Facturé à</div>
-            <div className="nova-invoice-client-name">{devis.client.name}</div>
-            {devis.client.address && <div>{devis.client.address}</div>}
-            {devis.client.email && <div>{devis.client.email}</div>}
-            {devis.client.phone && <div>{devis.client.phone}</div>}
-          </div>
-        )}
-
-        <table className="nova-table nova-invoice-table">
-          <thead>
-            <tr>
-              <th>Prestation</th>
-              <th style={{ textAlign: "right" }}>Montant HT</th>
-              <th style={{ textAlign: "right" }}>TVA (20%)</th>
-              <th style={{ textAlign: "right" }}>Montant TTC</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div className="nova-invoice-label">{devis.label}</div>
-                {devis.description && <div className="nova-invoice-meta">{devis.description}</div>}
-              </td>
-              <td style={{ textAlign: "right" }}>{amounts ? `${fmt(amounts.ht)} €` : "—"}</td>
-              <td style={{ textAlign: "right" }}>{amounts ? `${fmt(amounts.tva)} €` : "—"}</td>
-              <td style={{ textAlign: "right" }}>
-                <strong>{amounts ? `${fmt(amounts.ttc)} €` : "—"}</strong>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <footer className="nova-invoice-footer">
-          <p>{business.conditionsPaiement || "Paiement sous 30 jours"}</p>
-        </footer>
-      </div>
+      <PrintableDocument
+        kind="facture"
+        numero={numero}
+        date={devis.updatedAt}
+        business={business}
+        client={devis.client}
+        label={devis.label}
+        description={devis.description}
+        lines={devis.lines}
+        fallbackAmountHT={devis.amount}
+        remisePct={devis.remise || 0}
+      />
     </div>
   );
 }

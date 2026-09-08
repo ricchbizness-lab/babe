@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, Building2, FileText, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { Banknote, Building2, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -499,6 +499,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             Voir la facture
           </Link>
         )}
+        <Link href={`/dashboard/devis/${devis.id}/imprimer`} className="nova-btn nova-btn-secondary">
+          <Printer size={16} strokeWidth={1.75} />
+          Imprimer le devis
+        </Link>
         {devis.status === "envoye" && (
           <Button variant="secondary" disabled={generatingRelance} onClick={handleRelance}>
             <MessageCircle size={16} strokeWidth={1.75} />
