@@ -572,9 +572,11 @@ export default function AchatsPage() {
         )
       ) : (
         <EmptyState
-          icon="achats"
-          title="Suivi de stock — bientôt disponible"
-          description="Le suivi des stocks et du matériel arrivera dans une prochaine mise à jour."
+          icon="stock"
+          title="Gestion de stock"
+          titleSize="lg"
+          description="Suivez vos matériaux et fournitures en temps réel. Cette fonctionnalité permettra de gérer vos niveaux de stock, les alertes de réapprovisionnement et les mouvements de matériaux entre chantiers."
+          badge="Prochainement"
         />
       )}
 

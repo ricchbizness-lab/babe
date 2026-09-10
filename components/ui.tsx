@@ -39,6 +39,7 @@ import {
   MessageCircle,
   Mic,
   MoreHorizontal,
+  Package,
   Phone,
   Plus,
   Receipt,
@@ -74,6 +75,7 @@ const ICONS = {
   facturation: Banknote,
   relances: Bell,
   achats: ShoppingCart,
+  stock: Package,
   analyse: TrendingUp,
   documents: FolderOpen,
   planning: CalendarDays,
@@ -181,19 +183,25 @@ export function EmptyState({
   description,
   actionLabel,
   actionHref,
+  badge,
+  titleSize = "md",
 }: {
   icon?: IconKey;
   title: string;
   description?: string;
   actionLabel?: string;
   actionHref?: string;
+  /** Ex. "Prochainement" — pour les fonctionnalités pas encore développées (règle CLAUDE.md). */
+  badge?: string;
+  titleSize?: "md" | "lg";
 }) {
   const Icon = icon ? ICONS[icon] : undefined;
   return (
     <div className="nova-empty-state">
       {Icon && <Icon size={48} strokeWidth={1.5} className="nova-empty-state-icon" />}
-      <p className="nova-empty-state-title">{title}</p>
+      <p className={`nova-empty-state-title ${titleSize === "lg" ? "nova-empty-state-title-lg" : ""}`}>{title}</p>
       {description && <p className="nova-empty-state-description">{description}</p>}
+      {badge && <Badge tone="teal">{badge}</Badge>}
       {actionLabel && actionHref && (
         <Link href={actionHref} className="nova-btn nova-btn-primary">
           {actionLabel}
