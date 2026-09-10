@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Banknote, Building2, CreditCard, Grid2x2, Mail, Trash2, Upload, UserCog, Users } from "lucide-react";
+import { Bell, Banknote, Building2, Check, CreditCard, Grid2x2, Mail, Trash2, Upload, UserCog, Users } from "lucide-react";
 import {
   Badge,
   Button,
@@ -63,6 +63,41 @@ const PLAN_LABEL: Record<string, string> = { essentiel: "Essentiel", pro: "Pro",
 const STATUS_LABEL: Record<string, string> = { inactive: "Inactif", active: "Actif", past_due: "Paiement en retard", canceled: "Résilié" };
 const STATUS_TONE: Record<string, BadgeTone> = { inactive: "neutral", active: "success", past_due: "danger", canceled: "neutral" };
 
+const PLANS: { key: "essentiel" | "pro" | "premium"; label: string; price: number; features: string[] }[] = [
+  {
+    key: "essentiel",
+    label: "Essentiel",
+    price: 149,
+    features: [
+      "CRM — clients et chantiers",
+      "Devis avec génération IA",
+      "Facturation conforme (Factur-X)",
+      "Planning et calendrier",
+    ],
+  },
+  {
+    key: "pro",
+    label: "Pro",
+    price: 399,
+    features: [
+      "Tout Essentiel, plus :",
+      "Rapports terrain vocaux",
+      "Dispatch équipe",
+      "Portail client",
+    ],
+  },
+  {
+    key: "premium",
+    label: "Premium",
+    price: 699,
+    features: [
+      "Tout Pro, plus :",
+      "Copilote financier (diagnostic, registre d'activité)",
+      "Rapport stratégique",
+    ],
+  },
+];
+
 const TABS: { key: "entreprise" | "utilisateurs" | "modules" | "notifications" | "abonnement"; label: string }[] = [
   { key: "entreprise", label: "Mon entreprise" },
   { key: "utilisateurs", label: "Utilisateurs" },
@@ -84,7 +119,7 @@ export default function ParametresPage() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo>(null);
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
-  const [managingSubscription, setManagingSubscription] = useState(false);
+  const [managingPlan, setManagingPlan] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWithAuth("/api/business")
@@ -185,17 +220,17 @@ export default function ParametresPage() {
     }
   }
 
-  async function handleManageSubscription() {
-    setManagingSubscription(true);
+  async function handleChangePlan(plan: string) {
+    setManagingPlan(plan);
     try {
       const res = await fetchWithAuth("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: subscription?.plan || "pro" }),
+        body: JSON.stringify({ plan }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Impossible d'ouvrir la gestion de l'abonnement.");
+        toast.error(data.error || "Impossible d'ouvrir le paiement.");
         return;
       }
       const data = await res.json();
@@ -203,7 +238,7 @@ export default function ParametresPage() {
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
-      setManagingSubscription(false);
+      setManagingPlan(null);
     }
   }
 
@@ -445,15 +480,15 @@ export default function ParametresPage() {
       )}
 
       {tab === "abonnement" && (
-        <Card>
-          <CardTitle>
-            <CreditCard size={16} strokeWidth={1.75} />
-            Abonnement
-          </CardTitle>
-          {!subscriptionLoaded ? (
-            <Skeleton style={{ height: 60 }} />
-          ) : (
-            <>
+        <>
+          <Card>
+            <CardTitle>
+              <CreditCard size={16} strokeWidth={1.75} />
+              Abonnement
+            </CardTitle>
+            {!subscriptionLoaded ? (
+              <Skeleton style={{ height: 60 }} />
+            ) : (
               <div className="nova-detail-list">
                 <div>
                   <dt>Palier actuel</dt>
@@ -474,13 +509,43 @@ export default function ParametresPage() {
                   </div>
                 )}
               </div>
-              <Button onClick={handleManageSubscription} disabled={managingSubscription} style={{ marginTop: 16 }}>
-                <CreditCard size={16} strokeWidth={1.75} />
-                {managingSubscription ? "Redirection..." : "Gérer l'abonnement"}
-              </Button>
-            </>
+            )}
+          </Card>
+
+          {subscriptionLoaded && (
+            <div className="nova-pricing-grid">
+              {PLANS.map((p) => {
+                const isCurrent = subscription?.plan === p.key;
+                return (
+                  <div key={p.key} className={`nova-pricing-card ${isCurrent ? "nova-pricing-card-active" : ""}`}>
+                    {isCurrent && <Badge tone="teal">Palier actuel</Badge>}
+                    <div className="nova-pricing-card-name">{p.label}</div>
+                    <div className="nova-pricing-price">
+                      {p.price} €<span className="nova-pricing-price-period">/mois</span>
+                    </div>
+                    <ul className="nova-pricing-features">
+                      {p.features.map((f) => (
+                        <li key={f}>
+                          <Check size={14} strokeWidth={2} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {isCurrent ? (
+                      <Button variant="secondary" disabled>
+                        Palier actuel
+                      </Button>
+                    ) : (
+                      <Button onClick={() => handleChangePlan(p.key)} disabled={managingPlan !== null}>
+                        {managingPlan === p.key ? "Redirection..." : "Passer à ce plan"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
-        </Card>
+        </>
       )}
     </div>
   );

@@ -2861,3 +2861,49 @@ button.primary:hover { background: var(--nova-teal-deep); }
 @media (max-width: 1100px) {
   .nova-team-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* --- Abonnement (3 paliers) --- */
+
+.nova-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--nova-space-3);
+}
+.nova-pricing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1.5px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  box-shadow: var(--nova-shadow-card);
+  padding: var(--nova-space-3);
+}
+.nova-pricing-card-active { border-color: var(--nova-teal); background: var(--nova-teal-tint); }
+.nova-pricing-card-name { font-family: var(--nova-font-heading); font-weight: 800; font-size: 18px; color: var(--nova-ink); }
+.nova-pricing-price { font-family: var(--nova-font-heading); font-weight: 800; font-size: 32px; color: var(--nova-teal-deep); }
+.nova-pricing-price-period { font-family: var(--nova-font-sans); font-weight: 500; font-size: 14px; color: var(--nova-ink-soft); }
+.nova-pricing-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: 1;
+  width: 100%;
+}
+.nova-pricing-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--nova-ink);
+}
+.nova-pricing-features li svg { flex-shrink: 0; margin-top: 2px; color: var(--nova-teal); }
+.nova-pricing-card .nova-btn { width: 100%; justify-content: center; }
+
+@media (max-width: 860px) {
+  .nova-pricing-grid { grid-template-columns: 1fr; }
+}
