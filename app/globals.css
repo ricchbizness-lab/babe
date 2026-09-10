@@ -1735,7 +1735,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-size: 14px;
   line-height: 1.6;
 }
-.nova-card-text { margin: 0; color: var(--nova-ink); font-size: 13.5px; line-height: 1.5; }
+.nova-card-text { margin: 0; color: var(--nova-ink); font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
 
 .nova-relance {
   display: inline-flex;
@@ -2069,7 +2069,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   color: var(--nova-teal-deep);
   margin-bottom: var(--nova-space-1);
 }
-.nova-portal-report p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--nova-ink); }
+.nova-portal-report p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--nova-ink); white-space: pre-wrap; }
 .nova-portal-footer {
   margin-top: var(--nova-space-3);
   font-size: 12px;

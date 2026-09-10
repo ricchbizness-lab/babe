@@ -5,7 +5,12 @@ export const MODULE_INSTRUCTIONS: Record<string, string> = {
   devis:
     "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. " +
     "Si les modalités de paiement ne sont pas fournies, utilise par défaut \"30% à la commande, solde à réception\". Si le délai d'exécution n'est pas fourni, utilise par défaut \"À convenir selon planning\". " +
-    "Structure le texte en sections séparées par une ligne vide (double saut de ligne). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points, par exemple \"PRESTATIONS :\". Le détail des prestations est présenté sous forme de tableau simple aligné avec des tirets (par exemple \"- Pose de tuiles ........ 3 200 €\"). Limite chaque ligne à environ 80 caractères. Texte clair uniquement, sans aucun symbole de formatage Markdown.",
+    "Structure le contenu avec des bullet points précédés d'un tiret (-) pour chaque prestation. Format attendu :\n" +
+    "TITRE : [objet du devis]\n" +
+    "- prestation 1\n" +
+    "- prestation 2\n" +
+    "- prestation 3\n" +
+    "Respecte ce format avec des sauts de ligne entre chaque section (coordonnées, prestations, modalités, délai). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points. Texte clair uniquement, sans aucun symbole de formatage Markdown autre que le tiret de liste.",
   marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
   conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",
