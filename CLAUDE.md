@@ -54,6 +54,96 @@
 - Jamais les mots "audit" ou "bilan" dans les textes générés par l'IA
 - Recommandations IA toujours formulées en option, jamais en directive
 
+## RÈGLES UX/UI OBLIGATOIRES
+
+Ces règles s'appliquent à CHAQUE ligne de code écrite, pas seulement quand
+elles sont rappelées.
+
+### Principe fondamental
+
+Avant de livrer n'importe quelle page ou composant, se poser cette
+question : "Un artisan qui ouvre cette page pour la première fois sur son
+téléphone peut-il comprendre et utiliser ce qu'il voit en moins de
+10 secondes ?" Si la réponse est non, corriger avant de committer.
+
+### Texte et contenu généré par IA
+
+- Jamais de texte en bloc continu — toujours `white-space: pre-wrap` sur les
+  zones de contenu IA
+- Le prompt IA doit toujours demander des bullet points avec tirets pour les
+  listes de prestations
+- Jamais de `[À COMPLÉTER]` visible dans l'interface
+
+### Formulaires et saisie
+
+- Tous les champs de date doivent accepter la saisie manuelle (jj/mm/aaaa)
+  EN PLUS du calendrier visuel
+- Le calendrier visuel s'ouvre toujours vers le haut si l'espace en bas est
+  insuffisant (vérifier avec `getBoundingClientRect`)
+- Chaque formulaire doit être utilisable sur mobile sans scroll horizontal
+- Les champs obligatoires sont marqués d'un astérisque
+- Les messages d'erreur apparaissent sous le champ concerné, jamais en haut
+  de page uniquement
+
+### Navigation et liens
+
+- Chaque élément dans une liste doit être cliquable vers sa fiche détail —
+  jamais une liste sans lien
+- Les boutons d'action (Modifier, Supprimer, Voir) sont toujours visibles ou
+  accessibles au hover, jamais cachés sans raison
+- Toujours un bouton de retour ou un breadcrumb sur les pages de détail
+- Les actions destructives (Supprimer) toujours avec ConfirmModal — jamais
+  directes
+
+### États et feedback
+
+- Toujours un skeleton loader pendant le chargement
+- Toujours un état vide soigné (icône + titre + description + bouton
+  d'action) quand une liste est vide
+- Toujours un toast de confirmation après une action
+- Les boutons se désactivent pendant une requête en cours (protection
+  double-clic)
+- Si une fonctionnalité n'est pas encore développée : placeholder soigné
+  avec badge "Prochainement" et description de ce que ça fera — jamais une
+  page blanche ou un message vague
+
+### Responsive et mobile
+
+- Tester mentalement chaque page sur 375px de large avant de committer
+- Les tableaux sur mobile : scroll horizontal dans leur container, jamais
+  sur toute la page
+- Les modales : padding adapté sur mobile, jamais plus larges que l'écran
+- Les calendriers et dropdowns : toujours dans le viewport, jamais coupés
+
+### Cohérence visuelle
+
+- Utiliser systématiquement les composants existants dans
+  `components/ui.tsx` — jamais de styles ad hoc dans les pages
+- Les badges de statut : toujours les mêmes couleurs pour les mêmes statuts
+  sur toutes les pages
+- Les icônes : toujours Lucide, jamais d'emoji comme icône d'interface
+- La typographie : Manrope pour les chiffres et titres importants, Inter
+  pour le corps, IBM Plex Mono pour les références et timestamps
+
+### Données et contenu
+
+- Jamais afficher "0" ou vide pendant le chargement — skeleton loader à la
+  place
+- Les montants : toujours formatés avec séparateurs (1 000 € pas 1000€)
+- Les dates : toujours en français (09/09/2026 ou "il y a 3 jours" selon le
+  contexte)
+- Les listes paginées : toujours indiquer le total ("Affichage de 1 à 10
+  sur 32 éléments")
+
+### Ce qu'il faut faire après chaque feature
+
+Avant de committer n'importe quelle page :
+1. Vérifier que tous les liens fonctionnent
+2. Vérifier l'état vide (que se passe-t-il si il n'y a pas de données ?)
+3. Vérifier le comportement sur mobile (375px)
+4. Vérifier que les formulaires fonctionnent du début à la fin
+5. Vérifier que les toasts s'affichent correctement
+
 ## Scope produit — phase en cours
 
 7 modules validés, à construire dans cet ordre exact, un à la fois, jamais
