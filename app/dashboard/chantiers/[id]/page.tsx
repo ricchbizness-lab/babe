@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, Pencil, Share2, Trash2 } from "lucide-react";
@@ -50,6 +50,7 @@ type ChantierDetail = {
 };
 
 type ClientOption = { id: string; name: string };
+type TeamMemberOption = { id: string; name: string };
 type FactureRow = {
   id: string;
   label: string;
@@ -116,6 +117,11 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     "overview"
   );
   const [factures, setFactures] = useState<FactureRow[] | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
+  const [assignForm, setAssignForm] = useState({ teamMemberId: "", date: "", note: "" });
+  const [assigning, setAssigning] = useState(false);
+  const [removeAssignmentTarget, setRemoveAssignmentTarget] = useState<ChantierDetail["assignments"][number] | null>(null);
+  const [removingAssignment, setRemovingAssignment] = useState(false);
 
   async function loadProject() {
     const res = await fetchWithAuth(`/api/projects/${params.id}`);
@@ -135,6 +141,9 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     fetchWithAuth("/api/devis")
       .then((res) => res.json())
       .then((data) => setFactures(data.devis ?? []));
+    fetchWithAuth("/api/team")
+      .then((res) => res.json())
+      .then((data) => setTeamMembers((data.members ?? []).map((m: { id: string; name: string }) => ({ id: m.id, name: m.name }))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -162,6 +171,68 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setUpdatingStatus(false);
+    }
+  }
+
+  async function handleAssign(e: FormEvent) {
+    e.preventDefault();
+    if (!project) return;
+    if (!assignForm.teamMemberId) {
+      toast.error("Choisissez un collaborateur.");
+      return;
+    }
+    if (!assignForm.date) {
+      toast.error("Choisissez une date d'affectation.");
+      return;
+    }
+    setAssigning(true);
+    try {
+      const res = await fetchWithAuth("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamMemberId: assignForm.teamMemberId,
+          projectId: project.id,
+          date: new Date(`${assignForm.date}T00:00:00.000Z`).toISOString(),
+          note: assignForm.note || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'affecter ce collaborateur.");
+        return;
+      }
+      const data = await res.json();
+      setProject((prev) => (prev ? { ...prev, assignments: [...prev.assignments, data.assignment] } : prev));
+      toast.success("Collaborateur affecté");
+      router.refresh();
+      setAssignForm({ teamMemberId: "", date: "", note: "" });
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function confirmRemoveAssignment() {
+    if (!removeAssignmentTarget) return;
+    setRemovingAssignment(true);
+    try {
+      const res = await fetchWithAuth(`/api/assignments/${removeAssignmentTarget.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Erreur lors du retrait de l'affectation.");
+        return;
+      }
+      setProject((prev) =>
+        prev ? { ...prev, assignments: prev.assignments.filter((a) => a.id !== removeAssignmentTarget.id) } : prev
+      );
+      toast.success("Collaborateur retiré");
+      router.refresh();
+      setRemoveAssignmentTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setRemovingAssignment(false);
     }
   }
 
@@ -308,6 +379,17 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     },
     { key: "date", label: "Date", render: (a) => <Timestamp date={a.date} /> },
     { key: "note", label: "Note", render: (a) => a.note || "—" },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (a) => (
+        <Button variant="ghost" onClick={() => setRemoveAssignmentTarget(a)}>
+          <Trash2 size={14} strokeWidth={1.75} />
+          Retirer
+        </Button>
+      ),
+    },
   ];
 
   const factureColumns: TableColumn<FactureRow>[] = [
@@ -439,11 +521,45 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
       )}
 
       {tab === "equipe" && (
-        <Table
-          columns={assignmentColumns}
-          rows={project.assignments}
-          emptyLabel="Aucun collaborateur affecté à ce chantier."
-        />
+        <>
+          <Card>
+            <CardTitle>Affecter un collaborateur</CardTitle>
+            <form onSubmit={handleAssign} className="nova-quick-add">
+              <SelectField
+                label="Collaborateur"
+                required
+                value={assignForm.teamMemberId}
+                onChange={(e) => setAssignForm({ ...assignForm, teamMemberId: e.target.value })}
+              >
+                <option value="">Sélectionner...</option>
+                {teamMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </SelectField>
+              <DatePickerField
+                label="Date d'affectation"
+                value={assignForm.date}
+                onChange={(value) => setAssignForm({ ...assignForm, date: value })}
+              />
+              <Field
+                label="Note (optionnel)"
+                value={assignForm.note}
+                onChange={(e) => setAssignForm({ ...assignForm, note: e.target.value })}
+                placeholder="Pose carrelage, matinée..."
+              />
+              <Button type="submit" disabled={assigning}>
+                {assigning ? "Affectation..." : "Affecter"}
+              </Button>
+            </form>
+          </Card>
+          <Table
+            columns={assignmentColumns}
+            rows={project.assignments}
+            emptyLabel="Aucun collaborateur affecté à ce chantier."
+          />
+        </>
       )}
 
       {tab === "factures" && (
@@ -496,6 +612,14 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
         onConfirm={confirmDelete}
         onCancel={() => setConfirmingDelete(false)}
         confirming={deleting}
+      />
+
+      <ConfirmModal
+        open={removeAssignmentTarget !== null}
+        itemLabel={removeAssignmentTarget ? `l'affectation de « ${removeAssignmentTarget.teamMember.name} »` : ""}
+        onConfirm={confirmRemoveAssignment}
+        onCancel={() => setRemoveAssignmentTarget(null)}
+        confirming={removingAssignment}
       />
 
       <EditModal
