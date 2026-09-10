@@ -199,6 +199,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-page-subtitle { margin: var(--nova-space-1) 0 0; color: var(--nova-ink-soft); font-size: 14px; }
 .nova-inline-link { color: var(--nova-teal-deep); font-weight: 600; }
 .nova-inline-link:hover { text-decoration: underline; }
+.nova-link-button { background: none; border: none; padding: 0; margin: 0; font: inherit; text-align: left; cursor: pointer; }
+.nova-attachment-preview-img { max-width: 100%; border-radius: var(--nova-radius-card); }
 .nova-truncate {
   display: -webkit-box;
   -webkit-line-clamp: 2;

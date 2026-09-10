@@ -504,3 +504,80 @@ export async function generateReportPDF(input: ReportPDFInput): Promise<Uint8Arr
 
   return pdfDoc.save();
 }
+
+// ---------------------------------------------------------------------------
+// generateSimpleTextPDF — export PDF générique pour un contenu texte simple
+// (documents générés, devis, rapports vocaux depuis /dashboard/documents) —
+// même moteur de mise en page que generateReportPDF, sans le pied de page
+// spécifique au rapport stratégique.
+// ---------------------------------------------------------------------------
+
+export type SimpleTextPDFInput = {
+  title: string;
+  meta: string;
+  content: string;
+  businessName: string;
+};
+
+export async function generateSimpleTextPDF(input: SimpleTextPDFInput): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const contentWidth = PAGE_WIDTH - 2 * MARGIN;
+  let y = PAGE_HEIGHT - MARGIN;
+
+  function newPage() {
+    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    y = PAGE_HEIGHT - MARGIN;
+  }
+
+  function drawText(text: string, opts: { size: number; bold?: boolean; color?: ReturnType<typeof rgb> }) {
+    const clean = sanitizePdfText(text);
+    if (y < MARGIN) newPage();
+    page.drawText(clean, { x: MARGIN, y, size: opts.size, font: opts.bold ? bold : font, color: opts.color || BODY });
+  }
+
+  function drawParagraph(text: string, size = 10.5, lineHeight = 15) {
+    const words = sanitizePdfText(text).split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      y -= lineHeight;
+      return;
+    }
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) > contentWidth && line) {
+        if (y < MARGIN + lineHeight) newPage();
+        page.drawText(line, { x: MARGIN, y, size, font, color: BODY });
+        y -= lineHeight;
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) {
+      if (y < MARGIN + lineHeight) newPage();
+      page.drawText(line, { x: MARGIN, y, size, font, color: BODY });
+      y -= lineHeight;
+    }
+  }
+
+  drawText(input.businessName, { size: 12, bold: true, color: TITLE_TEAL });
+  y -= 18;
+  drawText(input.title, { size: 18, bold: true, color: TITLE_TEAL });
+  y -= 20;
+  drawText(input.meta, { size: 9.5, color: BODY_SOFT });
+  y -= 18;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 1, color: TITLE_TEAL });
+  y -= 22;
+
+  const paragraphs = input.content.split(/\n+/);
+  for (const p of paragraphs) {
+    drawParagraph(p);
+    y -= 6;
+  }
+
+  return pdfDoc.save();
+}

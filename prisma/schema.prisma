@@ -54,6 +54,7 @@ model Business {
   teamMembers      TeamMember[]
   suppliers        Supplier[]
   purchases        Purchase[]
+  attachments      Attachment[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -188,6 +189,23 @@ model Document {
   type       String   // brief | marketing | conseil
   title      String
   content    String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+// Pièce jointe uploadée par le dirigeant (contrat, attestation, photo...) —
+// distincte de Document (contenu généré par l'IA) et de ProjectPhoto
+// (rattachée à un chantier) : ici un fichier externe, non lié à un
+// chantier précis, stocké en base64 comme logoBase64/photoCouverture.
+model Attachment {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  fileBase64 String
+  mimeType   String
+  category   String   // contrat | attestation | photo | autre
   createdAt  DateTime @default(now())
 
   @@index([businessId])

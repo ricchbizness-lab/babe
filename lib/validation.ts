@@ -182,3 +182,10 @@ export const voiceReportSchema = z.object({
 }).refine((d) => d.transcriptText || d.audioBase64, {
   message: "Fournir soit transcriptText (démo), soit audioBase64 (production).",
 });
+
+export const attachmentSchema = z.object({
+  name: z.string().min(1).max(200),
+  fileBase64: z.string().min(1).max(2_900_000),
+  mimeType: z.string().min(1).max(100),
+  category: z.enum(["contrat", "attestation", "photo", "autre"]),
+});
