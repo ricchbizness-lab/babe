@@ -4,13 +4,19 @@ import { sendEmail } from "@/lib/email";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 import { z } from "zod";
 
-// Seule transition possible via cette route : "brouillon" -> "en_relecture".
-// Passer à "envoye" nécessite reviewedBy renseigné — volontairement non
-// exposé ici en self-service : cette transition doit rester une action
-// consciente, pas un bouton client comme les autres. À implémenter dans un
-// futur back-office interne une fois un vrai comptable partenaire en place,
-// jamais côté client.
-const patchSchema = z.object({ status: z.literal("en_relecture") });
+// Deux usages distincts sur cette route, volontairement séparés du POST
+// d'envoi : la transition de statut "brouillon" -> "en_relecture", et la
+// correction du contenu avant relecture/envoi. Ni l'un ni l'autre ne permet
+// d'atteindre "envoye" — cette transition reste réservée au POST ci-dessous,
+// qui exige reviewedBy.
+const patchSchema = z
+  .object({
+    status: z.literal("en_relecture").optional(),
+    content: z.string().min(1).max(20000).optional(),
+  })
+  .refine((d) => d.status !== undefined || d.content !== undefined, {
+    message: "Rien à mettre à jour",
+  });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -23,12 +29,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const body = await req.json();
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Transition non autorisée depuis cette route" }, { status: 400 });
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Données invalides" }, { status: 400 });
     }
 
     const report = await prisma.strategicReport.update({
       where: { id: params.id, businessId },
-      data: { status: "en_relecture" },
+      data: parsed.data,
     });
     return NextResponse.json({ report });
   } catch (err) {

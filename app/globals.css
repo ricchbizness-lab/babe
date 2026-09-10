@@ -2808,6 +2808,31 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-report-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .nova-report-period { font-family: var(--nova-font-heading); font-weight: 700; font-size: 14px; }
+.nova-report-item { display: flex; flex-direction: column; }
+.nova-report-item .nova-report-row { flex-wrap: wrap; }
+.nova-report-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-top: none;
+  border-radius: 0 0 var(--nova-radius-card) var(--nova-radius-card);
+  margin-top: -1px;
+  padding: var(--nova-space-3);
+}
+.nova-report-edit-textarea {
+  width: 100%;
+  min-height: 220px;
+  border: 1.5px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-2);
+  font-size: 13.5px;
+  font-family: var(--nova-font-sans);
+  color: var(--nova-ink);
+  resize: vertical;
+}
+.nova-report-edit-textarea:focus { outline: none; border-color: var(--nova-teal); }
 
 @media (max-width: 860px) {
   .nova-shell { grid-template-columns: 1fr; }

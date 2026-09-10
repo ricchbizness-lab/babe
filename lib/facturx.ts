@@ -410,3 +410,97 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
 
   return pdfDoc.save();
 }
+
+// ---------------------------------------------------------------------------
+// generateReportPDF — export PDF simple pour le rapport stratégique
+// (contenu texte multi-pages, pas de tableau/XML Factur-X ici).
+// ---------------------------------------------------------------------------
+
+export type ReportPDFInput = {
+  period: string;
+  content: string;
+  status: string;
+  reviewedBy?: string | null;
+  businessName: string;
+};
+
+const REPORT_STATUS_LABEL: Record<string, string> = {
+  brouillon: "Brouillon",
+  en_relecture: "En relecture",
+  envoye: "Envoyé",
+};
+
+export async function generateReportPDF(input: ReportPDFInput): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const contentWidth = PAGE_WIDTH - 2 * MARGIN;
+  let y = PAGE_HEIGHT - MARGIN;
+
+  function newPage() {
+    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    y = PAGE_HEIGHT - MARGIN;
+  }
+
+  function drawText(text: string, opts: { size: number; bold?: boolean; color?: ReturnType<typeof rgb> }) {
+    const clean = sanitizePdfText(text);
+    if (y < MARGIN) newPage();
+    page.drawText(clean, { x: MARGIN, y, size: opts.size, font: opts.bold ? bold : font, color: opts.color || BODY });
+  }
+
+  /** Découpe un paragraphe en lignes qui tiennent dans contentWidth, dessine chaque ligne, gère le saut de page. */
+  function drawParagraph(text: string, size = 10.5, lineHeight = 15) {
+    const words = sanitizePdfText(text).split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      y -= lineHeight;
+      return;
+    }
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) > contentWidth && line) {
+        if (y < MARGIN + lineHeight) newPage();
+        page.drawText(line, { x: MARGIN, y, size, font, color: BODY });
+        y -= lineHeight;
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) {
+      if (y < MARGIN + lineHeight) newPage();
+      page.drawText(line, { x: MARGIN, y, size, font, color: BODY });
+      y -= lineHeight;
+    }
+  }
+
+  drawText(input.businessName, { size: 12, bold: true, color: TITLE_TEAL });
+  y -= 18;
+  drawText("RAPPORT DE SYNTHÈSE", { size: 20, bold: true, color: TITLE_TEAL });
+  y -= 22;
+  drawText(`Période : ${input.period} — Statut : ${REPORT_STATUS_LABEL[input.status] || input.status}`, { size: 9.5, color: BODY_SOFT });
+  y -= 18;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 1, color: TITLE_TEAL });
+  y -= 22;
+
+  const paragraphs = input.content.split(/\n+/);
+  for (const p of paragraphs) {
+    drawParagraph(p);
+    y -= 6;
+  }
+
+  y -= 14;
+  if (y < MARGIN + 40) newPage();
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: BORDER });
+  y -= 16;
+  drawText(
+    input.reviewedBy
+      ? `Relu par : ${input.reviewedBy}`
+      : "Ce rapport n'a pas encore été relu par un professionnel — les constats qu'il contient sont à discuter avec votre comptable avant toute décision.",
+    { size: 8.5, color: BODY_SOFT }
+  );
+
+  return pdfDoc.save();
+}

@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Badge, Breadcrumb, Card, CardTitle, EmptyState, Timestamp, useToast } from "@/components/ui";
+import { ChevronDown, ChevronUp, Download, Pencil } from "lucide-react";
+import { Badge, Breadcrumb, Button, Card, CardTitle, EmptyState, Timestamp, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Report = {
   id: string;
   period: string;
   status: string;
+  content: string;
+  reviewedBy: string | null;
   createdAt: string;
 };
 
@@ -28,6 +31,10 @@ export function RapportView() {
   const [period, setPeriod] = useState("");
   const [generating, setGenerating] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/strategic-reports")
@@ -86,6 +93,44 @@ export function RapportView() {
     }
   }
 
+  function toggleExpand(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
+    setEditingId(null);
+  }
+
+  function openEditContent(r: Report) {
+    setEditingId(r.id);
+    setEditContent(r.content);
+    setExpandedId(r.id);
+  }
+
+  async function handleSaveContent(id: string) {
+    if (!editContent.trim()) {
+      toast.error("Le contenu ne peut pas être vide.");
+      return;
+    }
+    setSavingContent(true);
+    try {
+      const res = await fetchWithAuth(`/api/strategic-reports/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible d'enregistrer les modifications.");
+        return;
+      }
+      const data = await res.json();
+      setReports((prev) => (prev ?? []).map((r) => (r.id === data.report.id ? data.report : r)));
+      toast.success("Rapport modifié");
+      setEditingId(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingContent(false);
+    }
+  }
+
   return (
     <div className="nova-page">
       <Breadcrumb items={[{ label: "Copilote", href: "/dashboard/copilote" }, { label: "Rapport stratégique" }]} />
@@ -122,25 +167,78 @@ export function RapportView() {
         />
       ) : (
         <ul className="nova-report-list">
-          {reports.map((r) => (
-            <li key={r.id} className="nova-report-row">
-              <div className="nova-report-info">
-                <div className="nova-report-period">{r.period}</div>
-                <Timestamp date={r.createdAt} />
-              </div>
-              <Badge tone={STATUS_TONE[r.status] || "neutral"}>{STATUS_LABEL[r.status] || r.status}</Badge>
-              {r.status === "brouillon" && (
-                <button
-                  type="button"
-                  className="nova-btn nova-btn-secondary"
-                  onClick={() => handleReview(r.id)}
-                  disabled={reviewingId === r.id}
-                >
-                  {reviewingId === r.id ? "Mise à jour..." : "Passer en relecture"}
-                </button>
-              )}
-            </li>
-          ))}
+          {reports.map((r) => {
+            const expanded = expandedId === r.id;
+            const editing = editingId === r.id;
+            return (
+              <li key={r.id} className="nova-report-item">
+                <div className="nova-report-row">
+                  <div className="nova-report-info">
+                    <div className="nova-report-period">{r.period}</div>
+                    <Timestamp date={r.createdAt} />
+                  </div>
+                  <Badge tone={STATUS_TONE[r.status] || "neutral"}>{STATUS_LABEL[r.status] || r.status}</Badge>
+                  <Button variant="secondary" onClick={() => toggleExpand(r.id)}>
+                    {expanded ? <ChevronUp size={14} strokeWidth={1.75} /> : <ChevronDown size={14} strokeWidth={1.75} />}
+                    {expanded ? "Masquer" : "Voir le rapport"}
+                  </Button>
+                  <a href={`/api/strategic-reports/${r.id}/pdf`} className="nova-btn nova-btn-secondary">
+                    <Download size={14} strokeWidth={1.75} />
+                    Télécharger PDF
+                  </a>
+                  {r.status === "brouillon" && (
+                    <button
+                      type="button"
+                      className="nova-btn nova-btn-secondary"
+                      onClick={() => handleReview(r.id)}
+                      disabled={reviewingId === r.id}
+                    >
+                      {reviewingId === r.id ? "Mise à jour..." : "Passer en relecture"}
+                    </button>
+                  )}
+                </div>
+
+                {expanded && (
+                  <div className="nova-report-expanded">
+                    {r.status === "en_relecture" && (
+                      <div className="nova-notice">Ce rapport attend une relecture humaine avant d'être partagé.</div>
+                    )}
+                    {r.reviewedBy && (
+                      <p className="nova-page-subtitle" style={{ margin: 0 }}>
+                        Relu par {r.reviewedBy}
+                      </p>
+                    )}
+                    {editing ? (
+                      <>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          rows={12}
+                          className="nova-report-edit-textarea"
+                        />
+                        <div className="nova-modal-actions" style={{ justifyContent: "flex-start" }}>
+                          <Button onClick={() => handleSaveContent(r.id)} disabled={savingContent}>
+                            {savingContent ? "Enregistrement..." : "Enregistrer"}
+                          </Button>
+                          <Button variant="secondary" onClick={() => setEditingId(null)}>
+                            Annuler
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="nova-card-text">{r.content}</p>
+                        <Button variant="secondary" onClick={() => openEditContent(r)}>
+                          <Pencil size={14} strokeWidth={1.75} />
+                          Modifier
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
