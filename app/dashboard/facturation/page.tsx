@@ -17,7 +17,7 @@ import {
   type TableColumn,
 } from "@/components/ui";
 import { computeInvoiceAmounts, invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
-import { daysSinceSent } from "@/lib/relance";
+import { isPaiementEnRetard, joursRetardPaiement } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { downloadCSV, generateCSV } from "@/lib/csv";
 
@@ -55,6 +55,18 @@ function echeanceDate(d: DevisRow): Date {
   const d2 = new Date(d.updatedAt);
   d2.setDate(d2.getDate() + PAYMENT_TERMS_DAYS);
   return d2;
+}
+
+/**
+ * Statut de paiement affiché, calculé plutôt que lu tel quel depuis
+ * paymentStatus : ce champ vaut "en_retard" uniquement s'il a été
+ * positionné à la main, aucun processus automatique ne le fait — sans ce
+ * calcul, une facture réellement en retard restait affichée "En attente"
+ * partout (onglet, badge, bouton Relancer, styles d'échéance).
+ */
+function displayPaymentStatus(d: DevisRow): "en_attente" | "payee" | "en_retard" {
+  if (d.paymentStatus === "payee") return "payee";
+  return isPaiementEnRetard(d.paymentStatus, d.updatedAt) ? "en_retard" : "en_attente";
 }
 
 type PeriodeFilter = "all" | "mois" | "trimestre" | "annee";
@@ -104,14 +116,12 @@ export default function FacturationPage() {
   );
 
   const filteredRows = displayRows.filter((d) => {
+    const status = displayPaymentStatus(d);
     const matchesTab =
-      tab === "en_attente"
-        ? d.paymentStatus === "en_attente"
-        : tab === "payees"
-          ? d.paymentStatus === "payee"
-          : tab === "en_retard"
-            ? d.paymentStatus === "en_retard"
-            : true;
+      tab === "toutes" ||
+      (tab === "en_attente" && status === "en_attente") ||
+      (tab === "payees" && status === "payee") ||
+      (tab === "en_retard" && status === "en_retard");
     const matchesClient = clientFilter === "all" || d.client?.id === clientFilter;
     const matchesPeriodeFilter = matchesPeriode(d.updatedAt, periodeFilter);
     return matchesTab && matchesClient && matchesPeriodeFilter;
@@ -158,7 +168,7 @@ export default function FacturationPage() {
             client: d.client?.name || "client",
             montant: amounts ? `${amounts.ttc.toLocaleString("fr-FR")} €` : "",
             echeance: echeanceDate(d).toLocaleDateString("fr-FR"),
-            joursRetard: daysSinceSent(d.updatedAt) - PAYMENT_TERMS_DAYS,
+            joursRetard: joursRetardPaiement(d.updatedAt),
           },
         }),
       });
@@ -193,10 +203,10 @@ export default function FacturationPage() {
     )
     .reduce((sum, d) => sum + (d.amount || 0), 0);
   const enAttenteMontant = invoices
-    .filter((d) => d.paymentStatus === "en_attente")
+    .filter((d) => displayPaymentStatus(d) === "en_attente")
     .reduce((sum, d) => sum + (d.amount || 0), 0);
   const enRetardMontant = invoices
-    .filter((d) => d.paymentStatus === "en_retard")
+    .filter((d) => displayPaymentStatus(d) === "en_retard")
     .reduce((sum, d) => sum + (d.amount || 0), 0);
 
   const columns: TableColumn<InvoiceRow>[] = [
@@ -246,12 +256,10 @@ export default function FacturationPage() {
       key: "paymentStatus",
       label: "Statut paiement",
       render: (d) => (
-        <Badge tone={PAYMENT_STATUS_TONE[d.paymentStatus] || "amber"}>
-          {PAYMENT_STATUS_LABEL[d.paymentStatus] || d.paymentStatus}
-        </Badge>
+        <Badge tone={PAYMENT_STATUS_TONE[displayPaymentStatus(d)]}>{PAYMENT_STATUS_LABEL[displayPaymentStatus(d)]}</Badge>
       ),
       sortable: true,
-      sortValue: (d) => PAYMENT_STATUS_ORDER[d.paymentStatus] ?? 99,
+      sortValue: (d) => PAYMENT_STATUS_ORDER[displayPaymentStatus(d)],
     },
     {
       key: "echeance",
@@ -260,7 +268,7 @@ export default function FacturationPage() {
         d.paymentStatus === "payee" ? (
           "—"
         ) : (
-          <span className={d.paymentStatus === "en_retard" ? "nova-task-due-date-late" : undefined}>
+          <span className={displayPaymentStatus(d) === "en_retard" ? "nova-task-due-date-late" : undefined}>
             {echeanceDate(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
           </span>
         ),
@@ -279,7 +287,7 @@ export default function FacturationPage() {
       label: "",
       align: "right",
       render: (d) =>
-        d.paymentStatus === "en_retard" ? (
+        displayPaymentStatus(d) === "en_retard" ? (
           <Button
             variant="secondary"
             onClick={(e) => {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Send, X } from "lucide-react";
 import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Tabs, useToast, type TableColumn } from "@/components/ui";
 import { computeInvoiceAmounts } from "@/lib/facturation";
-import { daysSinceSent, relanceLevel } from "@/lib/relance";
+import { daysSinceSent, joursRetardPaiement, relanceLevel } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type DevisRow = {
@@ -29,7 +29,7 @@ type TaskRow = {
 const PAYMENT_TERMS_DAYS = 30;
 
 function joursRetardFacture(d: DevisRow): number {
-  return Math.max(0, daysSinceSent(d.updatedAt) - PAYMENT_TERMS_DAYS);
+  return joursRetardPaiement(d.updatedAt);
 }
 
 function retardTone(days: number): "amber" | "danger" {
@@ -67,7 +67,12 @@ export default function RelancesPage() {
   const loading = devis === null || tasks === null;
   const devisList = devis ?? [];
 
-  const facturesARelancer = devisList.filter((d) => d.status === "accepte" && d.paymentStatus === "en_retard");
+  // Bug corrigé : le filtre exigeait paymentStatus === "en_retard", un
+  // statut qui n'est jamais positionné automatiquement (aucun job ne le
+  // recalcule) — en pratique la liste restait vide même avec des factures
+  // réellement en attente depuis plus de 30 jours. Le retard se calcule
+  // depuis updatedAt (date d'acceptation), pas depuis un champ de statut.
+  const facturesARelancer = devisList.filter((d) => d.status === "accepte" && d.paymentStatus !== "payee");
   const devisARelancer = devisList.filter((d) => d.status === "envoye" && relanceLevel(d.status, d.updatedAt).level !== "none");
   const rappelsList = (tasks ?? [])
     .filter((t) => !t.done && t.dueDate)
@@ -79,7 +84,7 @@ export default function RelancesPage() {
 
   const montantTotal =
     facturesARelancer.reduce((sum, d) => sum + (d.amount || 0), 0) + devisARelancer.reduce((sum, d) => sum + (d.amount || 0), 0);
-  const enRetard30j = facturesARelancer.filter((d) => joursRetardFacture(d) > 30).length;
+  const enRetard30j = facturesARelancer.filter((d) => joursRetardFacture(d) > 0).length;
 
   async function handleRelancer(d: DevisRow) {
     if (!d.client?.email) {

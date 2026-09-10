@@ -27,6 +27,7 @@ import {
 } from "@/components/ui";
 import { toDateKey } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { isPaiementEnRetard } from "@/lib/relance";
 import { ChantierOverviewTab } from "./ChantierOverviewTab";
 import { ChantierPlanningTab } from "./ChantierPlanningTab";
 import { ChantierPhotosTab } from "./ChantierPhotosTab";
@@ -404,11 +405,14 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     {
       key: "paymentStatus",
       label: "Statut paiement",
-      render: (d) => (
-        <Badge tone={d.paymentStatus === "payee" ? "success" : d.paymentStatus === "en_retard" ? "danger" : "amber"}>
-          {d.paymentStatus === "payee" ? "Payée" : d.paymentStatus === "en_retard" ? "En retard" : "En attente"}
-        </Badge>
-      ),
+      render: (d) => {
+        const enRetard = isPaiementEnRetard(d.paymentStatus, d.updatedAt);
+        return (
+          <Badge tone={d.paymentStatus === "payee" ? "success" : enRetard ? "danger" : "amber"}>
+            {d.paymentStatus === "payee" ? "Payée" : enRetard ? "En retard" : "En attente"}
+          </Badge>
+        );
+      },
     },
     { key: "updatedAt", label: "Date", render: (d) => <Timestamp date={d.updatedAt} /> },
   ];
