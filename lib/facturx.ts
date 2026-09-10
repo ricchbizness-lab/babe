@@ -13,16 +13,25 @@ import { lineTotalHT, type DevisLineLike } from "./devisTotals";
  * officiel Factur-X et ne doit pas être présenté comme certifié conforme
  * sans vérification par un outil de validation dédié (ex. Chorus Pro, Mustang
  * Project) avant tout usage en production réelle.
+ *
+ * Cette fonction ne sert qu'à générer la facture d'un devis accepté (voir
+ * /api/factures/[id]/facturx) : le titre du document est donc toujours
+ * "FACTURE", même si la demande d'origine mentionnait "DEVIS" en grand —
+ * afficher "DEVIS" sur une facture serait trompeur pour le destinataire.
  */
 
 const PAGE_WIDTH = 595.28; // A4 en points (72dpi)
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 56; // ~2cm
 
-const TEAL = rgb(0x14 / 255, 0x59 / 255, 0x4a / 255);
-const INK = rgb(0x14 / 255, 0x18 / 255, 0x1c / 255);
-const INK_SOFT = rgb(0x5a / 255, 0x63 / 255, 0x6b / 255);
+// Couleurs imposées pour le rendu PDF (distinctes des tokens --nova-* de
+// l'écran : choisies spécifiquement pour un rendu imprimé plus contrasté).
+const TITLE_TEAL = rgb(0x0d / 255, 0x3b / 255, 0x2e / 255);
+const BODY = rgb(0x33 / 255, 0x33 / 255, 0x33 / 255);
+const BODY_SOFT = rgb(0x6b / 255, 0x72 / 255, 0x7b / 255);
 const BORDER = rgb(0xe2 / 255, 0xe5 / 255, 0xe8 / 255);
+const HEADER_BG = rgb(0.94, 0.955, 0.945);
+const ROW_ALT_BG = rgb(0.96, 0.96, 0.96);
 
 export type FacturXLine = DevisLineLike & {
   id: string;
@@ -150,7 +159,7 @@ function buildFacturXml(input: FacturXInput, buckets: VatBucket[]): string {
  * dessin, plutôt que de laisser drawText lever une exception à l'usage.
  */
 function sanitizePdfText(s: string): string {
-  return s.replace(/[  ]/g, " ").replace(/−/g, "-");
+  return s.replace(/[\u202F\u00A0]/g, " ").replace(/\u2212/g, "-");
 }
 
 function fmt(n: number): string {
@@ -183,16 +192,16 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
   const rawBoldWidth = bold.widthOfTextAtSize.bind(bold);
   bold.widthOfTextAtSize = ((text: string, size: number) => rawBoldWidth(sanitizePdfText(text), size)) as typeof bold.widthOfTextAtSize;
 
+  const tableRight = PAGE_WIDTH - MARGIN;
   let y = PAGE_HEIGHT - MARGIN;
 
-  // Mention Factur-X en haut à droite
+  // Mention Factur-X tout en haut à droite
   const mention = "FACTURE ÉLECTRONIQUE — Format Factur-X";
-  const mentionWidth = font.widthOfTextAtSize(mention, 8);
-  page.drawText(mention, { x: PAGE_WIDTH - MARGIN - mentionWidth, y, size: 8, font, color: INK_SOFT });
-  y -= 22;
+  page.drawText(mention, { x: tableRight - font.widthOfTextAtSize(mention, 8), y, size: 8, font, color: BODY_SOFT });
+  y -= 26;
 
-  // Logo (image ou initiales sur carré teal) + identité entreprise
-  const logoSize = 40;
+  // En-tête : logo/initiales à gauche, titre + référence + date à droite
+  const logoSize = 42;
   let logoDrawn = false;
   if (input.business.logoBase64) {
     try {
@@ -208,9 +217,9 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
     }
   }
   if (!logoDrawn) {
-    page.drawRectangle({ x: MARGIN, y: y - logoSize, width: logoSize, height: logoSize, color: TEAL });
+    page.drawRectangle({ x: MARGIN, y: y - logoSize, width: logoSize, height: logoSize, color: TITLE_TEAL });
     const ini = initials(input.business.name);
-    const iniSize = 16;
+    const iniSize = 17;
     const iniWidth = bold.widthOfTextAtSize(ini, iniSize);
     page.drawText(ini, {
       x: MARGIN + logoSize / 2 - iniWidth / 2,
@@ -221,133 +230,152 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
     });
   }
 
-  const textX = MARGIN + logoSize + 12;
-  page.drawText(input.business.name, { x: textX, y: y - 12, size: 13, font: bold, color: INK });
-  let metaY = y - 26;
-  const metaLines: string[] = [];
-  if (input.business.siret) metaLines.push(`SIRET : ${input.business.siret}`);
-  if (input.business.codeAPE) metaLines.push(`Code APE : ${input.business.codeAPE}`);
-  if (input.business.address) metaLines.push(input.business.address);
-  for (const line of metaLines) {
-    page.drawText(line, { x: textX, y: metaY, size: 8.5, font, color: INK_SOFT });
-    metaY -= 12;
-  }
-
-  // Titre + référence à droite
   const title = "FACTURE";
-  page.drawText(title, { x: PAGE_WIDTH - MARGIN - bold.widthOfTextAtSize(title, 22), y: y - 18, size: 22, font: bold, color: INK });
-  const numText = input.numero;
-  page.drawText(numText, {
-    x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize(numText, 11),
-    y: y - 34,
+  page.drawText(title, { x: tableRight - bold.widthOfTextAtSize(title, 24), y: y - 4, size: 24, font: bold, color: TITLE_TEAL });
+  page.drawText(input.numero, {
+    x: tableRight - font.widthOfTextAtSize(input.numero, 11),
+    y: y - 22,
     size: 11,
     font,
-    color: TEAL,
+    color: TITLE_TEAL,
   });
   const dateText = `Date : ${new Date(input.date).toLocaleDateString("fr-FR")}`;
-  page.drawText(dateText, {
-    x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize(dateText, 8.5),
-    y: y - 47,
-    size: 8.5,
-    font,
-    color: INK_SOFT,
-  });
+  page.drawText(dateText, { x: tableRight - font.widthOfTextAtSize(dateText, 8.5), y: y - 36, size: 8.5, font, color: BODY_SOFT });
 
-  y -= logoSize + 20;
-  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 1.2, color: INK });
-  y -= 24;
-
-  // Encadré client
-  if (input.client) {
-    const boxHeight = 56;
-    page.drawRectangle({ x: MARGIN, y: y - boxHeight, width: PAGE_WIDTH - 2 * MARGIN, height: boxHeight, borderColor: BORDER, borderWidth: 1 });
-    let cy = y - 14;
-    page.drawText("À l'attention de", { x: MARGIN + 10, y: cy, size: 8, font, color: INK_SOFT });
-    cy -= 14;
-    page.drawText(input.client.name, { x: MARGIN + 10, y: cy, size: 11, font: bold, color: INK });
-    cy -= 14;
-    if (input.client.address) {
-      page.drawText(input.client.address, { x: MARGIN + 10, y: cy, size: 9, font, color: INK });
-      cy -= 12;
-    }
-    if (input.client.email) {
-      page.drawText(input.client.email, { x: MARGIN + 10, y: cy, size: 9, font, color: INK });
-    }
-    y -= boxHeight + 24;
-  }
-
-  // Tableau des prestations
-  const colX = { desc: MARGIN, qte: MARGIN + 250, unite: MARGIN + 300, prix: MARGIN + 350, tva: MARGIN + 420, total: MARGIN + 470 };
-  const tableRight = PAGE_WIDTH - MARGIN;
-
-  function drawTableHeader(atY: number) {
-    page.drawRectangle({ x: MARGIN, y: atY - 16, width: tableRight - MARGIN, height: 18, color: rgb(0.96, 0.97, 0.96) });
-    page.drawText("Description", { x: colX.desc + 6, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-    page.drawText("Qté", { x: colX.qte, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-    page.drawText("Unité", { x: colX.unite, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-    page.drawText("Prix HT", { x: colX.prix, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-    page.drawText("TVA %", { x: colX.tva, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-    page.drawText("Total HT", { x: colX.total, y: atY - 12, size: 8, font: bold, color: INK_SOFT });
-  }
-
-  drawTableHeader(y);
+  y -= logoSize + 18;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: tableRight, y }, thickness: 1.2, color: TITLE_TEAL });
   y -= 26;
 
-  const rowHeight = 18;
-  if (input.lines.length > 0) {
-    for (const l of input.lines) {
-      const desc = l.description.length > 42 ? l.description.slice(0, 41) + "…" : l.description;
-      page.drawText(desc, { x: colX.desc + 6, y, size: 9, font, color: INK });
-      page.drawText(l.quantite.toLocaleString("fr-FR"), { x: colX.qte, y, size: 9, font, color: INK });
-      page.drawText(l.unite || "—", { x: colX.unite, y, size: 9, font, color: INK });
-      page.drawText(fmt(l.prixUnitaire), { x: colX.prix, y, size: 9, font, color: INK });
-      page.drawText(`${l.tva}%`, { x: colX.tva, y, size: 9, font, color: INK });
-      page.drawText(fmt(lineTotalHT(l)), { x: colX.total, y, size: 9, font, color: INK });
-      y -= rowHeight;
+  // Deux colonnes : émetteur à gauche, client à droite
+  const colWidth = (tableRight - MARGIN - 24) / 2;
+  const rightColX = MARGIN + colWidth + 24;
+
+  page.drawText("ÉMETTEUR", { x: MARGIN, y, size: 8, font: bold, color: BODY_SOFT });
+  page.drawText("CLIENT", { x: rightColX, y, size: 8, font: bold, color: BODY_SOFT });
+  let leftY = y - 16;
+  let rightY = y - 16;
+
+  page.drawText(input.business.name, { x: MARGIN, y: leftY, size: 11, font: bold, color: BODY });
+  leftY -= 14;
+  const businessLines: string[] = [];
+  if (input.business.siret) businessLines.push(`SIRET : ${input.business.siret}`);
+  if (input.business.codeAPE) businessLines.push(`Code APE : ${input.business.codeAPE}`);
+  if (input.business.address) businessLines.push(input.business.address);
+  for (const line of businessLines) {
+    page.drawText(line, { x: MARGIN, y: leftY, size: 9, font, color: BODY });
+    leftY -= 12;
+  }
+
+  if (input.client) {
+    page.drawText(input.client.name, { x: rightColX, y: rightY, size: 11, font: bold, color: BODY });
+    rightY -= 14;
+    const clientLines: string[] = [];
+    if (input.client.address) clientLines.push(input.client.address);
+    if (input.client.email) clientLines.push(input.client.email);
+    for (const line of clientLines) {
+      page.drawText(line, { x: rightColX, y: rightY, size: 9, font, color: BODY });
+      rightY -= 12;
     }
   } else {
-    const desc = input.description || input.label;
-    page.drawText(input.label, { x: colX.desc + 6, y, size: 9, font: bold, color: INK });
-    y -= 12;
-    if (desc && desc !== input.label) {
-      const wrapped = desc.length > 90 ? desc.slice(0, 89) + "…" : desc;
-      page.drawText(wrapped, { x: colX.desc + 6, y, size: 8.5, font, color: INK_SOFT });
-      y -= 12;
+    page.drawText("Client non renseigné", { x: rightColX, y: rightY, size: 9, font, color: BODY_SOFT });
+    rightY -= 12;
+  }
+
+  y = Math.min(leftY, rightY) - 16;
+
+  // Tableau des prestations — Description | Qté | Unité | P.U. HT | TVA % | Total HT
+  const colX = { desc: MARGIN, qte: MARGIN + 250, unite: MARGIN + 300, prix: MARGIN + 350, tva: MARGIN + 420, total: MARGIN + 470 };
+  const tableWidth = tableRight - MARGIN;
+  const rowHeight = 20;
+
+  page.drawRectangle({ x: MARGIN, y: y - 18, width: tableWidth, height: 20, color: HEADER_BG });
+  page.drawText("Description", { x: colX.desc + 6, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  page.drawText("Qté", { x: colX.qte, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  page.drawText("Unité", { x: colX.unite, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  page.drawText("P.U. HT", { x: colX.prix, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  page.drawText("TVA %", { x: colX.tva, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  page.drawText("Total HT", { x: colX.total, y: y - 13, size: 8, font: bold, color: TITLE_TEAL });
+  y -= 20;
+
+  function drawRow(cells: { desc: string; qte?: string; unite?: string; prix?: string; tva?: string; total?: string }, index: number) {
+    if (index % 2 === 1) {
+      page.drawRectangle({ x: MARGIN, y: y - 15, width: tableWidth, height: rowHeight, color: ROW_ALT_BG });
     }
-    if (input.fallbackAmountHT != null) {
-      page.drawText(fmt(input.fallbackAmountHT), { x: colX.total, y: y + 12, size: 9, font, color: INK });
-    }
+    const textY = y - 10;
+    page.drawText(cells.desc, { x: colX.desc + 6, y: textY, size: 9, font, color: BODY });
+    if (cells.qte) page.drawText(cells.qte, { x: colX.qte, y: textY, size: 9, font, color: BODY });
+    if (cells.unite) page.drawText(cells.unite, { x: colX.unite, y: textY, size: 9, font, color: BODY });
+    if (cells.prix) page.drawText(cells.prix, { x: colX.prix, y: textY, size: 9, font, color: BODY });
+    if (cells.tva) page.drawText(cells.tva, { x: colX.tva, y: textY, size: 9, font, color: BODY });
+    if (cells.total) page.drawText(cells.total, { x: colX.total, y: textY, size: 9, font: bold, color: BODY });
     y -= rowHeight;
   }
 
-  y -= 10;
+  if (input.lines.length > 0) {
+    input.lines.forEach((l, i) => {
+      const desc = l.description.length > 40 ? l.description.slice(0, 39) + "…" : l.description;
+      drawRow(
+        {
+          desc,
+          qte: l.quantite.toLocaleString("fr-FR"),
+          unite: l.unite || "—",
+          prix: fmt(l.prixUnitaire),
+          tva: `${l.tva}%`,
+          total: fmt(lineTotalHT(l)),
+        },
+        i
+      );
+    });
+  } else {
+    const desc = input.description && input.description !== input.label ? `${input.label} — ${input.description}` : input.label;
+    const wrapped = desc.length > 70 ? desc.slice(0, 69) + "…" : desc;
+    drawRow(
+      { desc: wrapped, total: input.fallbackAmountHT != null ? fmt(input.fallbackAmountHT) : undefined },
+      0
+    );
+  }
+
+  y -= 6;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: tableRight, y }, thickness: 0.75, color: BORDER });
   y -= 20;
 
-  // Totaux (TVA regroupée par taux)
+  // Totaux (TVA regroupée par taux) dans un encadré à droite
   const buckets = vatBreakdown(input.lines, input.remisePct || 0, input.fallbackAmountHT);
   const totalHT = buckets.reduce((s, b) => s + b.base, 0);
   const totalTVA = buckets.reduce((s, b) => s + b.tva, 0);
   const totalTTC = totalHT + totalTVA;
 
-  const totalsBoxWidth = 220;
+  const totalsBoxWidth = 230;
   const totalsX = tableRight - totalsBoxWidth;
+  const totalsPad = 14;
+  const totalsRowCount = 1 + (input.remisePct ? 1 : 0) + buckets.length + 1;
+  const totalsBoxHeight = totalsRowCount * 17 + 2 * totalsPad - 5;
+  page.drawRectangle({
+    x: totalsX,
+    y: y - totalsBoxHeight + 17,
+    width: totalsBoxWidth,
+    height: totalsBoxHeight,
+    borderColor: BORDER,
+    borderWidth: 1,
+  });
+  y -= totalsPad - 4;
+
   function drawTotalRow(label: string, value: string, boldRow = false) {
     const f = boldRow ? bold : font;
-    const size = boldRow ? 12 : 9.5;
-    page.drawText(label, { x: totalsX, y, size, font: f, color: boldRow ? INK : INK_SOFT });
-    page.drawText(value, { x: tableRight - f.widthOfTextAtSize(value, size), y, size, font: f, color: INK });
-    y -= boldRow ? 20 : 15;
+    const size = boldRow ? 13 : 9.5;
+    page.drawText(label, { x: totalsX + totalsPad, y, size, font: f, color: boldRow ? TITLE_TEAL : BODY_SOFT });
+    page.drawText(value, { x: tableRight - totalsPad - f.widthOfTextAtSize(value, size), y, size, font: f, color: boldRow ? TITLE_TEAL : BODY });
+    y -= boldRow ? 22 : 17;
   }
 
   drawTotalRow("Sous-total HT", fmt(totalHT));
   if ((input.remisePct || 0) > 0) {
-    drawTotalRow(`Remise (${input.remisePct}%)`, `− appliquée par ligne`);
+    drawTotalRow(`Remise (${input.remisePct}%)`, "appliquée par ligne");
   }
   for (const b of buckets) {
     drawTotalRow(`TVA ${b.rate}%`, fmt(b.tva));
   }
-  page.drawLine({ start: { x: totalsX, y: y + 8 }, end: { x: tableRight, y: y + 8 }, thickness: 0.75, color: BORDER });
+  page.drawLine({ start: { x: totalsX + totalsPad, y: y + 8 }, end: { x: tableRight - totalsPad, y: y + 8 }, thickness: 0.75, color: BORDER });
   drawTotalRow("Total TTC", fmt(totalTTC), true);
 
   // Pied de page — conditions, mentions légales, signatures
@@ -359,17 +387,17 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
     "Facture électronique conforme à la réglementation française (article 289 bis du CGI).",
   ];
   for (const line of footerLines) {
-    page.drawText(line, { x: MARGIN, y: footerY, size: 8, font, color: INK_SOFT });
+    page.drawText(line, { x: MARGIN, y: footerY, size: 8, font, color: BODY_SOFT });
     footerY -= 12;
   }
 
   footerY -= 20;
-  const boxWidth = (tableRight - MARGIN - 20) / 2;
-  const boxHeight = 70;
-  page.drawRectangle({ x: MARGIN, y: footerY - boxHeight, width: boxWidth, height: boxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
-  page.drawText("Bon pour accord — signature du client", { x: MARGIN + 8, y: footerY - 14, size: 8, font, color: INK_SOFT });
-  page.drawRectangle({ x: MARGIN + boxWidth + 20, y: footerY - boxHeight, width: boxWidth, height: boxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
-  page.drawText("Signature de l'émetteur", { x: MARGIN + boxWidth + 28, y: footerY - 14, size: 8, font, color: INK_SOFT });
+  const sigBoxWidth = (tableRight - MARGIN - 20) / 2;
+  const sigBoxHeight = 70;
+  page.drawRectangle({ x: MARGIN, y: footerY - sigBoxHeight, width: sigBoxWidth, height: sigBoxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
+  page.drawText("Bon pour accord — signature du client", { x: MARGIN + 8, y: footerY - 14, size: 8, font, color: BODY_SOFT });
+  page.drawRectangle({ x: MARGIN + sigBoxWidth + 20, y: footerY - sigBoxHeight, width: sigBoxWidth, height: sigBoxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
+  page.drawText("Signature de l'émetteur", { x: MARGIN + sigBoxWidth + 28, y: footerY - 14, size: 8, font, color: BODY_SOFT });
 
   // XML Factur-X minimal embarqué en pièce jointe du PDF
   const xml = buildFacturXml(input, buckets);
