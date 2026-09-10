@@ -540,6 +540,29 @@ function formatMonthYear(date: Date): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+/** Ajoute les séparateurs "/" au fil de la saisie (jj/mm/aaaa), en ne gardant que les chiffres. */
+function maskFrDateInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+  return parts.join("/");
+}
+
+/** Convertit une saisie jj/mm/aaaa complète et valide en clé YYYY-MM-DD, ou null si incomplète/invalide. */
+function parseFrDate(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 8) return null;
+  const day = Number(digits.slice(0, 2));
+  const month = Number(digits.slice(2, 4));
+  const year = Number(digits.slice(4, 8));
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1000) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Hauteur approximative du panneau calendrier, utilisée pour décider s'il doit s'ouvrir vers le haut. */
+const DATEPICKER_PANEL_HEIGHT = 320;
+
 export function DatePickerField({
   label,
   value,
@@ -551,12 +574,23 @@ export function DatePickerField({
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const [draft, setDraft] = useState(() => (value ? formatDateDisplay(value) : ""));
   const [viewMonth, setViewMonth] = useState(() => {
     const d = value ? new Date(`${value}T00:00:00`) : new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const containerRef = useRef<HTMLDivElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
   const todayKey = toDateKey(new Date());
+
+  // La saisie manuelle reste maîtresse tant qu'elle n'est pas complète/valide
+  // (l'utilisateur peut être en train de taper) — on ne resynchronise
+  // l'affichage sur la valeur validée qu'une fois qu'elle change réellement.
+  useEffect(() => {
+    setDraft(value ? formatDateDisplay(value) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   useEffect(() => {
     if (!open) return;
@@ -576,30 +610,63 @@ export function DatePickerField({
     };
   }, [open]);
 
-  function openPicker() {
+  function togglePicker() {
     const d = value ? new Date(`${value}T00:00:00`) : new Date();
     setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    if (!open && fieldRef.current) {
+      const rect = fieldRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUp(spaceBelow < DATEPICKER_PANEL_HEIGHT && rect.top > spaceBelow);
+    }
     setOpen((o) => !o);
+  }
+
+  function handleDraftChange(e: ChangeEvent<HTMLInputElement>) {
+    const masked = maskFrDateInput(e.target.value);
+    setDraft(masked);
+    const parsed = parseFrDate(masked);
+    if (parsed) onChange(parsed);
+  }
+
+  function handleDraftBlur() {
+    // Saisie incomplète ou invalide en quittant le champ : revenir au
+    // dernier état valide plutôt que de laisser un texte à moitié saisi.
+    if (draft !== "" && !parseFrDate(draft)) {
+      setDraft(value ? formatDateDisplay(value) : "");
+    }
   }
 
   return (
     <div className="nova-field" ref={containerRef}>
       <label>{label}</label>
-      <div className="nova-datepicker">
+      <div className="nova-datepicker" ref={fieldRef}>
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className="nova-datepicker-input"
+          value={draft}
+          onChange={handleDraftChange}
+          onBlur={handleDraftBlur}
+          placeholder="jj/mm/aaaa"
+          aria-label={label}
+        />
         <button
           type="button"
-          className="nova-datepicker-trigger"
-          onClick={openPicker}
+          className="nova-datepicker-icon-btn"
+          onClick={togglePicker}
           aria-haspopup="dialog"
           aria-expanded={open}
+          aria-label="Ouvrir le calendrier"
         >
-          <span className={value ? "" : "nova-datepicker-placeholder"}>
-            {value ? formatDateDisplay(value) : "jj/mm/aaaa"}
-          </span>
           <CalendarDays size={16} strokeWidth={1.75} />
         </button>
         {open && (
-          <div className="nova-datepicker-panel" role="dialog" aria-label={label}>
+          <div
+            className={`nova-datepicker-panel ${openUp ? "nova-datepicker-panel-up" : ""}`}
+            role="dialog"
+            aria-label={label}
+          >
             <div className="nova-datepicker-header">
               <button
                 type="button"
