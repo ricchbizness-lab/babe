@@ -1733,6 +1733,21 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border-radius: var(--nova-radius-card);
   padding: var(--nova-space-3);
 }
+.nova-ai-zone-amber { background: var(--nova-amber-tint); border-color: var(--nova-amber-tint); }
+.nova-suggestion-list { display: flex; flex-direction: column; gap: var(--nova-space-1); margin-top: var(--nova-space-2); }
+.nova-suggestion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  font-size: 13.5px;
+}
+.nova-suggestion-text { flex: 1; }
+.nova-suggestion-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .nova-ai-zone-header {
   display: flex;
   align-items: center;

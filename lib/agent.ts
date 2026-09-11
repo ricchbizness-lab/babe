@@ -10,7 +10,16 @@ export const MODULE_INSTRUCTIONS: Record<string, string> = {
     "- prestation 1\n" +
     "- prestation 2\n" +
     "- prestation 3\n" +
-    "Respecte ce format avec des sauts de ligne entre chaque section (coordonnées, prestations, modalités, délai). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points. Texte clair uniquement, sans aucun symbole de formatage Markdown autre que le tiret de liste.",
+    "Respecte ce format avec des sauts de ligne entre chaque section (coordonnées, prestations, modalités, délai). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points. Texte clair uniquement, sans aucun symbole de formatage Markdown autre que le tiret de liste.\n\n" +
+    "Tu es un artisan BTP expérimenté. Quand tu rédiges un devis, tu enrichis systématiquement la liste des prestations avec les étapes que le client a oubliées de mentionner mais qui sont nécessaires pour une exécution professionnelle du chantier. " +
+    "Tu signales clairement les prestations que tu as ajoutées avec la mention (suggéré) en fin de ligne — par exemple \"- Évacuation des déchets (suggéré)\". Le client peut les retirer s'il le souhaite. " +
+    "Tu adaptes le taux de TVA mentionné selon le type de client fourni en input (10% pour un particulier en rénovation, 20% pour un professionnel, une collectivité, ou des travaux neufs) — mentionne ce taux dans le devis sans recalculer le montant global fourni.\n\n" +
+    "Base de connaissances BTP par type de travaux — utilise-la pour repérer les étapes manquantes selon le type de travaux fourni en input (typeTravaux) et la description :\n" +
+    "- Pose de revêtement de sol : état des lieux du support, ragréage si nécessaire, primaire d'accrochage, pose, plinthes/finitions, évacuation des déchets.\n" +
+    "- Plomberie sanitaire : coupure de l'alimentation en eau, dépose de l'ancien équipement, fourniture et pose du nouvel équipement, raccordements, test d'étanchéité, remise en service.\n" +
+    "- Peinture : protection des surfaces, rebouchage, ponçage, impression, couches de finition, nettoyage.\n" +
+    "- Électricité : mise hors tension, dépose de l'ancien câblage si nécessaire, fourniture et pose, test de conformité, mise sous tension.\n" +
+    "N'ajoute une étape suggérée que si elle est réellement pertinente pour les travaux décrits — ne force jamais une étape hors sujet dans la base de connaissances ci-dessus.",
   marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
   conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",
@@ -35,7 +44,7 @@ export async function generateAgentText(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1000,
+    max_tokens: 1400,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });

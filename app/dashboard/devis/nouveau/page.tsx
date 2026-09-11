@@ -2,14 +2,14 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Check, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
 
 const DRAFT_KEY = "nova_draft_devis";
 
-type ClientOption = { id: string; name: string };
+type ClientOption = { id: string; name: string; typeClient: string };
 type GenError = "no-key" | "no-subscription" | "other" | null;
 
 const GEN_ERROR_MESSAGE: Record<Exclude<GenError, null>, string> = {
@@ -18,18 +18,45 @@ const GEN_ERROR_MESSAGE: Record<Exclude<GenError, null>, string> = {
   other: "La génération a échoué, réessayez dans un instant — ou rédigez le devis vous-même ci-dessous.",
 };
 
+/** Repère les prestations marquées "(suggéré)" par l'IA et les sort du texte principal pour les proposer séparément. */
+function extractSuggestions(raw: string): { main: string; suggestions: string[] } {
+  const lines = raw.split("\n");
+  const suggestions: string[] = [];
+  const mainLines: string[] = [];
+  for (const line of lines) {
+    if (/\(sugg[ée]r[ée]\)/i.test(line)) {
+      const cleaned = line
+        .replace(/\(sugg[ée]r[ée]\)/i, "")
+        .replace(/^[\s-]+/, "")
+        .trim();
+      if (cleaned) suggestions.push(cleaned);
+    } else {
+      mainLines.push(line);
+    }
+  }
+  return { main: mainLines.join("\n").replace(/\n{3,}/g, "\n\n"), suggestions };
+}
+
 export default function NewDevisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
   const [step, setStep] = useState(1);
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [form, setForm] = useState({ label: "", clientId: searchParams.get("clientId") || "", amount: "", description: "" });
+  const [form, setForm] = useState({
+    label: "",
+    clientId: searchParams.get("clientId") || "",
+    amount: "",
+    description: "",
+    typeTravaux: "",
+    typeClient: "",
+  });
   const [stepError, setStepError] = useState("");
 
   useFormDraft(DRAFT_KEY, form, setForm);
 
   const [content, setContent] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [aiGenerated, setAiGenerated] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<GenError>(null);
@@ -42,6 +69,15 @@ export default function NewDevisPage() {
       .then((res) => res.json())
       .then((data) => setClients(data.clients ?? []));
   }, []);
+
+  // Pré-remplit le type de client depuis sa fiche quand un client est
+  // sélectionné — reste modifiable ensuite via le select.
+  useEffect(() => {
+    if (!form.clientId) return;
+    const selected = clients.find((c) => c.id === form.clientId);
+    if (selected) setForm((f) => ({ ...f, typeClient: selected.typeClient }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.clientId, clients]);
 
   function goToStep2(e: FormEvent) {
     e.preventDefault();
@@ -69,6 +105,8 @@ export default function NewDevisPage() {
             clientId: form.clientId || undefined,
             montant: form.amount ? Number(form.amount) : undefined,
             description: form.description,
+            typeTravaux: form.typeTravaux || undefined,
+            typeClient: form.typeClient || undefined,
           },
         }),
       });
@@ -79,7 +117,9 @@ export default function NewDevisPage() {
         return;
       }
       const data = await res.json();
-      setContent(data.result || "");
+      const { main, suggestions: extracted } = extractSuggestions(data.result || "");
+      setContent(main);
+      setSuggestions(extracted);
       setAiGenerated(true);
     } catch {
       setGenError("other");
@@ -87,6 +127,16 @@ export default function NewDevisPage() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  function acceptSuggestion(index: number) {
+    const item = suggestions[index];
+    setContent((prev) => `${prev.replace(/\n+$/, "")}\n- ${item}`);
+    setSuggestions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function dismissSuggestion(index: number) {
+    setSuggestions((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSave() {
@@ -161,6 +211,29 @@ export default function NewDevisPage() {
                 </option>
               ))}
             </SelectField>
+            <SelectField
+              label="Type de travaux"
+              value={form.typeTravaux}
+              onChange={(e) => setForm({ ...form, typeTravaux: e.target.value })}
+              hint="Aide Nova à anticiper les prestations à prévoir et le taux de TVA."
+            >
+              <option value="">Non précisé</option>
+              <option value="renovation">Rénovation</option>
+              <option value="neuf">Neuf</option>
+              <option value="entretien">Entretien</option>
+              <option value="depannage">Dépannage</option>
+            </SelectField>
+            <SelectField
+              label="Type de client"
+              value={form.typeClient}
+              onChange={(e) => setForm({ ...form, typeClient: e.target.value })}
+              hint="Pré-rempli depuis la fiche client si rattaché — modifiable."
+            >
+              <option value="">Non précisé</option>
+              <option value="particulier">Particulier</option>
+              <option value="professionnel">Professionnel</option>
+              <option value="collectivite">Collectivité</option>
+            </SelectField>
             <Field
               label="Montant estimé (€)"
               type="number"
@@ -219,6 +292,31 @@ export default function NewDevisPage() {
 
             {genError && <div className="nova-info-banner">{GEN_ERROR_MESSAGE[genError]}</div>}
           </Card>
+
+          {suggestions.length > 0 && (
+            <Card accent={false} className="nova-ai-zone nova-ai-zone-amber">
+              <div className="nova-ai-zone-header">
+                <span className="nova-page-subtitle">Prestations suggérées par Nova</span>
+              </div>
+              <div className="nova-suggestion-list">
+                {suggestions.map((s, i) => (
+                  <div key={`${i}-${s}`} className="nova-suggestion-row">
+                    <span className="nova-suggestion-text">{s}</span>
+                    <div className="nova-suggestion-actions">
+                      <Button type="button" variant="secondary" onClick={() => acceptSuggestion(i)}>
+                        <Check size={14} strokeWidth={2} />
+                        Ajouter
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => dismissSuggestion(i)}>
+                        <X size={14} strokeWidth={2} />
+                        Ignorer
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {saveError && <div className="error">{saveError}</div>}
 
