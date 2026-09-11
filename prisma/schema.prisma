@@ -56,6 +56,7 @@ model Business {
   purchases        Purchase[]
   attachments      Attachment[]
   situations       SituationFacture[]
+  ouvrages         OuvrageType[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -188,6 +189,23 @@ model DevisLine {
   createdAt     DateTime @default(now())
 
   @@index([devisId])
+}
+
+// Bibliothèque d'ouvrages (module B4) : prestations types réutilisables
+// d'un devis à l'autre, pour éviter de ressaisir les mêmes lignes.
+model OuvrageType {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  label          String
+  type           String   // plomberie | electricite | maconnerie | peinture | sol | menuiserie | autre
+  unite          String
+  prixUnitaireHT Float
+  tvaDefaut      Float    @default(20)
+  description    String?
+  createdAt      DateTime @default(now())
+
+  @@index([businessId])
 }
 
 model Task {

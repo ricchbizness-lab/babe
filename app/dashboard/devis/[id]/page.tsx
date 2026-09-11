@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -17,6 +17,7 @@ import {
   Field,
   ProgressBar,
   RelanceIndicator,
+  SearchInput,
   SelectField,
   Skeleton,
   Table,
@@ -30,6 +31,7 @@ import { daysSinceSent } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { computeDevisTotals, lineTotalHT, tvaByRate } from "@/lib/devisTotals";
 import { suggestedTvaRate, TVA_MENTION_LEGALE, TVA_RATES, TYPE_TRAVAUX_TVA_LABEL } from "@/lib/tva";
+import { OUVRAGE_TYPE_LABEL } from "@/lib/validation";
 
 type DevisLineType = "prestation" | "materiel" | "deplacement" | "maindoeuvre" | "autre";
 
@@ -128,6 +130,15 @@ const LINE_TYPE_TONE: Record<DevisLineType, "neutral" | "teal" | "amber" | "succ
   autre: "neutral",
 };
 
+type OuvrageOption = {
+  id: string;
+  label: string;
+  type: string;
+  unite: string;
+  prixUnitaireHT: number;
+  tvaDefaut: number;
+};
+
 type LineFormState = {
   type: DevisLineType;
   description: string;
@@ -178,6 +189,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [deletingSituation, setDeletingSituation] = useState(false);
   const [updatingSituationId, setUpdatingSituationId] = useState<string | null>(null);
 
+  const [ouvragePickerOpen, setOuvragePickerOpen] = useState(false);
+  const [ouvrageOptions, setOuvrageOptions] = useState<OuvrageOption[] | null>(null);
+  const [ouvrageQuery, setOuvrageQuery] = useState("");
+
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
@@ -198,6 +213,13 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       .then((res) => res.json())
       .then((data) => setSituations(data.situations ?? []));
   }, [params.id, devis?.status]);
+
+  useEffect(() => {
+    if (!ouvragePickerOpen || ouvrageOptions !== null) return;
+    fetchWithAuth("/api/ouvrages")
+      .then((res) => res.json())
+      .then((data) => setOuvrageOptions(data.ouvrages ?? []));
+  }, [ouvragePickerOpen, ouvrageOptions]);
 
   // Retour de Stripe Checkout (paiement direct depuis un devis accepté).
   useEffect(() => {
@@ -346,6 +368,22 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   function closeLineModal() {
     setLineForm(null);
     setEditingLineId(null);
+  }
+
+  function selectOuvrage(o: OuvrageOption) {
+    setLineForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            description: o.label,
+            unite: o.unite,
+            prixUnitaire: String(o.prixUnitaireHT),
+            tva: String(o.tvaDefaut),
+          }
+        : prev
+    );
+    setOuvragePickerOpen(false);
+    setOuvrageQuery("");
   }
 
   async function confirmLineSave() {
@@ -974,6 +1012,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       >
         {lineForm && (
           <>
+            {!editingLineId && (
+              <Button type="button" variant="secondary" onClick={() => setOuvragePickerOpen(true)}>
+                <BookOpen size={15} strokeWidth={1.75} />
+                Choisir depuis la bibliothèque
+              </Button>
+            )}
             <SelectField
               label="Type"
               value={lineForm.type}
@@ -1034,6 +1078,45 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         onCancel={() => setDeleteLineTarget(null)}
         confirming={deletingLine}
       />
+
+      {ouvragePickerOpen && (
+        <div className="nova-modal-overlay" onClick={() => setOuvragePickerOpen(false)}>
+          <div
+            className="nova-modal nova-modal-edit"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choisir depuis la bibliothèque"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="nova-modal-title">Choisir depuis la bibliothèque</h3>
+            <SearchInput value={ouvrageQuery} onChange={setOuvrageQuery} placeholder="Rechercher un ouvrage..." />
+            {ouvrageOptions === null ? (
+              <Skeleton style={{ height: 160 }} />
+            ) : (
+              <div className="nova-picker-list">
+                {ouvrageOptions
+                  .filter((o) => o.label.toLowerCase().includes(ouvrageQuery.trim().toLowerCase()))
+                  .map((o) => (
+                    <button key={o.id} type="button" className="nova-picker-row" onClick={() => selectOuvrage(o)}>
+                      <span className="nova-picker-row-label">
+                        {o.label} <Badge tone="neutral">{OUVRAGE_TYPE_LABEL[o.type as keyof typeof OUVRAGE_TYPE_LABEL] || o.type}</Badge>
+                      </span>
+                      <span className="nova-picker-row-price">
+                        {o.prixUnitaireHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € / {o.unite}
+                      </span>
+                    </button>
+                  ))}
+                {ouvrageOptions.length === 0 && <p className="nova-page-subtitle">Bibliothèque vide.</p>}
+              </div>
+            )}
+            <div className="nova-modal-actions">
+              <Button type="button" variant="ghost" onClick={() => setOuvragePickerOpen(false)}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EditModal
         open={situationForm !== null}

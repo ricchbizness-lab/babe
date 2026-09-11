@@ -113,6 +113,29 @@ export const situationFactureUpdateSchema = z.object({
   statut: z.enum(["brouillon", "envoyee", "payee"]).optional(),
 });
 
+export const OUVRAGE_TYPES = ["plomberie", "electricite", "maconnerie", "peinture", "sol", "menuiserie", "autre"] as const;
+
+export const OUVRAGE_TYPE_LABEL: Record<(typeof OUVRAGE_TYPES)[number], string> = {
+  plomberie: "Plomberie",
+  electricite: "Électricité",
+  maconnerie: "Maçonnerie",
+  peinture: "Peinture",
+  sol: "Sol",
+  menuiserie: "Menuiserie",
+  autre: "Autre",
+};
+
+export const ouvrageTypeSchema = z.object({
+  label: z.string().min(1).max(200),
+  type: z.enum(OUVRAGE_TYPES),
+  unite: z.string().min(1).max(20),
+  prixUnitaireHT: z.number().min(0),
+  tvaDefaut: z.number().min(0).max(100).default(20),
+  description: z.string().max(500).optional(),
+});
+
+export const ouvrageTypeUpdateSchema = ouvrageTypeSchema.partial();
+
 export const taskSchema = z.object({
   text: z.string().min(1).max(500),
   projectId: z.string().optional(),
