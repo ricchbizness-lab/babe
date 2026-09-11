@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Download, UserPlus } from "lucide-react";
 import {
   Avatar,
+  Badge,
   Button,
   EmptyState,
   FilterBar,
@@ -15,6 +16,7 @@ import {
   Table,
   TableSkeleton,
   Timestamp,
+  type BadgeTone,
   type TableColumn,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -26,9 +28,21 @@ type ClientRow = {
   email: string | null;
   phone: string | null;
   address: string | null;
+  typeClient: string;
   createdAt: string;
   devis: { amount: number | null; status: string }[];
   projects: { status: string }[];
+};
+
+const CLIENT_TYPE_LABEL: Record<string, string> = {
+  particulier: "Particulier",
+  professionnel: "Pro",
+  collectivite: "Collectivité",
+};
+const CLIENT_TYPE_TONE: Record<string, BadgeTone> = {
+  particulier: "neutral",
+  professionnel: "teal",
+  collectivite: "blue",
 };
 
 function caTotalFor(c: ClientRow): number {
@@ -109,6 +123,11 @@ export default function ClientsPage() {
     { key: "email", label: "Email", render: (c) => c.email || "—" },
     { key: "phone", label: "Téléphone", render: (c) => c.phone || "—" },
     {
+      key: "typeClient",
+      label: "Type",
+      render: (c) => <Badge tone={CLIENT_TYPE_TONE[c.typeClient] || "neutral"}>{CLIENT_TYPE_LABEL[c.typeClient] || c.typeClient}</Badge>,
+    },
+    {
       key: "caTotal",
       label: "CA total",
       align: "right",
@@ -187,7 +206,7 @@ export default function ClientsPage() {
       </FilterBar>
 
       {clients === null ? (
-        <TableSkeleton columns={6} />
+        <TableSkeleton columns={7} />
       ) : clients.length === 0 ? (
         <EmptyState
           icon="crm"

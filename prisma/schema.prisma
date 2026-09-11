@@ -68,6 +68,7 @@ model Client {
   phone     String?
   address   String?
   notes     String?
+  typeClient String  @default("particulier") // particulier | professionnel | collectivite — influence le taux de TVA par défaut du devis (module 9)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

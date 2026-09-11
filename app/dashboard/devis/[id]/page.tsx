@@ -51,7 +51,7 @@ type DevisDetail = {
   notesDevis: string | null;
   createdAt: string;
   updatedAt: string;
-  client: { id: string; name: string } | null;
+  client: { id: string; name: string; typeClient: string } | null;
   lines: DevisLine[];
 };
 
@@ -66,6 +66,17 @@ const STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "dan
   envoye: "blue",
   accepte: "success",
   refuse: "danger",
+};
+
+const CLIENT_TYPE_LABEL: Record<string, string> = {
+  particulier: "Particulier",
+  professionnel: "Pro",
+  collectivite: "Collectivité",
+};
+const CLIENT_TYPE_TONE: Record<string, "neutral" | "teal" | "blue"> = {
+  particulier: "neutral",
+  professionnel: "teal",
+  collectivite: "blue",
 };
 
 const STATUS_ACTIONS: { status: string; label: string; variant: "primary" | "success" | "danger" }[] = [
@@ -106,6 +117,18 @@ const EMPTY_LINE_FORM: LineFormState = {
   prixUnitaire: "",
   tva: "20",
 };
+
+/**
+ * Taux de TVA par défaut proposé pour une nouvelle ligne — 10% pour un
+ * particulier (taux réduit travaux de rénovation, cas le plus courant pour
+ * ce type de client), 20% pour un professionnel/collectivité ou en
+ * l'absence de client rattaché. Approximation assumée : on ne sait pas ici
+ * si le chantier est réellement une rénovation (pas de champ dédié sur le
+ * devis) — le dirigeant reste libre de corriger le taux au cas par cas.
+ */
+function defaultTvaForClient(typeClient: string | undefined): string {
+  return typeClient === "particulier" ? "10" : "20";
+}
 
 export default function DevisDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -273,7 +296,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
 
   function openAddLine() {
     setEditingLineId(null);
-    setLineForm({ ...EMPTY_LINE_FORM });
+    setLineForm({ ...EMPTY_LINE_FORM, tva: defaultTvaForClient(devis?.client?.typeClient) });
   }
 
   function openEditLine(line: DevisLine) {
@@ -471,9 +494,14 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           <h1>{devis.label}</h1>
           <p className="nova-page-subtitle">
             {devis.client ? (
-              <Link href={`/dashboard/clients/${devis.client.id}`} className="nova-inline-link">
-                {devis.client.name}
-              </Link>
+              <>
+                <Link href={`/dashboard/clients/${devis.client.id}`} className="nova-inline-link">
+                  {devis.client.name}
+                </Link>{" "}
+                <Badge tone={CLIENT_TYPE_TONE[devis.client.typeClient] || "neutral"}>
+                  {CLIENT_TYPE_LABEL[devis.client.typeClient] || devis.client.typeClient}
+                </Badge>
+              </>
             ) : (
               "Sans client rattaché"
             )}

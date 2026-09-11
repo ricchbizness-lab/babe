@@ -32,6 +32,7 @@ export const clientSchema = z.object({
   phone: z.string().max(30).optional(),
   address: z.string().max(300).optional(),
   notes: z.string().max(2000).optional(),
+  typeClient: z.enum(["particulier", "professionnel", "collectivite"]).default("particulier"),
 });
 
 export const projectSchema = z.object({

@@ -15,12 +15,14 @@ import {
   ConfirmModal,
   EditModal,
   Field,
+  SelectField,
   Table,
   TableSkeleton,
   Tabs,
   TextareaField,
   Timestamp,
   useToast,
+  type BadgeTone,
   type TableColumn,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -32,6 +34,7 @@ type ClientDetail = {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  typeClient: string;
   createdAt: string;
   projects: {
     id: string;
@@ -42,6 +45,17 @@ type ClientDetail = {
     _count: { voiceReports: number };
   }[];
   devis: { id: string; label: string; status: string; amount: number | null; createdAt: string }[];
+};
+
+const CLIENT_TYPE_LABEL: Record<string, string> = {
+  particulier: "Particulier",
+  professionnel: "Pro",
+  collectivite: "Collectivité",
+};
+const CLIENT_TYPE_TONE: Record<string, BadgeTone> = {
+  particulier: "neutral",
+  professionnel: "teal",
+  collectivite: "blue",
 };
 
 const PROJECT_STATUS_LABEL: Record<string, string> = {
@@ -77,7 +91,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", typeClient: "particulier" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [tab, setTab] = useState<"info" | "chantiers" | "devis" | "activite">("info");
   const [deleteDevisTarget, setDeleteDevisTarget] = useState<ClientDetail["devis"][number] | null>(null);
@@ -102,6 +116,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       phone: client.phone || "",
       address: client.address || "",
       notes: client.notes || "",
+      typeClient: client.typeClient,
     });
     setEditing(true);
   }
@@ -278,7 +293,12 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
         <div className="nova-identity-cell" style={{ gap: 16 }}>
           <Avatar name={client.name} size={56} />
           <div>
-            <h1>{client.name}</h1>
+            <div className="nova-identity-cell" style={{ gap: 8 }}>
+              <h1>{client.name}</h1>
+              <Badge tone={CLIENT_TYPE_TONE[client.typeClient] || "neutral"}>
+                {CLIENT_TYPE_LABEL[client.typeClient] || client.typeClient}
+              </Badge>
+            </div>
             <p className="nova-page-subtitle">
               {client.address || client.email || `Client depuis le ${new Date(client.createdAt).toLocaleDateString("fr-FR")}`}
             </p>
@@ -443,6 +463,15 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
           value={editForm.address}
           onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
         />
+        <SelectField
+          label="Type de client"
+          value={editForm.typeClient}
+          onChange={(e) => setEditForm({ ...editForm, typeClient: e.target.value })}
+        >
+          <option value="particulier">Particulier</option>
+          <option value="professionnel">Professionnel</option>
+          <option value="collectivite">Collectivité</option>
+        </SelectField>
         <TextareaField
           label="Notes"
           rows={3}

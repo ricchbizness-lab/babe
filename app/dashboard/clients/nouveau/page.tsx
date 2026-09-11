@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Breadcrumb, Button, Card, Field, TextareaField, useToast } from "@/components/ui";
+import { Breadcrumb, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
 
@@ -11,7 +11,7 @@ const DRAFT_KEY = "nova_draft_client";
 export default function NewClientPage() {
   const router = useRouter();
   const toast = useToast();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", typeClient: "particulier" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -83,6 +83,15 @@ export default function NewClientPage() {
             onChange={(e) => setForm({ ...form, address: e.target.value })}
             placeholder="12 rue des Lilas, 75011 Paris"
           />
+          <SelectField
+            label="Type de client"
+            value={form.typeClient}
+            onChange={(e) => setForm({ ...form, typeClient: e.target.value })}
+          >
+            <option value="particulier">Particulier</option>
+            <option value="professionnel">Professionnel</option>
+            <option value="collectivite">Collectivité</option>
+          </SelectField>
           <TextareaField
             label="Notes"
             rows={3}
