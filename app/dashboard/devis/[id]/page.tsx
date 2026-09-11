@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, Building2, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { Banknote, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -13,11 +13,14 @@ import {
   Button,
   ConfirmModal,
   EditModal,
+  EmptyState,
   Field,
+  ProgressBar,
   RelanceIndicator,
   SelectField,
   Skeleton,
   Table,
+  Tabs,
   TextareaField,
   Timestamp,
   useToast,
@@ -56,6 +59,28 @@ type DevisDetail = {
   updatedAt: string;
   client: { id: string; name: string; typeClient: string } | null;
   lines: DevisLine[];
+};
+
+type SituationStatut = "brouillon" | "envoyee" | "payee";
+
+type SituationRow = {
+  id: string;
+  numero: number;
+  pourcentageAvancement: number;
+  montantHT: number;
+  statut: SituationStatut;
+  createdAt: string;
+};
+
+const SITUATION_STATUT_LABEL: Record<SituationStatut, string> = {
+  brouillon: "Brouillon",
+  envoyee: "Envoyée",
+  payee: "Payée",
+};
+const SITUATION_STATUT_TONE: Record<SituationStatut, "neutral" | "blue" | "success"> = {
+  brouillon: "neutral",
+  envoyee: "blue",
+  payee: "success",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -145,6 +170,14 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [savingSettings, setSavingSettings] = useState(false);
   const [requestingPayment, setRequestingPayment] = useState(false);
 
+  const [devisTab, setDevisTab] = useState<"lignes" | "situations">("lignes");
+  const [situations, setSituations] = useState<SituationRow[] | null>(null);
+  const [situationForm, setSituationForm] = useState<{ pourcentageAvancement: string; montantHT: string } | null>(null);
+  const [savingSituation, setSavingSituation] = useState(false);
+  const [deleteSituationTarget, setDeleteSituationTarget] = useState<SituationRow | null>(null);
+  const [deletingSituation, setDeletingSituation] = useState(false);
+  const [updatingSituationId, setUpdatingSituationId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
@@ -158,6 +191,13 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       setNotesInput(data.devis.notesDevis || "");
     });
   }, [params.id]);
+
+  useEffect(() => {
+    if (devis?.status !== "accepte") return;
+    fetchWithAuth(`/api/devis/${params.id}/situations`)
+      .then((res) => res.json())
+      .then((data) => setSituations(data.situations ?? []));
+  }, [params.id, devis?.status]);
 
   // Retour de Stripe Checkout (paiement direct depuis un devis accepté).
   useEffect(() => {
@@ -401,6 +441,93 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     setDeleteLineTarget(null);
   }
 
+  function montantTotalDevisHT(d: DevisDetail): number {
+    return d.lines.length > 0 ? computeDevisTotals(d.lines, d.remise || 0).totalHT : d.amount ?? 0;
+  }
+
+  function openCreateSituation() {
+    setSituationForm({ pourcentageAvancement: "0", montantHT: "0" });
+  }
+
+  function handleSituationPctChange(pct: string) {
+    if (!devis) return;
+    const montant = (Number(pct) / 100) * montantTotalDevisHT(devis);
+    setSituationForm({ pourcentageAvancement: pct, montantHT: montant.toFixed(2) });
+  }
+
+  async function confirmSituationSave() {
+    if (!devis || !situationForm) return;
+    setSavingSituation(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${devis.id}/situations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pourcentageAvancement: Number(situationForm.pourcentageAvancement) || 0,
+          montantHT: Number(situationForm.montantHT) || 0,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer la situation.");
+        return;
+      }
+      const data = await res.json();
+      setSituations((prev) => [...(prev ?? []), data.situation]);
+      toast.success("Situation créée");
+      router.refresh();
+      setSituationForm(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingSituation(false);
+    }
+  }
+
+  async function updateSituationStatut(situation: SituationRow, statut: SituationStatut) {
+    setUpdatingSituationId(situation.id);
+    try {
+      const res = await fetchWithAuth(`/api/situations/${situation.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de mettre à jour le statut de cette situation.");
+        return;
+      }
+      const data = await res.json();
+      setSituations((prev) => (prev ? prev.map((s) => (s.id === situation.id ? data.situation : s)) : prev));
+      toast.success(`Situation marquée comme ${SITUATION_STATUT_LABEL[statut].toLowerCase()}`);
+      router.refresh();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setUpdatingSituationId(null);
+    }
+  }
+
+  async function confirmDeleteSituation() {
+    if (!deleteSituationTarget) return;
+    setDeletingSituation(true);
+    try {
+      const res = await fetchWithAuth(`/api/situations/${deleteSituationTarget.id}`, { method: "DELETE" });
+      setDeletingSituation(false);
+      if (res.ok) {
+        const deletedId = deleteSituationTarget.id;
+        setSituations((prev) => (prev ? prev.filter((s) => s.id !== deletedId) : prev));
+        toast.success("Situation supprimée");
+        router.refresh();
+      } else {
+        toast.error("Erreur lors de la suppression de la situation.");
+      }
+    } catch {
+      setDeletingSituation(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    }
+    setDeleteSituationTarget(null);
+  }
+
   async function handleSaveSettings() {
     if (!devis) return;
     setSavingSettings(true);
@@ -631,59 +758,168 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         </Card>
       )}
 
-      <section>
-        <div className="nova-section-header-row">
-          <h2 className="nova-section-title">Lignes du devis</h2>
-          <Button variant="secondary" onClick={openAddLine}>
-            <Plus size={16} strokeWidth={1.75} />
-            Ajouter une ligne
-          </Button>
-        </div>
-        <Table
-          columns={lineColumns}
-          rows={devis.lines}
-          emptyLabel="Aucune ligne pour le moment — ajoutez la première ligne du devis."
+      {devis.status === "accepte" && (
+        <Tabs
+          tabs={[
+            { key: "lignes", label: "Lignes du devis" },
+            { key: "situations", label: "Facturation de situation" },
+          ]}
+          active={devisTab}
+          onChange={setDevisTab}
         />
+      )}
 
-        {devis.lines.length > 0 && (
-          <div className="nova-devis-totals">
-            <div className="nova-devis-totals-row">
-              <span>Sous-total HT</span>
-              <span>{totals.sousTotalHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
-            </div>
-            {remisePct > 0 && (
+      {(devis.status !== "accepte" || devisTab === "lignes") && (
+        <section>
+          <div className="nova-section-header-row">
+            <h2 className="nova-section-title">Lignes du devis</h2>
+            <Button variant="secondary" onClick={openAddLine}>
+              <Plus size={16} strokeWidth={1.75} />
+              Ajouter une ligne
+            </Button>
+          </div>
+          <Table
+            columns={lineColumns}
+            rows={devis.lines}
+            emptyLabel="Aucune ligne pour le moment — ajoutez la première ligne du devis."
+          />
+
+          {devis.lines.length > 0 && (
+            <div className="nova-devis-totals">
               <div className="nova-devis-totals-row">
-                <span>Remise ({remisePct}%)</span>
-                <span>− {totals.remiseMontant.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+                <span>Sous-total HT</span>
+                <span>{totals.sousTotalHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
               </div>
-            )}
-            <div className="nova-devis-totals-row">
-              <span>Total HT</span>
-              <span>{totals.totalHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
-            </div>
-            {tvaBuckets.map((b) => (
-              <div className="nova-devis-totals-row" key={b.rate}>
-                <span>TVA {b.rate}%</span>
-                <span>{b.tva.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+              {remisePct > 0 && (
+                <div className="nova-devis-totals-row">
+                  <span>Remise ({remisePct}%)</span>
+                  <span>− {totals.remiseMontant.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+                </div>
+              )}
+              <div className="nova-devis-totals-row">
+                <span>Total HT</span>
+                <span>{totals.totalHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
               </div>
-            ))}
-            <div className="nova-devis-totals-row nova-devis-totals-ttc">
-              <span>Total TTC</span>
-              <span>{totals.totalTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+              {tvaBuckets.map((b) => (
+                <div className="nova-devis-totals-row" key={b.rate}>
+                  <span>TVA {b.rate}%</span>
+                  <span>{b.tva.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+                </div>
+              ))}
+              <div className="nova-devis-totals-row nova-devis-totals-ttc">
+                <span>Total TTC</span>
+                <span>{totals.totalTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {mentionsLegales.length > 0 && (
-          <div className="nova-tva-mentions">
-            {mentionsLegales.map((mention) => (
-              <p key={mention} className="nova-tva-mention">
-                {mention}
-              </p>
-            ))}
+          {mentionsLegales.length > 0 && (
+            <div className="nova-tva-mentions">
+              {mentionsLegales.map((mention) => (
+                <p key={mention} className="nova-tva-mention">
+                  {mention}
+                </p>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {devis.status === "accepte" && devisTab === "situations" && (
+        <section>
+          <div className="nova-section-header-row">
+            <h2 className="nova-section-title">Facturation de situation</h2>
+            <Button variant="secondary" onClick={openCreateSituation}>
+              <Plus size={16} strokeWidth={1.75} />
+              Créer une situation
+            </Button>
           </div>
-        )}
-      </section>
+
+          {situations === null ? (
+            <Skeleton style={{ height: 120 }} />
+          ) : situations.length === 0 ? (
+            <>
+              <EmptyState
+                icon="facturation"
+                title="Aucune situation pour le moment"
+                description="Facturez ce chantier par avancement plutôt qu'en une seule fois — créez une première situation."
+              />
+              <div className="nova-status-actions">
+                <Button onClick={openCreateSituation}>
+                  <Plus size={16} strokeWidth={1.75} />
+                  Créer une situation
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="nova-situation-progress">
+                <ProgressBar
+                  value={
+                    montantTotalDevisHT(devis) > 0
+                      ? (situations.reduce((sum, s) => sum + s.montantHT, 0) / montantTotalDevisHT(devis)) * 100
+                      : 0
+                  }
+                  label={`${situations
+                    .reduce((sum, s) => sum + s.montantHT, 0)
+                    .toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € facturés sur ${montantTotalDevisHT(devis).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`}
+                />
+              </div>
+
+              <div className="nova-situation-list">
+                {situations.map((s) => (
+                  <Card key={s.id} className="nova-situation-card">
+                    <div className="nova-situation-card-header">
+                      <div>
+                        <span className="nova-cell-title">Situation n°{s.numero}</span>{" "}
+                        <Badge tone={SITUATION_STATUT_TONE[s.statut]}>{SITUATION_STATUT_LABEL[s.statut]}</Badge>
+                      </div>
+                      <span className="nova-cell-amount">{s.montantHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+                    </div>
+                    <p className="nova-page-subtitle">
+                      {s.pourcentageAvancement}% d'avancement · <Timestamp date={s.createdAt} />
+                    </p>
+                    <div className="nova-status-actions">
+                      {s.statut === "brouillon" && (
+                        <Button
+                          variant="secondary"
+                          disabled={updatingSituationId === s.id}
+                          onClick={() => updateSituationStatut(s, "envoyee")}
+                        >
+                          Marquer comme envoyée
+                        </Button>
+                      )}
+                      {s.statut === "envoyee" && (
+                        <Button
+                          variant="success"
+                          disabled={updatingSituationId === s.id}
+                          onClick={() => updateSituationStatut(s, "payee")}
+                        >
+                          Marquer comme payée
+                        </Button>
+                      )}
+                      <Link href={`/dashboard/situations/${s.id}/imprimer`} className="nova-btn nova-btn-secondary">
+                        <FileText size={16} strokeWidth={1.75} />
+                        Voir la facture
+                      </Link>
+                      {s.statut === "payee" && (
+                        <a href={`/api/situations/${s.id}/facturx`} className="nova-btn nova-btn-secondary">
+                          <Download size={16} strokeWidth={1.75} />
+                          Factur-X
+                        </a>
+                      )}
+                      <Button variant="danger" onClick={() => setDeleteSituationTarget(s)}>
+                        <Trash2 size={16} strokeWidth={1.75} />
+                        Supprimer
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       <Card>
         <CardTitle>Remise et notes</CardTitle>
@@ -797,6 +1033,49 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         onConfirm={confirmDeleteLine}
         onCancel={() => setDeleteLineTarget(null)}
         confirming={deletingLine}
+      />
+
+      <EditModal
+        open={situationForm !== null}
+        title="Créer une situation"
+        onCancel={() => setSituationForm(null)}
+        onSave={confirmSituationSave}
+        saving={savingSituation}
+      >
+        {situationForm && (
+          <>
+            <Field label="Numéro" value={`Situation n°${(situations?.length ?? 0) + 1}`} readOnly disabled />
+            <div className="nova-field">
+              <label>Avancement ({situationForm.pourcentageAvancement}%)</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={situationForm.pourcentageAvancement}
+                onChange={(e) => handleSituationPctChange(e.target.value)}
+                className="nova-slider"
+              />
+            </div>
+            <Field
+              label="Montant HT (€)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={situationForm.montantHT}
+              onChange={(e) => setSituationForm({ ...situationForm, montantHT: e.target.value })}
+              hint="Calculé automatiquement depuis le % d'avancement — modifiable manuellement."
+            />
+          </>
+        )}
+      </EditModal>
+
+      <ConfirmModal
+        open={deleteSituationTarget !== null}
+        itemLabel={deleteSituationTarget ? `la situation n°${deleteSituationTarget.numero}` : ""}
+        onConfirm={confirmDeleteSituation}
+        onCancel={() => setDeleteSituationTarget(null)}
+        confirming={deletingSituation}
       />
     </div>
   );

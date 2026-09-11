@@ -102,6 +102,17 @@ export const devisUpdateSchema = z.object({
   clientTypeTVA: z.enum(["particulier", "professionnel", "collectivite"]).optional(),
 });
 
+export const situationFactureSchema = z.object({
+  pourcentageAvancement: z.number().min(0).max(100),
+  montantHT: z.number().min(0),
+});
+
+export const situationFactureUpdateSchema = z.object({
+  pourcentageAvancement: z.number().min(0).max(100).optional(),
+  montantHT: z.number().min(0).optional(),
+  statut: z.enum(["brouillon", "envoyee", "payee"]).optional(),
+});
+
 export const taskSchema = z.object({
   text: z.string().min(1).max(500),
   projectId: z.string().optional(),

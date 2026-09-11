@@ -2504,6 +2504,24 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-style: italic;
 }
 
+.nova-slider {
+  width: 100%;
+  accent-color: var(--nova-teal);
+  height: 6px;
+  cursor: pointer;
+}
+
+.nova-situation-progress { margin-bottom: var(--nova-space-3); }
+.nova-situation-list { display: flex; flex-direction: column; gap: var(--nova-space-2); }
+.nova-situation-card { display: flex; flex-direction: column; gap: var(--nova-space-1); }
+.nova-situation-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+
 /* --- Tâches --- */
 
 .nova-quick-add {

@@ -55,6 +55,7 @@ model Business {
   suppliers        Supplier[]
   purchases        Purchase[]
   attachments      Attachment[]
+  situations       SituationFacture[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -149,9 +150,29 @@ model Devis {
   updatedAt  DateTime @updatedAt
 
   lines DevisLine[]
+  situations SituationFacture[]
 
   @@index([businessId])
   @@index([clientId])
+}
+
+// Facturation de situation (module B2) : dans le BTP un chantier est
+// rarement facturé en une fois — chaque situation facture une partie du
+// devis accepté selon l'avancement réel du chantier.
+model SituationFacture {
+  id                    String   @id @default(cuid())
+  devisId               String
+  devis                 Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  businessId            String
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  numero                Int
+  pourcentageAvancement Float
+  montantHT             Float
+  statut                String   @default("brouillon") // brouillon | envoyee | payee
+  createdAt             DateTime @default(now())
+
+  @@index([devisId])
+  @@index([businessId])
 }
 
 model DevisLine {
