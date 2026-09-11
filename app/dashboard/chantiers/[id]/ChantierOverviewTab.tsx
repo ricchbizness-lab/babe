@@ -4,9 +4,11 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Camera, Plus, Trash2, Upload } from "lucide-react";
 import { Avatar, Badge, Button, ConfirmModal, MetricBar, ProgressBar, useToast, type BadgeTone } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { margeTone } from "@/lib/rentabilite";
 
 type Step = { id: string; title: string; status: string; order: number };
 type Assignment = { id: string; teamMember: { id: string; name: string; role: string | null } };
+type Purchase = { amount: number; status: string };
 
 type OverviewProject = {
   id: string;
@@ -16,6 +18,7 @@ type OverviewProject = {
   tasks: { done: boolean }[];
   assignments: Assignment[];
   steps: Step[];
+  purchases: Purchase[];
 };
 
 const STEP_STATUS_LABEL: Record<string, string> = { a_faire: "À faire", en_cours: "En cours", termine: "Terminé" };
@@ -27,9 +30,11 @@ const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg"];
 
 export function ChantierOverviewTab({
   project,
+  montantFacture,
   onRefresh,
 }: {
   project: OverviewProject;
+  montantFacture: number;
   onRefresh: () => void;
 }) {
   const toast = useToast();
@@ -41,8 +46,12 @@ export function ChantierOverviewTab({
   const [deletingStep, setDeletingStep] = useState(false);
 
   const progressValue = project.tasks.length === 0 ? 0 : (project.tasks.filter((t) => t.done).length / project.tasks.length) * 100;
-  const depenses = 0; // module Achats à venir — 0 tant qu'il n'existe pas
-  const margeEstimee = project.budgetPrevu != null ? project.budgetPrevu - depenses : null;
+  // Rentabilité réelle = facturé - coûts réels (module B3). Les achats annulés
+  // ne sont pas des coûts réels, on les exclut — même règle que
+  // lib/achats.ts#depensesForProject côté page Analyse.
+  const coutsReels = project.purchases.filter((p) => p.status !== "annule").reduce((sum, p) => sum + p.amount, 0);
+  const margeReelle = montantFacture - coutsReels;
+  const margePct = montantFacture > 0 ? (margeReelle / montantFacture) * 100 : 0;
 
   const teamOnSite = (() => {
     const seen = new Set<string>();
@@ -186,8 +195,14 @@ export function ChantierOverviewTab({
       <MetricBar
         items={[
           { label: "Budget prévu", value: project.budgetPrevu != null ? `${project.budgetPrevu.toLocaleString("fr-FR")} €` : "—" },
-          { label: "Dépenses", value: `${depenses.toLocaleString("fr-FR")} €` },
-          { label: "Marge estimée", value: margeEstimee != null ? `${margeEstimee.toLocaleString("fr-FR")} €` : "—" },
+          { label: "Montant facturé", value: `${montantFacture.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €` },
+          { label: "Coûts réels", value: `${coutsReels.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €` },
+          { label: "Marge réelle", value: `${margeReelle.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €` },
+          {
+            label: "Marge %",
+            value:
+              montantFacture > 0 ? <Badge tone={margeTone(margePct)}>{Math.round(margePct)}%</Badge> : "—",
+          },
           { label: "Avancement", value: `${Math.round(progressValue)}%` },
         ]}
       />

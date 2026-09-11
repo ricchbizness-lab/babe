@@ -82,7 +82,9 @@ export default function AnalysePage() {
       {tab === "global" && (
         <AnalyseVueGlobale loading={loading} devis={devis ?? []} projects={projects ?? []} purchases={purchases ?? []} chart={chart} />
       )}
-      {tab === "chantiers" && <AnalyseChantiers loading={loading} projects={projects ?? []} purchases={purchases ?? []} />}
+      {tab === "chantiers" && (
+        <AnalyseChantiers loading={loading} projects={projects ?? []} purchases={purchases ?? []} devis={devis ?? []} />
+      )}
       {tab === "clients" && <AnalyseClients loading={loading} devis={devis ?? []} projects={projects ?? []} />}
       {tab === "commercial" && <AnalyseCommercial loading={loading} devis={devis ?? []} />}
     </div>

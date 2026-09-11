@@ -48,6 +48,7 @@ type ChantierDetail = {
   assignments: { id: string; date: string; note: string | null; teamMember: { id: string; name: string; role: string | null } }[];
   steps: { id: string; title: string; status: string; order: number }[];
   photos: { id: string; imageBase64: string; caption: string | null; createdAt: string }[];
+  purchases: { id: string; amount: number; status: string }[];
 };
 
 type ClientOption = { id: string; name: string };
@@ -420,6 +421,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
   const factureRows = factures
     ? factures.filter((d) => d.status === "accepte" && d.clientId && d.clientId === project.client?.id)
     : null;
+  const montantFacture = (factureRows ?? []).reduce((sum, d) => sum + (d.amount || 0), 0);
 
   return (
     <div className="nova-page">
@@ -485,7 +487,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
 
       {tab === "overview" && (
         <>
-          <ChantierOverviewTab project={project} onRefresh={loadProject} />
+          <ChantierOverviewTab project={project} montantFacture={montantFacture} onRefresh={loadProject} />
           <Card>
             <CardTitle>Détails</CardTitle>
             <dl className="nova-detail-list">

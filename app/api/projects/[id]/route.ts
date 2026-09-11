@@ -17,6 +17,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         assignments: { include: { teamMember: true }, orderBy: { date: "desc" } },
         steps: { orderBy: { order: "asc" } },
         photos: { orderBy: { createdAt: "desc" } },
+        purchases: { orderBy: { createdAt: "desc" } },
       },
     });
     await assertOwnedByBusiness(project, businessId);

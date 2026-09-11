@@ -1265,7 +1265,7 @@ export function RowActionsMenu({
 // MetricBar — bandeau de métriques compactes en haut d'une page liste
 // ---------------------------------------------------------------------------
 
-export function MetricBar({ items }: { items: { label: string; value: string | number }[] }) {
+export function MetricBar({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
     <div className="nova-metric-bar">
       {items.map((item) => (
