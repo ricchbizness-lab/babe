@@ -10,7 +10,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     const existing = await prisma.attachment.findUnique({ where: { id: params.id } });
     await assertOwnedByBusiness(existing, businessId);
 
-    await prisma.attachment.delete({ where: { id: params.id } });
+    await prisma.attachment.delete({ where: { id: params.id, businessId } });
     return NextResponse.json({ success: true });
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);

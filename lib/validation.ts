@@ -186,6 +186,6 @@ export const voiceReportSchema = z.object({
 export const attachmentSchema = z.object({
   name: z.string().min(1).max(200),
   fileBase64: z.string().min(1).max(2_900_000),
-  mimeType: z.string().min(1).max(100),
+  mimeType: z.enum(["application/pdf", "image/png", "image/jpeg"]),
   category: z.enum(["contrat", "attestation", "photo", "autre"]),
 });
