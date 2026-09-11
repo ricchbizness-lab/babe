@@ -6,6 +6,7 @@ import { Check, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, Skeleton, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { clearFormDraft, useFormDraft } from "@/lib/formDraft";
+import { CLIENT_TYPE_TVA_LABEL, TYPE_TRAVAUX_TVA_LABEL } from "@/lib/tva";
 
 const DRAFT_KEY = "nova_draft_devis";
 
@@ -48,8 +49,8 @@ export default function NewDevisPage() {
     clientId: searchParams.get("clientId") || "",
     amount: "",
     description: "",
-    typeTravaux: "",
-    typeClient: "",
+    typeTravauxTVA: "neuf",
+    clientTypeTVA: "professionnel",
   });
   const [stepError, setStepError] = useState("");
 
@@ -75,7 +76,7 @@ export default function NewDevisPage() {
   useEffect(() => {
     if (!form.clientId) return;
     const selected = clients.find((c) => c.id === form.clientId);
-    if (selected) setForm((f) => ({ ...f, typeClient: selected.typeClient }));
+    if (selected) setForm((f) => ({ ...f, clientTypeTVA: selected.typeClient }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId, clients]);
 
@@ -105,8 +106,8 @@ export default function NewDevisPage() {
             clientId: form.clientId || undefined,
             montant: form.amount ? Number(form.amount) : undefined,
             description: form.description,
-            typeTravaux: form.typeTravaux || undefined,
-            typeClient: form.typeClient || undefined,
+            typeTravaux: form.typeTravauxTVA,
+            typeClient: form.clientTypeTVA,
           },
         }),
       });
@@ -152,6 +153,8 @@ export default function NewDevisPage() {
           amount: form.amount ? Number(form.amount) : undefined,
           description: form.description || undefined,
           content,
+          typeTravauxTVA: form.typeTravauxTVA,
+          clientTypeTVA: form.clientTypeTVA,
         }),
       });
       if (!res.ok) {
@@ -212,27 +215,28 @@ export default function NewDevisPage() {
               ))}
             </SelectField>
             <SelectField
-              label="Type de travaux"
-              value={form.typeTravaux}
-              onChange={(e) => setForm({ ...form, typeTravaux: e.target.value })}
-              hint="Aide Nova à anticiper les prestations à prévoir et le taux de TVA."
+              label="Nature des travaux"
+              value={form.typeTravauxTVA}
+              onChange={(e) => setForm({ ...form, typeTravauxTVA: e.target.value })}
+              hint="Détermine le taux de TVA suggéré sur les lignes du devis (obligation légale) et aide Nova à anticiper les prestations à prévoir."
             >
-              <option value="">Non précisé</option>
-              <option value="renovation">Rénovation</option>
-              <option value="neuf">Neuf</option>
-              <option value="entretien">Entretien</option>
-              <option value="depannage">Dépannage</option>
+              {Object.entries(TYPE_TRAVAUX_TVA_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </SelectField>
             <SelectField
               label="Type de client"
-              value={form.typeClient}
-              onChange={(e) => setForm({ ...form, typeClient: e.target.value })}
-              hint="Pré-rempli depuis la fiche client si rattaché — modifiable."
+              value={form.clientTypeTVA}
+              onChange={(e) => setForm({ ...form, clientTypeTVA: e.target.value })}
+              hint="Pré-rempli depuis la fiche client si rattaché — modifiable. Détermine aussi le taux de TVA suggéré."
             >
-              <option value="">Non précisé</option>
-              <option value="particulier">Particulier</option>
-              <option value="professionnel">Professionnel</option>
-              <option value="collectivite">Collectivité</option>
+              {Object.entries(CLIENT_TYPE_TVA_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </SelectField>
             <Field
               label="Montant estimé (€)"

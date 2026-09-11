@@ -51,6 +51,8 @@ export async function POST(req: Request) {
         content: parsed.data.content || "",
         remise: parsed.data.remise,
         notesDevis: parsed.data.notesDevis,
+        typeTravauxTVA: parsed.data.typeTravauxTVA,
+        clientTypeTVA: parsed.data.clientTypeTVA,
         businessId,
         lines: parsed.data.lines ? { create: parsed.data.lines } : undefined,
       },

@@ -25,7 +25,8 @@ import {
 } from "@/components/ui";
 import { daysSinceSent } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
-import { computeDevisTotals, lineTotalHT } from "@/lib/devisTotals";
+import { computeDevisTotals, lineTotalHT, tvaByRate } from "@/lib/devisTotals";
+import { suggestedTvaRate, TVA_MENTION_LEGALE, TVA_RATES, TYPE_TRAVAUX_TVA_LABEL } from "@/lib/tva";
 
 type DevisLineType = "prestation" | "materiel" | "deplacement" | "maindoeuvre" | "autre";
 
@@ -49,6 +50,8 @@ type DevisDetail = {
   content: string;
   remise: number | null;
   notesDevis: string | null;
+  typeTravauxTVA: string;
+  clientTypeTVA: string;
   createdAt: string;
   updatedAt: string;
   client: { id: string; name: string; typeClient: string } | null;
@@ -117,18 +120,6 @@ const EMPTY_LINE_FORM: LineFormState = {
   prixUnitaire: "",
   tva: "20",
 };
-
-/**
- * Taux de TVA par défaut proposé pour une nouvelle ligne — 10% pour un
- * particulier (taux réduit travaux de rénovation, cas le plus courant pour
- * ce type de client), 20% pour un professionnel/collectivité ou en
- * l'absence de client rattaché. Approximation assumée : on ne sait pas ici
- * si le chantier est réellement une rénovation (pas de champ dédié sur le
- * devis) — le dirigeant reste libre de corriger le taux au cas par cas.
- */
-function defaultTvaForClient(typeClient: string | undefined): string {
-  return typeClient === "particulier" ? "10" : "20";
-}
 
 export default function DevisDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -295,8 +286,9 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   }
 
   function openAddLine() {
+    if (!devis) return;
     setEditingLineId(null);
-    setLineForm({ ...EMPTY_LINE_FORM, tva: defaultTvaForClient(devis?.client?.typeClient) });
+    setLineForm({ ...EMPTY_LINE_FORM, tva: String(suggestedTvaRate(devis.typeTravauxTVA, devis.clientTypeTVA)) });
   }
 
   function openEditLine(line: DevisLine) {
@@ -362,6 +354,29 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setSavingLine(false);
+    }
+  }
+
+  async function updateLineTva(line: DevisLine, tva: number) {
+    if (!devis) return;
+    const previousLines = devis.lines;
+    setDevis((prev) => (prev ? { ...prev, lines: prev.lines.map((l) => (l.id === line.id ? { ...l, tva } : l)) } : prev));
+    try {
+      const res = await fetchWithAuth(`/api/devis-lines/${line.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tva }),
+      });
+      if (!res.ok) {
+        setDevis((prev) => (prev ? { ...prev, lines: previousLines } : prev));
+        toast.error("Impossible de mettre à jour le taux de TVA de cette ligne.");
+        return;
+      }
+      toast.success("Taux de TVA mis à jour");
+      router.refresh();
+    } catch {
+      setDevis((prev) => (prev ? { ...prev, lines: previousLines } : prev));
+      toast.error("Impossible de joindre le serveur — réessayez.");
     }
   }
 
@@ -435,6 +450,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
 
   const remisePct = devis.remise || 0;
   const totals = computeDevisTotals(devis.lines, remisePct);
+  const tvaBuckets = tvaByRate(devis.lines, remisePct);
+  const mentionsLegales = tvaBuckets
+    .map((b) => TVA_MENTION_LEGALE[String(b.rate)])
+    .filter((m): m is string => Boolean(m));
 
   const lineColumns: TableColumn<DevisLine>[] = [
     {
@@ -451,7 +470,26 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       align: "right",
       render: (l) => `${l.prixUnitaire.toLocaleString("fr-FR")} €`,
     },
-    { key: "tva", label: "TVA %", align: "right", render: (l) => `${l.tva}%` },
+    {
+      key: "tva",
+      label: "TVA %",
+      align: "right",
+      render: (l) => (
+        <select
+          className="nova-inline-select"
+          value={String(l.tva)}
+          onChange={(e) => updateLineTva(l, Number(e.target.value))}
+          aria-label={`Taux de TVA pour ${l.description}`}
+        >
+          {!TVA_RATES.includes(l.tva as (typeof TVA_RATES)[number]) && <option value={String(l.tva)}>{l.tva}%</option>}
+          {TVA_RATES.map((rate) => (
+            <option key={rate} value={rate}>
+              {rate}%
+            </option>
+          ))}
+        </select>
+      ),
+    },
     {
       key: "totalHT",
       label: "Total HT",
@@ -504,7 +542,8 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
               </>
             ) : (
               "Sans client rattaché"
-            )}
+            )}{" "}
+            <Badge tone="neutral">{TYPE_TRAVAUX_TVA_LABEL[devis.typeTravauxTVA] || devis.typeTravauxTVA}</Badge>
             {devis.amount != null && <> · {devis.amount.toLocaleString("fr-FR")} €</>}
           </p>
         </div>
@@ -622,14 +661,26 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
               <span>Total HT</span>
               <span>{totals.totalHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
             </div>
-            <div className="nova-devis-totals-row">
-              <span>TVA</span>
-              <span>{totals.totalTVA.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
-            </div>
+            {tvaBuckets.map((b) => (
+              <div className="nova-devis-totals-row" key={b.rate}>
+                <span>TVA {b.rate}%</span>
+                <span>{b.tva.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
+              </div>
+            ))}
             <div className="nova-devis-totals-row nova-devis-totals-ttc">
               <span>Total TTC</span>
               <span>{totals.totalTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</span>
             </div>
+          </div>
+        )}
+
+        {mentionsLegales.length > 0 && (
+          <div className="nova-tva-mentions">
+            {mentionsLegales.map((mention) => (
+              <p key={mention} className="nova-tva-mention">
+                {mention}
+              </p>
+            ))}
           </div>
         )}
       </section>

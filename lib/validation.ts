@@ -85,6 +85,8 @@ export const devisSchema = z.object({
   content: z.string().max(20000).optional(),
   remise: z.number().min(0).max(100).optional(),
   notesDevis: z.string().max(2000).optional(),
+  typeTravauxTVA: z.enum(["neuf", "renovation", "energie", "entretien"]).default("neuf"),
+  clientTypeTVA: z.enum(["particulier", "professionnel", "collectivite"]).default("professionnel"),
   lines: z.array(devisLineSchema).optional(),
 });
 
@@ -96,6 +98,8 @@ export const devisUpdateSchema = z.object({
   content: z.string().max(20000).optional(),
   remise: z.number().min(0).max(100).optional(),
   notesDevis: z.string().max(2000).optional(),
+  typeTravauxTVA: z.enum(["neuf", "renovation", "energie", "entretien"]).optional(),
+  clientTypeTVA: z.enum(["particulier", "professionnel", "collectivite"]).optional(),
 });
 
 export const taskSchema = z.object({

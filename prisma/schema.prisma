@@ -143,6 +143,8 @@ model Devis {
   content    String   // texte du devis généré (génération IA en texte libre — coexiste avec les lignes détaillées)
   remise     Float?   // pourcentage de remise appliqué au total
   notesDevis String?  // conditions, délais, remarques affichés sur le devis
+  typeTravauxTVA String @default("neuf") // neuf | renovation | energie | entretien — détermine le taux de TVA suggéré sur les lignes (module B1, obligation légale BTP)
+  clientTypeTVA  String @default("professionnel") // particulier | professionnel | collectivite — détermine le taux de TVA suggéré sur les lignes (module B1)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
