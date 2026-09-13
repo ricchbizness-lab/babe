@@ -723,6 +723,17 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-amber { background: var(--nova-badge-amber-bg); color: var(--nova-badge-amber-text); }
 .nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
 .nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
+.nova-facturx-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--nova-badge-success-bg);
+  color: var(--nova-badge-success-text);
+  cursor: default;
+}
 
 .nova-timestamp {
   font-family: var(--nova-font-mono);
@@ -1633,7 +1644,9 @@ button.primary:hover { background: var(--nova-teal-deep); }
   z-index: 30;
 }
 .nova-row-actions-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
   text-align: left;
   padding: var(--nova-space-1) var(--nova-space-2);
@@ -1644,6 +1657,20 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-row-actions-item:hover { background: var(--nova-teal-tint); color: var(--nova-teal-deep); }
 .nova-row-actions-item-danger:hover { background: var(--nova-danger-tint); color: var(--nova-danger); }
+.nova-download-menu-panel { min-width: 280px; }
+.nova-download-menu-item-row { display: flex; align-items: center; gap: 4px; }
+.nova-download-menu-link { flex: 1; min-width: 0; }
+.nova-download-menu-info {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--nova-ink-faint);
+  cursor: help;
+}
+.nova-download-menu-info:hover { color: var(--nova-teal); }
 
 .nova-activity-type { display: flex; align-items: center; gap: var(--nova-space-1); }
 .nova-activity-type-icon {

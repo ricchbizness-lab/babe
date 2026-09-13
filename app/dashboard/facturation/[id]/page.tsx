@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Printer } from "lucide-react";
+import { ChevronDown, Download, Info, Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
 import { PrintableDocument } from "@/components/PrintableDocument";
 import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
@@ -50,6 +50,24 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
   const [numero, setNumero] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!downloadMenuOpen) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDownloadMenuOpen(false);
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target as Node)) setDownloadMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [downloadMenuOpen]);
 
   useEffect(() => {
     Promise.all([
@@ -139,20 +157,51 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
             {markingPaid ? "Mise à jour..." : "Marquer comme payée"}
           </Button>
         )}
-        <Button onClick={() => window.print()}>
-          <Printer size={16} strokeWidth={1.75} />
-          Imprimer / Télécharger PDF
-        </Button>
-        <a href={`/api/factures/${devis.id}/facturx`} className="nova-btn nova-btn-secondary">
-          <Download size={16} strokeWidth={1.75} />
-          Télécharger Factur-X
-        </a>
+        <div className="nova-row-actions" ref={downloadMenuRef}>
+          <Button
+            onClick={() => setDownloadMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={downloadMenuOpen}
+          >
+            <Download size={16} strokeWidth={1.75} />
+            Télécharger
+            <ChevronDown size={14} strokeWidth={1.75} />
+          </Button>
+          {downloadMenuOpen && (
+            <div className="nova-row-actions-panel nova-download-menu-panel" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="nova-row-actions-item"
+                onClick={() => {
+                  setDownloadMenuOpen(false);
+                  window.print();
+                }}
+              >
+                <Printer size={14} strokeWidth={1.75} />
+                PDF standard
+              </button>
+              <div className="nova-download-menu-item-row">
+                <a
+                  href={`/api/factures/${devis.id}/facturx`}
+                  role="menuitem"
+                  className="nova-row-actions-item nova-download-menu-link"
+                  onClick={() => setDownloadMenuOpen(false)}
+                >
+                  <Download size={14} strokeWidth={1.75} />
+                  Factur-X (conformité légale)
+                </a>
+                <span
+                  className="nova-download-menu-info"
+                  title="Format Factur-X — conforme à la réforme française de facturation électronique (réception obligatoire depuis le 1er septembre 2026, émission via plateforme agréée prévue avant septembre 2027)."
+                >
+                  <Info size={14} strokeWidth={1.75} />
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      <p className="nova-page-subtitle nova-no-print">
-        Format Factur-X — conforme à la réforme française de facturation électronique (réception obligatoire depuis
-        le 1er septembre 2026, émission via plateforme agréée prévue avant septembre 2027).
-      </p>
 
       <PrintableDocument
         kind="facture"

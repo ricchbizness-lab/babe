@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Download, Send, X } from "lucide-react";
+import { ChevronRight, Download, FileCheck, Send, X } from "lucide-react";
 import {
   Badge,
   Button,
@@ -250,7 +250,11 @@ export default function FacturationPage() {
     {
       key: "facturx",
       label: "Factur-X",
-      render: () => <Badge tone="success">Factur-X ✓</Badge>,
+      render: () => (
+        <span className="nova-facturx-indicator" title="Factur-X disponible">
+          <FileCheck size={16} strokeWidth={1.75} />
+        </span>
+      ),
     },
     {
       key: "paymentStatus",
