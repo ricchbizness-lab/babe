@@ -193,7 +193,7 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
                 </a>
                 <span
                   className="nova-download-menu-info"
-                  title="Format Factur-X — conforme à la réforme française de facturation électronique (réception obligatoire depuis le 1er septembre 2026, émission via plateforme agréée prévue avant septembre 2027)."
+                  title="Format PDF avec XML embarqué, conforme à la réforme française de facturation électronique"
                 >
                   <Info size={14} strokeWidth={1.75} />
                 </span>

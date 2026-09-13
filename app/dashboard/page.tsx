@@ -186,7 +186,7 @@ export default function DashboardPage() {
       key: "amount",
       label: "Montant",
       align: "right",
-      render: (row) => (row.amount != null ? `${row.amount.toLocaleString("fr-FR")} €` : "—"),
+      render: (row) => (row.amount != null ? `${row.amount.toLocaleString("fr-FR")} €` : "—"),
     },
     { key: "status", label: "Statut", render: statusBadge },
     { key: "date", label: "Date", render: (row) => <Timestamp date={row.date} /> },
@@ -236,7 +236,7 @@ export default function DashboardPage() {
           <StatCard
             icon={<TrendingUp size={20} strokeWidth={1.75} />}
             tone="teal"
-            value={`${data.metrics.caFacture.toLocaleString("fr-FR")} €`}
+            value={`${data.metrics.caFacture.toLocaleString("fr-FR")} €`}
             label="CA facturé"
             sublabel="Devis acceptés"
           />
