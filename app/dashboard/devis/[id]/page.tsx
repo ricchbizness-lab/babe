@@ -1058,15 +1058,11 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
               value={lineForm.prixUnitaire}
               onChange={(e) => setLineForm({ ...lineForm, prixUnitaire: e.target.value })}
             />
-            <Field
-              label="TVA (%)"
-              type="number"
-              min="0"
-              max="100"
-              step="0.5"
-              value={lineForm.tva}
-              onChange={(e) => setLineForm({ ...lineForm, tva: e.target.value })}
-            />
+            <SelectField label="TVA" value={lineForm.tva} onChange={(e) => setLineForm({ ...lineForm, tva: e.target.value })}>
+              <option value="20">20% — Taux normal (travaux neufs, pro)</option>
+              <option value="10">10% — Taux réduit (rénovation logement &gt; 2 ans)</option>
+              <option value="5.5">5.5% — Taux super-réduit (amélioration énergétique)</option>
+            </SelectField>
           </>
         )}
       </EditModal>

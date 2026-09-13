@@ -3,23 +3,22 @@ import { anthropic, buildSystemPrompt, type BusinessContext } from "@/lib/anthro
 export const MODULE_INSTRUCTIONS: Record<string, string> = {
   brief: "Génère un brief du jour : 3 à 5 priorités concrètes pour aujourd'hui, adaptées au secteur de l'entreprise.",
   devis:
-    "Rédige un devis professionnel à partir des informations fournies (client, prestation, montant, détails). Le montant fourni est déjà définitif : reprends-le tel quel dans le texte, sans le recalculer, sans ajouter de TVA ni de répartition HT/TTC de ton fait. " +
-    "Si les modalités de paiement ne sont pas fournies, utilise par défaut \"30% à la commande, solde à réception\". Si le délai d'exécution n'est pas fourni, utilise par défaut \"À convenir selon planning\". " +
-    "Structure le contenu avec des bullet points précédés d'un tiret (-) pour chaque prestation. Format attendu :\n" +
-    "TITRE : [objet du devis]\n" +
-    "- prestation 1\n" +
-    "- prestation 2\n" +
-    "- prestation 3\n" +
-    "Respecte ce format avec des sauts de ligne entre chaque section (coordonnées, prestations, modalités, délai). Chaque titre de section est écrit en MAJUSCULES suivi de deux-points. Texte clair uniquement, sans aucun symbole de formatage Markdown autre que le tiret de liste.\n\n" +
-    "Tu es un artisan BTP expérimenté. Quand tu rédiges un devis, tu enrichis systématiquement la liste des prestations avec les étapes que le client a oubliées de mentionner mais qui sont nécessaires pour une exécution professionnelle du chantier. " +
-    "Tu signales clairement les prestations que tu as ajoutées avec la mention (suggéré) en fin de ligne — par exemple \"- Évacuation des déchets (suggéré)\". Le client peut les retirer s'il le souhaite. " +
-    "Tu adaptes le taux de TVA mentionné selon le type de client et la nature des travaux fournis en input (typeClient, typeTravaux) : 20% pour un professionnel, une collectivité, ou des travaux neufs ; 10% pour un particulier en rénovation ou entretien d'un logement de plus de 2 ans ; 5.5% pour des travaux d'amélioration énergétique chez un particulier (isolation, chaudière, pompe à chaleur) — mentionne ce taux dans le devis sans recalculer le montant global fourni.\n\n" +
-    "Base de connaissances BTP par type de travaux — utilise-la pour repérer les étapes manquantes selon le type de travaux fourni en input (typeTravaux) et la description :\n" +
-    "- Pose de revêtement de sol : état des lieux du support, ragréage si nécessaire, primaire d'accrochage, pose, plinthes/finitions, évacuation des déchets.\n" +
-    "- Plomberie sanitaire : coupure de l'alimentation en eau, dépose de l'ancien équipement, fourniture et pose du nouvel équipement, raccordements, test d'étanchéité, remise en service.\n" +
-    "- Peinture : protection des surfaces, rebouchage, ponçage, impression, couches de finition, nettoyage.\n" +
-    "- Électricité : mise hors tension, dépose de l'ancien câblage si nécessaire, fourniture et pose, test de conformité, mise sous tension.\n" +
-    "N'ajoute une étape suggérée que si elle est réellement pertinente pour les travaux décrits — ne force jamais une étape hors sujet dans la base de connaissances ci-dessus.",
+    "Tu es un artisan BTP expérimenté. Génère un devis complet au format JSON strict — rien d'autre que le JSON dans ta réponse, aucun texte autour.\n\n" +
+    "Règles :\n" +
+    "- Complète avec les prestations oubliées selon le type de travaux\n" +
+    "- Prix moyens du marché français 2026\n" +
+    "- TVA : 20% neuf/pro, 10% rénovation particulier, 5.5% énergie\n" +
+    "- Inclure toujours : préparation + prestations principales + finitions + évacuation déchets\n" +
+    "- Jamais de prix à 0\n" +
+    "- Entre 4 et 10 lignes maximum\n\n" +
+    "Prestations à inclure selon contexte :\n" +
+    "SOL : dépose, ragréage si rénovation, fourniture (m²), pose (m²), plinthes (ml), évacuation\n" +
+    "PLOMBERIE : dépose si rénovation, fourniture, pose et raccordements, test étanchéité\n" +
+    "PEINTURE : protection, rebouchage/ponçage, impression, finition, nettoyage\n" +
+    "ÉLECTRICITÉ : mise hors tension, fourniture, pose, test conformité\n" +
+    "MAÇONNERIE : protection, travaux, évacuation gravats, nettoyage\n\n" +
+    "Format JSON attendu :\n" +
+    '{"titre": "...", "description": "...", "lignes": [{"type": "prestation|materiel|maindoeuvre|deplacement", "description": "...", "quantite": 1, "unite": "h|m²|ml|forfait|unité", "prixUnitaireHT": 0, "tva": 10}], "conditions": "..."}',
   marketing: "Rédige un post pour la plateforme indiquée, adapté au ton de l'entreprise.",
   conseil: "Donne un conseil métier actionnable pour la semaine, adapté au secteur.",
   reponse_client: "Rédige une réponse professionnelle au message client fourni.",
