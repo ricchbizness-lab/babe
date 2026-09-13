@@ -189,11 +189,11 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
                   onClick={() => setDownloadMenuOpen(false)}
                 >
                   <Download size={14} strokeWidth={1.75} />
-                  Factur-X (conformité légale)
+                  Factur-X ✓
                 </a>
                 <span
                   className="nova-download-menu-info"
-                  title="Format PDF avec XML embarqué, conforme à la réforme française de facturation électronique"
+                  title="PDF avec XML embarqué, conforme à la réforme française de facturation électronique"
                 >
                   <Info size={14} strokeWidth={1.75} />
                 </span>

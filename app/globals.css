@@ -730,8 +730,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--nova-badge-success-bg);
-  color: var(--nova-badge-success-text);
+  background: var(--nova-teal-tint);
+  color: var(--nova-teal);
   cursor: default;
 }
 
