@@ -23,6 +23,7 @@ model User {
   business     Business?
   subscription Subscription?
   pushSubscriptions PushSubscription[]
+  langue       String        @default("fr") // fr | en | ar | pt — langue d'interface pour les pages terrain (sprint 1, point 2)
 }
 
 // Abonnements navigateur aux notifications push (module PWA, sprint 1

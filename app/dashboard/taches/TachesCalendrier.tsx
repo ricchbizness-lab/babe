@@ -1,18 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, monthGrid, toDateKey } from "@/lib/dates";
+import { LOCALE_TO_BCP47, resolveLocale } from "@/lib/i18n";
 import type { TaskRow } from "./page";
 
-const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-
-function formatMonthYear(date: Date): string {
-  const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+function formatMonthYear(date: Date, bcp47: string): string {
+  const label = date.toLocaleDateString(bcp47, { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export function TachesCalendrier({ tasks, onToggle }: { tasks: TaskRow[]; onToggle: (task: TaskRow) => void }) {
+  const t = useTranslations("taches");
+  const locale = resolveLocale(useLocale());
+  const WEEKDAY_LABELS = [
+    t("weekdayMon"),
+    t("weekdayTue"),
+    t("weekdayWed"),
+    t("weekdayThu"),
+    t("weekdayFri"),
+    t("weekdaySat"),
+    t("weekdaySun"),
+  ];
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -35,7 +46,7 @@ export function TachesCalendrier({ tasks, onToggle }: { tasks: TaskRow[]; onTogg
         <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setViewMonth((m) => addMonths(m, -1))}>
           <ChevronLeft size={16} strokeWidth={1.75} />
         </button>
-        <span className="nova-calendar-month-label">{formatMonthYear(viewMonth)}</span>
+        <span className="nova-calendar-month-label">{formatMonthYear(viewMonth, LOCALE_TO_BCP47[locale])}</span>
         <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setViewMonth((m) => addMonths(m, 1))}>
           <ChevronRight size={16} strokeWidth={1.75} />
         </button>

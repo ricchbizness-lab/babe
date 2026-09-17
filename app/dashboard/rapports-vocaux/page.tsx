@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Mic, Trash2 } from "lucide-react";
 import { Badge, ConfirmModal, EmptyState, MetricBar, Table, TableSkeleton, Timestamp, useToast, type TableColumn } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -18,6 +19,8 @@ type ReportRow = {
 export default function RapportsVocauxPage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useTranslations("rapportsVocaux");
+  const tCommon = useTranslations("common");
   const [reports, setReports] = useState<ReportRow[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -36,14 +39,14 @@ export default function RapportsVocauxPage() {
       setDeleting(false);
       if (res.ok) {
         setReports((prev) => (prev ?? []).filter((r) => r.id !== deleteTarget.id));
-        toast.success("Rapport supprimé");
+        toast.success(t("toastDeleted"));
         router.refresh();
       } else {
-        toast.error("Erreur lors de la suppression du rapport.");
+        toast.error(t("toastDeleteError"));
       }
     } catch {
       setDeleting(false);
-      toast.error("Impossible de joindre le serveur — réessayez.");
+      toast.error(tCommon("networkError"));
     }
     setDeleteTarget(null);
   }
@@ -56,7 +59,7 @@ export default function RapportsVocauxPage() {
   const columns: TableColumn<ReportRow>[] = [
     {
       key: "authorLabel",
-      label: "Auteur",
+      label: t("columnAuthor"),
       render: (r) => (
         <span className="nova-identity-cell">
           <span className="nova-report-icon">
@@ -68,7 +71,7 @@ export default function RapportsVocauxPage() {
     },
     {
       key: "project",
-      label: "Chantier",
+      label: t("columnProject"),
       render: (r) =>
         r.project ? (
           <Link href={`/dashboard/chantiers/${r.project.id}`}>
@@ -78,8 +81,8 @@ export default function RapportsVocauxPage() {
           "—"
         ),
     },
-    { key: "summary", label: "Résumé", render: (r) => <span className="nova-truncate">{r.summary}</span> },
-    { key: "createdAt", label: "Le", render: (r) => <Timestamp date={r.createdAt} /> },
+    { key: "summary", label: t("columnSummary"), render: (r) => <span className="nova-truncate">{r.summary}</span> },
+    { key: "createdAt", label: t("columnDate"), render: (r) => <Timestamp date={r.createdAt} /> },
     {
       key: "actions",
       label: "",
@@ -89,7 +92,7 @@ export default function RapportsVocauxPage() {
           type="button"
           className="nova-icon-btn"
           onClick={() => setDeleteTarget(r)}
-          aria-label={`Supprimer le rapport de ${r.authorLabel}`}
+          aria-label={t("deleteReport", { name: r.authorLabel })}
         >
           <Trash2 size={15} strokeWidth={1.75} />
         </button>
@@ -101,23 +104,21 @@ export default function RapportsVocauxPage() {
     <div className="nova-page">
       <header className="nova-page-header-row">
         <div>
-          <h1>Rapports vocaux</h1>
-          <p className="nova-page-subtitle">
-            {reports === null ? "…" : `${reports.length} rapport${reports.length > 1 ? "s" : ""}`}
-          </p>
+          <h1>{t("title")}</h1>
+          <p className="nova-page-subtitle">{reports === null ? "…" : t("countLabel", { count: reports.length })}</p>
         </div>
         <Link href="/dashboard/rapports-vocaux/nouveau" className="nova-btn nova-btn-primary">
           <Mic size={16} strokeWidth={1.75} />
-          Nouveau rapport
+          {t("newReport")}
         </Link>
       </header>
 
       {reports !== null && reports.length > 0 && (
         <MetricBar
           items={[
-            { label: "Total rapports", value: reports.length },
-            { label: "Cette semaine", value: cetteSemaineCount },
-            { label: "Chantiers couverts", value: chantiersCouverts },
+            { label: t("metricTotal"), value: reports.length },
+            { label: t("metricThisWeek"), value: cetteSemaineCount },
+            { label: t("metricProjectsCovered"), value: chantiersCouverts },
           ]}
         />
       )}
@@ -127,9 +128,9 @@ export default function RapportsVocauxPage() {
       ) : reports.length === 0 ? (
         <EmptyState
           icon="rapports-vocaux"
-          title="Aucun rapport vocal pour l'instant"
-          description="Les comptes rendus terrain de vos équipes apparaîtront ici, résumés automatiquement."
-          actionLabel="Ajouter un rapport"
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          actionLabel={t("emptyAction")}
           actionHref="/dashboard/rapports-vocaux/nouveau"
         />
       ) : (
@@ -138,7 +139,7 @@ export default function RapportsVocauxPage() {
 
       <ConfirmModal
         open={deleteTarget !== null}
-        itemLabel={deleteTarget ? `le rapport de ${deleteTarget.authorLabel}` : ""}
+        itemLabel={deleteTarget ? t("deleteConfirmItem", { name: deleteTarget.authorLabel }) : ""}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirming={deleting}

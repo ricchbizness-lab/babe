@@ -1,29 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui";
 import type { TaskRow } from "./page";
 
-const COLUMNS: { key: string; label: string; match: (t: TaskRow) => boolean }[] = [
+const COLUMNS: { key: string; labelKey: "kanbanAFaire" | "kanbanEnCours" | "kanbanEnAttente" | "kanbanTerminees"; match: (t: TaskRow) => boolean }[] = [
   {
     key: "a_faire",
-    label: "À faire",
+    labelKey: "kanbanAFaire",
     match: (t) => !t.done && !t.dueDate && t.project?.status !== "en_cours",
   },
   {
     key: "en_cours",
-    label: "En cours",
+    labelKey: "kanbanEnCours",
     match: (t) => !t.done && t.project?.status === "en_cours",
   },
   {
     key: "en_attente",
-    label: "En attente",
+    labelKey: "kanbanEnAttente",
     match: (t) => !t.done && !!t.dueDate && t.project?.status !== "en_cours",
   },
   {
     key: "terminees",
-    label: "Terminées",
+    labelKey: "kanbanTerminees",
     match: (t) => t.done,
   },
 ];
@@ -42,6 +43,7 @@ export function TachesKanban({
   onToggle: (task: TaskRow) => void;
   onDelete: (task: TaskRow) => void;
 }) {
+  const tt = useTranslations("taches");
   return (
     <div className="nova-kanban">
       {COLUMNS.map((col) => {
@@ -53,13 +55,13 @@ export function TachesKanban({
           <div className="nova-kanban-column" key={col.key}>
             <div className="nova-kanban-column-header">
               <div className="nova-kanban-column-title">
-                <span className="nova-kanban-column-name">{col.label}</span>
+                <span className="nova-kanban-column-name">{tt(col.labelKey)}</span>
                 <span className="nova-kanban-column-count">{items.length}</span>
               </div>
             </div>
             <div className="nova-kanban-column-body">
               {items.length === 0 ? (
-                <div className="nova-kanban-empty">Aucune tâche</div>
+                <div className="nova-kanban-empty">{tt("kanbanNoTask")}</div>
               ) : (
                 items.map((t) => (
                   <div key={t.id} className="nova-kanban-card nova-task-kanban-card">
@@ -69,14 +71,14 @@ export function TachesKanban({
                         className="nova-checkbox"
                         checked={t.done}
                         onChange={() => onToggle(t)}
-                        aria-label={t.done ? "Marquer comme non faite" : "Marquer comme faite"}
+                        aria-label={t.done ? tt("markUndone") : tt("markDone")}
                       />
                       <span className={t.done ? "nova-task-text-done" : "nova-task-kanban-text"}>{t.text}</span>
                       <button
                         type="button"
                         className="nova-icon-btn"
                         onClick={() => onDelete(t)}
-                        aria-label="Supprimer la tâche"
+                        aria-label={tt("deleteTask")}
                       >
                         <Trash2 size={14} strokeWidth={1.75} />
                       </button>

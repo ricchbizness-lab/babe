@@ -8,6 +8,7 @@ export const registerSchema = z.object({
 export const userSchema = z.object({
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
+  langue: z.enum(["fr", "en", "ar", "pt"]).optional(),
 });
 
 export const businessSchema = z.object({

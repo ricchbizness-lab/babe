@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
@@ -1811,25 +1812,25 @@ export function GlobalSearch() {
 // Sidebar — navigation fixe de la plateforme
 // ---------------------------------------------------------------------------
 
-export const NAV_ITEMS: { href: string; label: string; icon: IconKey }[] = [
-  { href: "/dashboard", label: "Vue d'ensemble", icon: "dashboard" },
-  { href: "/dashboard/clients", label: "Clients", icon: "crm" },
-  { href: "/dashboard/devis", label: "Devis", icon: "devis" },
-  { href: "/dashboard/chantiers", label: "Chantiers", icon: "chantiers" },
-  { href: "/dashboard/facturation", label: "Facturation", icon: "facturation" },
-  { href: "/dashboard/relances", label: "Relances", icon: "relances" },
-  { href: "/dashboard/achats", label: "Achats", icon: "achats" },
-  { href: "/dashboard/ouvrages", label: "Bibliothèque", icon: "ouvrages" },
-  { href: "/dashboard/taches", label: "Tâches", icon: "taches" },
-  { href: "/dashboard/equipe", label: "Équipe", icon: "equipe" },
-  { href: "/dashboard/planning", label: "Planning", icon: "planning" },
-  { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", icon: "dispatch" },
-  { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", icon: "rapports-vocaux" },
-  { href: "/dashboard/copilote", label: "Copilote", icon: "copilote" },
-  { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", icon: "rapport" },
-  { href: "/dashboard/analyse", label: "Analyse", icon: "analyse" },
-  { href: "/dashboard/documents", label: "Documents", icon: "documents" },
-  { href: "/dashboard/parametres", label: "Paramètres", icon: "parametres" },
+export const NAV_ITEMS: { href: string; label: string; navKey: string; icon: IconKey }[] = [
+  { href: "/dashboard", label: "Vue d'ensemble", navKey: "dashboard", icon: "dashboard" },
+  { href: "/dashboard/clients", label: "Clients", navKey: "clients", icon: "crm" },
+  { href: "/dashboard/devis", label: "Devis", navKey: "devis", icon: "devis" },
+  { href: "/dashboard/chantiers", label: "Chantiers", navKey: "chantiers", icon: "chantiers" },
+  { href: "/dashboard/facturation", label: "Facturation", navKey: "facturation", icon: "facturation" },
+  { href: "/dashboard/relances", label: "Relances", navKey: "relances", icon: "relances" },
+  { href: "/dashboard/achats", label: "Achats", navKey: "achats", icon: "achats" },
+  { href: "/dashboard/ouvrages", label: "Bibliothèque", navKey: "ouvrages", icon: "ouvrages" },
+  { href: "/dashboard/taches", label: "Tâches", navKey: "taches", icon: "taches" },
+  { href: "/dashboard/equipe", label: "Équipe", navKey: "equipe", icon: "equipe" },
+  { href: "/dashboard/planning", label: "Planning", navKey: "planning", icon: "planning" },
+  { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", navKey: "planningDispatch", icon: "dispatch" },
+  { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", navKey: "rapportsVocaux", icon: "rapports-vocaux" },
+  { href: "/dashboard/copilote", label: "Copilote", navKey: "copilote", icon: "copilote" },
+  { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", navKey: "copiloteRapport", icon: "rapport" },
+  { href: "/dashboard/analyse", label: "Analyse", navKey: "analyse", icon: "analyse" },
+  { href: "/dashboard/documents", label: "Documents", navKey: "documents", icon: "documents" },
+  { href: "/dashboard/parametres", label: "Paramètres", navKey: "parametres", icon: "parametres" },
 ];
 
 /**
@@ -1858,6 +1859,7 @@ export function Sidebar({
   userInitials?: string;
 }) {
   const pathname = usePathname();
+  const t = useTranslations("sidebar");
   // Plusieurs hrefs peuvent être des préfixes les uns des autres (ex.
   // /dashboard/planning et /dashboard/planning/dispatch) — ne marquer actif
   // que le lien le plus spécifique, jamais les deux à la fois.
@@ -1880,13 +1882,13 @@ export function Sidebar({
       <GlobalSearch />
       <div className="nova-sidebar-scroll">
         <nav className="nova-sidebar-nav">
-          {NAV_ITEMS.map(({ href, label, icon }) => {
+          {NAV_ITEMS.map(({ href, navKey, icon }) => {
             const Icon = ICONS[icon];
             const active = href === activeHref;
             return (
               <Link key={href} href={href} className={`nova-sidebar-link ${active ? "nova-sidebar-link-active" : ""}`}>
                 <Icon size={18} strokeWidth={1.75} />
-                <span>{label}</span>
+                <span>{t(navKey)}</span>
               </Link>
             );
           })}

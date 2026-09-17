@@ -2,10 +2,12 @@
 
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Avatar, Badge, EmptyState, Skeleton, colorFromName, initialsFromName } from "@/components/ui";
 import { addDays, addMonths, formatShortDate, isSameDay, monthGrid, startOfWeek, toDateKey, weekDays } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { LOCALE_TO_BCP47, resolveLocale } from "@/lib/i18n";
 
 type ProjectRow = { id: string; name: string; status: string; startDate: string | null; endDate: string | null };
 type MemberRow = { id: string; name: string; role: string | null };
@@ -17,12 +19,16 @@ type AssignmentRow = {
   project: { id: string; name: string; status: string } | null;
 };
 
-function formatMonthYear(date: Date): string {
-  const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+function formatMonthYear(date: Date, bcp47: string): string {
+  const label = date.toLocaleDateString(bcp47, { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export default function PlanningPage() {
+  const t = useTranslations("planning");
+  const locale = resolveLocale(useLocale());
+  const bcp47 = LOCALE_TO_BCP47[locale];
+  const WEEKDAY_LABELS = [t("weekdayMon"), t("weekdayTue"), t("weekdayWed"), t("weekdayThu"), t("weekdayFri"), t("weekdaySat"), t("weekdaySun")];
   const [mode, setMode] = useState<"semaine" | "mois">("semaine");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [monthStart, setMonthStart] = useState(() => {
@@ -72,8 +78,8 @@ export default function PlanningPage() {
     <div className="nova-page">
       <header className="nova-page-header-row">
         <div>
-          <h1>Planning</h1>
-          <p className="nova-page-subtitle">{mode === "semaine" ? rangeLabel : formatMonthYear(monthStart)}</p>
+          <h1>{t("title")}</h1>
+          <p className="nova-page-subtitle">{mode === "semaine" ? rangeLabel : formatMonthYear(monthStart, bcp47)}</p>
         </div>
         <div className="nova-header-actions">
           <div className="nova-mode-toggle">
@@ -82,19 +88,19 @@ export default function PlanningPage() {
               className={`nova-mode-toggle-btn ${mode === "semaine" ? "nova-mode-toggle-btn-active" : ""}`}
               onClick={() => setMode("semaine")}
             >
-              Semaine
+              {t("week")}
             </button>
             <button
               type="button"
               className={`nova-mode-toggle-btn ${mode === "mois" ? "nova-mode-toggle-btn-active" : ""}`}
               onClick={() => setMode("mois")}
             >
-              Mois
+              {t("month")}
             </button>
           </div>
           <Link href="/dashboard/planning/dispatch" className="nova-btn nova-btn-primary">
             <Plus size={16} strokeWidth={1.75} />
-            Nouvelle intervention
+            {t("newIntervention")}
           </Link>
         </div>
       </header>
@@ -103,10 +109,10 @@ export default function PlanningPage() {
         <div className="nova-week-nav">
           <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             <ChevronLeft size={16} strokeWidth={1.75} />
-            Semaine précédente
+            {t("prevWeek")}
           </button>
           <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-            Semaine suivante
+            {t("nextWeek")}
             <ChevronRight size={16} strokeWidth={1.75} />
           </button>
         </div>
@@ -116,10 +122,10 @@ export default function PlanningPage() {
         <div className="nova-week-nav">
           <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setMonthStart((m) => addMonths(m, -1))}>
             <ChevronLeft size={16} strokeWidth={1.75} />
-            Mois précédent
+            {t("prevMonth")}
           </button>
           <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setMonthStart((m) => addMonths(m, 1))}>
-            Mois suivant
+            {t("nextMonth")}
             <ChevronRight size={16} strokeWidth={1.75} />
           </button>
         </div>
@@ -130,20 +136,20 @@ export default function PlanningPage() {
       ) : mode === "semaine" && membersList.length === 0 ? (
         <EmptyState
           icon="equipe"
-          title="Aucun collaborateur pour l'instant"
-          description="Ajoutez votre équipe pour l'organiser dans le planning."
-          actionLabel="Ajouter un collaborateur"
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          actionLabel={t("emptyAction")}
           actionHref="/dashboard/equipe"
         />
       ) : mode === "semaine" ? (
         <div className="nova-planning-weekgrid">
           <div className="nova-planning-weekgrid-corner" />
-          {days.map((day) => (
+          {days.map((day, i) => (
             <div
-              key={day.label}
+              key={toDateKey(day.date)}
               className={`nova-planning-weekgrid-header-cell ${isSameDay(day.date, new Date()) ? "nova-planning-weekgrid-today" : ""}`}
             >
-              <span className="nova-planning-day-label">{day.label}</span>
+              <span className="nova-planning-day-label">{WEEKDAY_LABELS[i]}</span>
               <span className="nova-planning-day-date">{formatShortDate(day.date)}</span>
             </div>
           ))}
@@ -161,7 +167,7 @@ export default function PlanningPage() {
                 const cellAssignments = assignmentsForCell(member.id, day.date);
                 return (
                   <div
-                    key={`${member.id}-${day.label}`}
+                    key={`${member.id}-${toDateKey(day.date)}`}
                     className={`nova-planning-weekgrid-cell ${isSameDay(day.date, new Date()) ? "nova-planning-weekgrid-today" : ""}`}
                   >
                     {cellAssignments.map((a) => (
@@ -173,7 +179,7 @@ export default function PlanningPage() {
                         onClick={() => setDetail(a)}
                       >
                         <span className="nova-planning-block-initials">{initialsFromName(member.name)}</span>
-                        <span className="nova-planning-block-project">{a.project?.name || "Sans chantier"}</span>
+                        <span className="nova-planning-block-project">{a.project?.name || t("noProject")}</span>
                       </button>
                     ))}
                   </div>
@@ -185,8 +191,8 @@ export default function PlanningPage() {
       ) : (
         <div className="nova-calendar">
           <div className="nova-calendar-grid">
-            {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((label) => (
-              <div key={label} className="nova-calendar-weekday">
+            {WEEKDAY_LABELS.map((label, i) => (
+              <div key={i} className="nova-calendar-weekday">
                 {label}
               </div>
             ))}
@@ -217,41 +223,41 @@ export default function PlanningPage() {
 
       {detail && (
         <div className="nova-modal-overlay" onClick={() => setDetail(null)}>
-          <div className="nova-modal" role="dialog" aria-modal="true" aria-label="Détail de l'affectation" onClick={(e) => e.stopPropagation()}>
+          <div className="nova-modal" role="dialog" aria-modal="true" aria-label={t("detailTitle")} onClick={(e) => e.stopPropagation()}>
             <div className="nova-planning-detail-header">
-              <h3 className="nova-modal-title">Détail de l'affectation</h3>
-              <button type="button" className="nova-icon-btn" onClick={() => setDetail(null)} aria-label="Fermer">
+              <h3 className="nova-modal-title">{t("detailTitle")}</h3>
+              <button type="button" className="nova-icon-btn" onClick={() => setDetail(null)} aria-label={t("close")}>
                 <X size={18} strokeWidth={1.75} />
               </button>
             </div>
             <dl className="nova-detail-list">
               <div>
-                <dt>Collaborateur</dt>
+                <dt>{t("collaborator")}</dt>
                 <dd>
                   {detail.teamMember.name}
                   {detail.teamMember.role ? ` — ${detail.teamMember.role}` : ""}
                 </dd>
               </div>
               <div>
-                <dt>Date</dt>
+                <dt>{t("date")}</dt>
                 <dd>{new Date(detail.date).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</dd>
               </div>
               <div>
-                <dt>Chantier</dt>
+                <dt>{t("project")}</dt>
                 <dd>
                   {detail.project ? (
                     <>
                       {detail.project.name}{" "}
-                      <Badge tone="blue">{detail.project.status === "en_cours" ? "En cours" : detail.project.status}</Badge>
+                      <Badge tone="blue">{detail.project.status === "en_cours" ? t("inProgress") : detail.project.status}</Badge>
                     </>
                   ) : (
-                    "Sans chantier"
+                    t("noProject")
                   )}
                 </dd>
               </div>
               {detail.note && (
                 <div>
-                  <dt>Note</dt>
+                  <dt>{t("note")}</dt>
                   <dd>{detail.note}</dd>
                 </div>
               )}
@@ -259,11 +265,11 @@ export default function PlanningPage() {
             <div className="nova-modal-actions">
               {detail.project && (
                 <Link href={`/dashboard/chantiers/${detail.project.id}`} className="nova-btn nova-btn-secondary">
-                  Voir le chantier
+                  {t("viewProject")}
                 </Link>
               )}
               <button type="button" className="nova-btn nova-btn-primary" onClick={() => setDetail(null)}>
-                Fermer
+                {t("close")}
               </button>
             </div>
           </div>

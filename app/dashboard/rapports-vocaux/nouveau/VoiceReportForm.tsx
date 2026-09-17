@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Mic, Square } from "lucide-react";
 import { Badge, Breadcrumb, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -34,6 +35,9 @@ export function VoiceReportForm({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const t = useTranslations("rapportsVocaux.form");
+  const tParent = useTranslations("rapportsVocaux");
+  const tCommon = useTranslations("common");
   const [mode, setMode] = useState<Mode>("texte");
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [authorLabel, setAuthorLabel] = useState("");
@@ -100,13 +104,13 @@ export function VoiceReportForm({
     setError("");
 
     if (mode === "texte" && !transcriptText.trim()) {
-      const message = "Saisissez le compte rendu avant d'envoyer.";
+      const message = t("errorEmptyTranscript");
       setError(message);
       toast.error(message);
       return;
     }
     if (mode === "audio" && !audioBlob) {
-      const message = "Enregistrez un message avant d'envoyer.";
+      const message = t("errorEmptyAudio");
       setError(message);
       toast.error(message);
       return;
@@ -133,23 +137,23 @@ export function VoiceReportForm({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const message = data.error || "Impossible d'enregistrer le rapport.";
+        const message = data.error || t("errorSave");
         setError(message);
         toast.error(message);
         return;
       }
       const data = await res.json();
       if (!data.report) {
-        const message = "Réponse inattendue du serveur — réessayez.";
+        const message = t("errorUnexpected");
         setError(message);
         toast.error(message);
         return;
       }
-      toast.success("Rapport vocal soumis");
+      toast.success(t("toastSubmitted"));
       router.refresh();
       setResult({ summary: data.report.summary });
     } catch {
-      const message = "Impossible de joindre le serveur — vérifiez votre connexion et réessayez.";
+      const message = tCommon("networkError");
       setError(message);
       toast.error(message);
     } finally {
@@ -160,18 +164,18 @@ export function VoiceReportForm({
   if (result) {
     return (
       <div className="nova-page">
-        <Breadcrumb items={[{ label: "Rapports vocaux", href: "/dashboard/rapports-vocaux" }, { label: "Rapport enregistré" }]} />
+        <Breadcrumb items={[{ label: tParent("title"), href: "/dashboard/rapports-vocaux" }, { label: t("resultTitle") }]} />
         <header className="nova-page-header">
-          <h1>Rapport enregistré</h1>
+          <h1>{t("resultTitle")}</h1>
         </header>
         <Card accent={false} className="nova-ai-zone">
           <div className="nova-ai-zone-header">
-            <Badge tone="teal">Résumé Nova</Badge>
+            <Badge tone="teal">{t("novaSummaryBadge")}</Badge>
           </div>
           <p className="nova-ai-content">{result.summary}</p>
         </Card>
         <div>
-          <Button onClick={() => router.push("/dashboard/rapports-vocaux")}>Voir tous les rapports</Button>
+          <Button onClick={() => router.push("/dashboard/rapports-vocaux")}>{t("viewAllReports")}</Button>
         </div>
       </div>
     );
@@ -179,28 +183,25 @@ export function VoiceReportForm({
 
   return (
     <div className="nova-page">
-      <Breadcrumb items={[{ label: "Rapports vocaux", href: "/dashboard/rapports-vocaux" }, { label: "Nouveau rapport vocal" }]} />
+      <Breadcrumb items={[{ label: tParent("title"), href: "/dashboard/rapports-vocaux" }, { label: t("newReportTitle") }]} />
 
       <header className="nova-page-header">
-        <h1>Nouveau rapport vocal</h1>
+        <h1>{t("newReportTitle")}</h1>
       </header>
 
-      <div className="nova-notice">
-        Ce compte rendu est un outil pratique pour le collaborateur — il n'est pas utilisé pour évaluer sa
-        performance individuelle.
-      </div>
+      <div className="nova-notice">{t("privacyNotice")}</div>
 
       <Card>
         <form onSubmit={handleSubmit}>
           <Field
-            label="Nom du collaborateur / rôle"
+            label={t("authorLabel")}
             required
             value={authorLabel}
             onChange={(e) => setAuthorLabel(e.target.value)}
-            placeholder="Marc (chef de chantier)"
+            placeholder={t("authorPlaceholder")}
           />
-          <SelectField label="Chantier rattaché" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">Aucun chantier rattaché</option>
+          <SelectField label={t("projectLabel")} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="">{t("noProject")}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -215,39 +216,39 @@ export function VoiceReportForm({
                 className={`nova-filter-chip ${mode === "texte" ? "nova-filter-chip-active" : ""}`}
                 onClick={() => setMode("texte")}
               >
-                Saisie manuelle
+                {t("modeManual")}
               </button>
               <button
                 type="button"
                 className={`nova-filter-chip ${mode === "audio" ? "nova-filter-chip-active" : ""}`}
                 onClick={() => setMode("audio")}
               >
-                Enregistrement vocal
+                {t("modeAudio")}
               </button>
             </div>
           )}
 
           {mode === "texte" ? (
             <TextareaField
-              label="Compte rendu"
+              label={t("transcriptLabel")}
               rows={6}
               value={transcriptText}
               onChange={(e) => setTranscriptText(e.target.value)}
-              placeholder="Charpente posée à 60% aujourd'hui, il manque des tuiles pour finir la semaine..."
+              placeholder={t("transcriptPlaceholder")}
             />
           ) : (
             <div className="nova-record-block">
-              <label>Enregistrement</label>
+              <label>{t("recordingLabel")}</label>
               <div className="nova-record-controls">
                 {recording ? (
                   <Button type="button" variant="danger" className="nova-btn-recording" onClick={stopRecording}>
                     <Square size={16} strokeWidth={1.75} />
-                    Arrêter
+                    {t("stop")}
                   </Button>
                 ) : (
                   <Button type="button" variant="danger" onClick={startRecording}>
                     <Mic size={16} strokeWidth={1.75} />
-                    {audioBlob ? "Réenregistrer" : "Démarrer l'enregistrement"}
+                    {audioBlob ? t("reRecord") : t("startRecording")}
                   </Button>
                 )}
                 {recording && (
@@ -263,11 +264,11 @@ export function VoiceReportForm({
             </div>
           )}
 
-          {!audioEnabled && <p className="nova-hint-standalone">Enregistrement vocal disponible avec la clé Groq.</p>}
+          {!audioEnabled && <p className="nova-hint-standalone">{t("audioHint")}</p>}
 
           {error && <div className="error">{error}</div>}
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Envoi en cours..." : "Envoyer pour résumé"}
+            {submitting ? t("submitting") : t("submit")}
           </Button>
         </form>
       </Card>

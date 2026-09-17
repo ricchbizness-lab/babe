@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LogOut, Settings } from "lucide-react";
-import { Breadcrumb, Button, Card, CardTitle, Field, useToast } from "@/components/ui";
+import { Breadcrumb, Button, Card, CardTitle, Field, SelectField, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { getInitials } from "@/lib/userDisplay";
+import { LOCALE_FLAG, LOCALE_LABEL, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
 
-type UserProfile = { id: string; email: string; firstName: string | null; lastName: string | null };
+type UserProfile = { id: string; email: string; firstName: string | null; lastName: string | null; langue: string };
 
 export default function ComptePage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ComptePage() {
   const [form, setForm] = useState({ firstName: "", lastName: "" });
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [savingLangue, setSavingLangue] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/user")
@@ -27,6 +29,30 @@ export default function ComptePage() {
         setForm({ firstName: data.user?.firstName || "", lastName: data.user?.lastName || "" });
       });
   }, []);
+
+  async function handleLangueChange(langue: Locale) {
+    if (!user) return;
+    setSavingLangue(true);
+    try {
+      const res = await fetchWithAuth("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ langue }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible d'enregistrer la langue.");
+        return;
+      }
+      const data = await res.json();
+      setUser(data.user);
+      toast.success("Langue mise à jour");
+      router.refresh();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingLangue(false);
+    }
+  }
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -109,6 +135,23 @@ export default function ComptePage() {
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </form>
+      </Card>
+
+      <Card>
+        <CardTitle>Langue de l'interface</CardTitle>
+        <SelectField
+          label="Langue"
+          value={user.langue}
+          disabled={savingLangue}
+          onChange={(e) => handleLangueChange(e.target.value as Locale)}
+          hint="S'applique à la navigation, aux pages Tâches, Rapports vocaux et Planning."
+        >
+          {SUPPORTED_LOCALES.map((locale) => (
+            <option key={locale} value={locale}>
+              {LOCALE_FLAG[locale]} {LOCALE_LABEL[locale]}
+            </option>
+          ))}
+        </SelectField>
       </Card>
 
       <Card>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import {
   Badge,
@@ -40,24 +41,26 @@ function isOverdue(task: TaskRow) {
   return new Date(task.dueDate) < new Date(new Date().toDateString());
 }
 
-const FILTERS: { key: "all" | "pending" | "done" | "late"; label: string }[] = [
-  { key: "all", label: "Toutes" },
-  { key: "pending", label: "En attente" },
-  { key: "done", label: "Terminées" },
-  { key: "late", label: "En retard" },
-];
-
 type SortKey = "status" | "project";
 type SortState = { key: SortKey; direction: "asc" | "desc" };
-
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "status", label: "Statut" },
-  { key: "project", label: "Chantier rattaché" },
-];
 
 export default function TachesPage() {
   const router = useRouter();
   const toast = useToast();
+  const tt = useTranslations("taches");
+  const tCommon = useTranslations("common");
+
+  const FILTERS: { key: "all" | "pending" | "done" | "late"; label: string }[] = [
+    { key: "all", label: tt("filterAll") },
+    { key: "pending", label: tt("filterPending") },
+    { key: "done", label: tt("filterDone") },
+    { key: "late", label: tt("filterLate") },
+  ];
+
+  const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: "status", label: tt("sortStatus") },
+    { key: "project", label: tt("sortProject") },
+  ];
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [view, setView] = useState<"kanban" | "liste" | "calendrier">("kanban");
@@ -107,18 +110,18 @@ export default function TachesPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const message = data.error || "Impossible d'ajouter cette tâche.";
+        const message = data.error || tt("toastAddError");
         setError(message);
         toast.error(message);
         return;
       }
       const data = await res.json();
       setTasks((prev) => [data.task, ...(prev ?? [])]);
-      toast.success("Tâche ajoutée");
+      toast.success(tt("toastAdded"));
       router.refresh();
       setAddOpen(false);
     } catch {
-      const message = "Impossible de joindre le serveur — réessayez.";
+      const message = tCommon("networkError");
       setError(message);
       toast.error(message);
     } finally {
@@ -136,14 +139,14 @@ export default function TachesPage() {
       });
       if (!res.ok) {
         setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
-        toast.error("Erreur lors de la mise à jour de la tâche.");
+        toast.error(tt("toastToggleError"));
         return;
       }
-      toast.success(task.done ? "Tâche marquée comme non faite" : "Tâche cochée comme faite");
+      toast.success(task.done ? tt("toastMarkedUndone") : tt("toastMarkedDone"));
       router.refresh();
     } catch {
       setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
-      toast.error("Impossible de joindre le serveur — réessayez.");
+      toast.error(tCommon("networkError"));
     }
   }
 
@@ -155,14 +158,14 @@ export default function TachesPage() {
       setDeleting(false);
       if (res.ok) {
         setTasks((prev) => (prev ?? []).filter((t) => t.id !== deleteTarget.id));
-        toast.success("Tâche supprimée");
+        toast.success(tt("toastDeleted"));
         router.refresh();
       } else {
-        toast.error("Erreur lors de la suppression de la tâche.");
+        toast.error(tt("toastDeleteError"));
       }
     } catch {
       setDeleting(false);
-      toast.error("Impossible de joindre le serveur — réessayez.");
+      toast.error(tCommon("networkError"));
     }
     setDeleteTarget(null);
   }
@@ -213,22 +216,22 @@ export default function TachesPage() {
     <div className="nova-page">
       <header className="nova-page-header-row">
         <div>
-          <h1>Tâches</h1>
+          <h1>{tt("title")}</h1>
           <p className="nova-page-subtitle">
-            {tasks === null ? "…" : `${tasks.filter((t) => !t.done).length} en attente sur ${tasks.length}`}
+            {tasks === null ? "…" : tt("pendingOfTotal", { pending: tasks.filter((t) => !t.done).length, total: tasks.length })}
           </p>
         </div>
         <Button onClick={openAdd}>
           <Plus size={16} strokeWidth={1.75} />
-          Nouvelle tâche
+          {tt("newTask")}
         </Button>
       </header>
 
       <Tabs
         tabs={[
-          { key: "kanban", label: "Kanban" },
-          { key: "liste", label: "Liste" },
-          { key: "calendrier", label: "Calendrier" },
+          { key: "kanban", label: tt("tabKanban") },
+          { key: "liste", label: tt("tabListe") },
+          { key: "calendrier", label: tt("tabCalendrier") },
         ]}
         active={view}
         onChange={setView}
@@ -237,10 +240,10 @@ export default function TachesPage() {
       {view === "liste" && tasks !== null && tasks.length > 0 && (
         <MetricBar
           items={[
-            { label: "Total", value: tasks.length },
-            { label: "À faire", value: aFaireCount },
-            { label: "En retard", value: enRetardCount },
-            { label: "Terminées ce mois", value: termineesCeMoisCount },
+            { label: tt("metricTotal"), value: tasks.length },
+            { label: tt("metricTodo"), value: aFaireCount },
+            { label: tt("metricLate"), value: enRetardCount },
+            { label: tt("metricDoneThisMonth"), value: termineesCeMoisCount },
           ]}
         />
       )}
@@ -250,11 +253,7 @@ export default function TachesPage() {
       {tasks === null ? (
         <TableSkeleton columns={3} />
       ) : tasks.length === 0 ? (
-        <EmptyState
-          icon="taches"
-          title="Aucune tâche pour l'instant"
-          description="Ajoutez votre première tâche avec le bouton ci-dessus."
-        />
+        <EmptyState icon="taches" title={tt("emptyTitle")} description={tt("emptyDescription")} />
       ) : view === "kanban" ? (
         <TachesKanban tasks={tasks} onToggle={handleToggle} onDelete={setDeleteTarget} />
       ) : view === "calendrier" ? (
@@ -276,7 +275,7 @@ export default function TachesPage() {
 
           {filtered.length > 0 && (
             <div className="nova-task-sort-row">
-              <span className="nova-task-sort-label">Trier par</span>
+              <span className="nova-task-sort-label">{tt("sortBy")}</span>
               {SORT_OPTIONS.map((opt) => {
                 const active = sort?.key === opt.key;
                 return (
@@ -301,7 +300,7 @@ export default function TachesPage() {
           )}
 
           {filtered.length === 0 ? (
-            <EmptyState icon="taches" title="Aucune tâche pour ce filtre" />
+            <EmptyState icon="taches" title={tt("emptyFilterTitle")} />
           ) : (
             <ul className="nova-task-list">
               {pageTasks.map((t) => (
@@ -322,7 +321,7 @@ export default function TachesPage() {
                     className="nova-checkbox"
                     checked={t.done}
                     onChange={() => handleToggle(t)}
-                    aria-label={t.done ? "Marquer comme non faite" : "Marquer comme faite"}
+                    aria-label={t.done ? tt("markUndone") : tt("markDone")}
                   />
                   <span className={t.done ? "nova-task-text-done" : "nova-task-text"}>{t.text}</span>
                   {t.dueDate && (
@@ -347,7 +346,7 @@ export default function TachesPage() {
                       e.stopPropagation();
                       setDeleteTarget(t);
                     }}
-                    aria-label="Supprimer la tâche"
+                    aria-label={tt("deleteTask")}
                   >
                     <Trash2 size={15} strokeWidth={1.75} />
                   </button>
@@ -362,28 +361,28 @@ export default function TachesPage() {
         </>
       )}
 
-      <EditModal open={addOpen} title="Nouvelle tâche" onCancel={() => setAddOpen(false)} onSave={handleAdd} saving={adding}>
+      <EditModal open={addOpen} title={tt("newTaskModalTitle")} onCancel={() => setAddOpen(false)} onSave={handleAdd} saving={adding}>
         <Field
-          label="Texte de la tâche"
+          label={tt("taskTextLabel")}
           required
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Ex. Commander le carrelage"
+          placeholder={tt("taskTextPlaceholder")}
         />
-        <SelectField label="Chantier rattaché" value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)}>
-          <option value="">Aucun chantier</option>
+        <SelectField label={tt("projectLabel")} value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)}>
+          <option value="">{tt("noProject")}</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </SelectField>
-        <DatePickerField label="Date d'échéance (optionnel)" value={newDueDate} onChange={setNewDueDate} />
+        <DatePickerField label={tt("dueDateLabel")} value={newDueDate} onChange={setNewDueDate} />
       </EditModal>
 
       <ConfirmModal
         open={deleteTarget !== null}
-        itemLabel={deleteTarget ? `la tâche « ${deleteTarget.text} »` : ""}
+        itemLabel={deleteTarget ? tt("deleteConfirmItem", { text: deleteTarget.text }) : ""}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirming={deleting}
