@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { urlBase64ToUint8Array } from "@/lib/push";
+import { METIERS, METIER_LABEL, type Metier } from "@/lib/metiers";
 
 type BusinessForm = {
   name: string;
@@ -36,6 +37,7 @@ type BusinessForm = {
   codeAPE: string;
   conditionsPaiement: string;
   logoBase64: string;
+  metier: Metier | "";
 };
 
 const EMPTY_FORM: BusinessForm = {
@@ -52,6 +54,7 @@ const EMPTY_FORM: BusinessForm = {
   codeAPE: "",
   conditionsPaiement: "",
   logoBase64: "",
+  metier: "",
 };
 
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -127,6 +130,10 @@ export default function ParametresPage() {
   const [notifSubscribed, setNotifSubscribed] = useState(false);
   const [enablingNotif, setEnablingNotif] = useState(false);
 
+  const [initialMetier, setInitialMetier] = useState<Metier | "">("");
+  const [metierChangePrompt, setMetierChangePrompt] = useState<Metier | null>(null);
+  const [applyingMetier, setApplyingMetier] = useState(false);
+
   useEffect(() => {
     fetchWithAuth("/api/business")
       .then((res) => res.json())
@@ -146,7 +153,9 @@ export default function ParametresPage() {
           codeAPE: b?.codeAPE || "",
           conditionsPaiement: b?.conditionsPaiement || "",
           logoBase64: b?.logoBase64 || "",
+          metier: b?.metier || "",
         });
+        setInitialMetier(b?.metier || "");
       });
     fetchWithAuth("/api/user")
       .then((res) => res.json())
@@ -231,12 +240,47 @@ export default function ParametresPage() {
     setForm((prev) => (prev ? { ...prev, logoBase64: "" } : prev));
   }
 
+  async function handleApplyMetierCatalog() {
+    if (!metierChangePrompt) return;
+    setApplyingMetier(true);
+    try {
+      const res = await fetchWithAuth("/api/ouvrages/apply-metier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metier: metierChangePrompt }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de mettre à jour la bibliothèque d'ouvrages.");
+        return;
+      }
+      const data = await res.json();
+      toast.success(`${data.added} ouvrage(s) ajouté(s) à la bibliothèque`);
+      setMetierChangePrompt(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setApplyingMetier(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!form) return;
     setError("");
     setSaving(true);
+    const metierChanged = !!form.metier && form.metier !== initialMetier;
     try {
+      // Capturé avant l'enregistrement : si la bibliothèque contient déjà des
+      // ouvrages, le pré-remplissage automatique (silencieux) ne se déclenche
+      // pas côté serveur — on propose alors la mise à jour explicitement
+      // plutôt que de dupliquer les ouvrages en les recréant à l'aveugle.
+      let hadExistingOuvrages = false;
+      if (metierChanged) {
+        const ouvragesRes = await fetchWithAuth("/api/ouvrages");
+        const ouvragesData = await ouvragesRes.json().catch(() => ({ ouvrages: [] }));
+        hadExistingOuvrages = (ouvragesData.ouvrages ?? []).length > 0;
+      }
+
       const res = await fetchWithAuth("/api/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -254,6 +298,7 @@ export default function ParametresPage() {
           codeAPE: form.codeAPE || undefined,
           conditionsPaiement: form.conditionsPaiement || undefined,
           logoBase64: form.logoBase64,
+          metier: form.metier || undefined,
         }),
       });
       if (!res.ok) {
@@ -264,6 +309,10 @@ export default function ParametresPage() {
         return;
       }
       toast.success("Paramètres enregistrés");
+      setInitialMetier(form.metier);
+      if (metierChanged && hadExistingOuvrages && form.metier) {
+        setMetierChangePrompt(form.metier);
+      }
       router.refresh();
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
@@ -365,6 +414,19 @@ export default function ParametresPage() {
               onChange={(e) => setForm({ ...form, sector: e.target.value })}
               placeholder="Plomberie, menuiserie..."
             />
+            <SelectField
+              label="Métier"
+              value={form.metier}
+              onChange={(e) => setForm({ ...form, metier: e.target.value as Metier | "" })}
+              hint="Pré-configure votre bibliothèque d'ouvrages. La changer vous proposera de mettre à jour la bibliothèque."
+            >
+              <option value="">Non renseigné</option>
+              {METIERS.map((m) => (
+                <option key={m} value={m}>
+                  {METIER_LABEL[m]}
+                </option>
+              ))}
+            </SelectField>
             <Field
               label="Adresse"
               value={form.address}
@@ -461,6 +523,23 @@ export default function ParametresPage() {
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </form>
+      )}
+
+      {metierChangePrompt && (
+        <Card accent={false} className="nova-ai-zone nova-ai-zone-amber">
+          <p className="nova-ai-content">
+            Mettre à jour votre bibliothèque d'ouvrages avec les prestations courantes du métier «{" "}
+            {METIER_LABEL[metierChangePrompt]} » ? Les ouvrages existants ne seront pas supprimés.
+          </p>
+          <div className="nova-status-actions">
+            <Button onClick={handleApplyMetierCatalog} disabled={applyingMetier}>
+              {applyingMetier ? "Mise à jour..." : "Mettre à jour la bibliothèque"}
+            </Button>
+            <Button variant="ghost" onClick={() => setMetierChangePrompt(null)}>
+              Plus tard
+            </Button>
+          </div>
+        </Card>
       )}
 
       {tab === "utilisateurs" && (

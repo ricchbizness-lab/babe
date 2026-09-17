@@ -57,6 +57,7 @@ model Business {
   capitalSocial  Float?  // mention légale facture, non pertinent en auto-entreprise
   codeAPE        String? // code APE/NAF — mention légale facture
   conditionsPaiement String? @default("Paiement sous 30 jours") // pied de page facture
+  metier       String? // plomberie | electricite | maconnerie | peinture | menuiserie | carrelage | chauffage | toiture | autre — pré-configure la bibliothèque d'ouvrages (module B4) et les couleurs d'accent (sprint 1, point 3)
   logoBase64   String? // logo entreprise, encodé en data URL — affiché en haut de la sidebar
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

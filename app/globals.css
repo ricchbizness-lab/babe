@@ -157,6 +157,40 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border-radius: var(--nova-radius-card);
   box-shadow: var(--nova-shadow-card);
 }
+.onboarding-metier-card { max-width: 640px; }
+.onboarding-metier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--nova-space-2);
+}
+@media (max-width: 480px) {
+  .onboarding-metier-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.onboarding-metier-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nova-space-1);
+  padding: var(--nova-space-2);
+  background: var(--nova-surface);
+  border: 2px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  cursor: pointer;
+  transition: border-color var(--nova-transition-color), background-color var(--nova-transition-color);
+}
+.onboarding-metier-tile:hover { border-color: var(--nova-teal); }
+.onboarding-metier-tile-selected { border-color: var(--nova-teal); background: var(--nova-teal-tint); }
+.onboarding-metier-tile-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nova-teal-tint);
+  color: var(--nova-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.onboarding-metier-tile-label { font-size: 13px; font-weight: 600; color: var(--nova-ink); text-align: center; }
 
 /* ===========================================================================
    Design system NOVA v7 — classes utilisées par components/ui.tsx

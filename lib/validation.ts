@@ -25,6 +25,7 @@ export const businessSchema = z.object({
   codeAPE: z.string().max(10).optional(),
   conditionsPaiement: z.string().max(500).optional(),
   logoBase64: z.string().max(2_900_000).optional().or(z.literal("")),
+  metier: z.enum(["plomberie", "electricite", "maconnerie", "peinture", "menuiserie", "carrelage", "chauffage", "toiture", "autre"]).optional(),
 });
 
 export const clientSchema = z.object({
