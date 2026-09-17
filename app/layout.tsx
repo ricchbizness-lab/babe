@@ -1,7 +1,8 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Manrope } from "next/font/google";
 import { Providers } from "./providers";
+import { ServiceWorkerRegister } from "./sw-register";
 
 // Inter = corps de texte et labels (police par défaut du body)
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -18,6 +19,19 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Nova",
   description: "Plateforme tout-en-un pour le bâtiment et l'artisanat",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Nova BTP",
+  },
+  icons: {
+    apple: "/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0D3B2E",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${inter.variable} ${manrope.variable} ${plexMono.variable}`}>
       <body>
         <Providers>{children}</Providers>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

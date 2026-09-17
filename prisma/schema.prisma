@@ -22,6 +22,22 @@ model User {
   updatedAt    DateTime      @updatedAt
   business     Business?
   subscription Subscription?
+  pushSubscriptions PushSubscription[]
+}
+
+// Abonnements navigateur aux notifications push (module PWA, sprint 1
+// point 1) — un utilisateur peut avoir plusieurs abonnements (un par
+// appareil/navigateur installé).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Business {

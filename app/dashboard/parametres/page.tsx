@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Banknote, Building2, Check, CreditCard, Grid2x2, Mail, Trash2, Upload, UserCog, Users } from "lucide-react";
+import { Bell, BellRing, Banknote, Building2, Check, CreditCard, Grid2x2, Mail, Trash2, Upload, UserCog, Users } from "lucide-react";
 import {
   Badge,
   Button,
@@ -20,6 +20,7 @@ import {
   type BadgeTone,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { urlBase64ToUint8Array } from "@/lib/push";
 
 type BusinessForm = {
   name: string;
@@ -121,6 +122,11 @@ export default function ParametresPage() {
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
   const [managingPlan, setManagingPlan] = useState<string | null>(null);
 
+  const [notifSupported, setNotifSupported] = useState<boolean | null>(null);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const [notifSubscribed, setNotifSubscribed] = useState(false);
+  const [enablingNotif, setEnablingNotif] = useState(false);
+
   useEffect(() => {
     fetchWithAuth("/api/business")
       .then((res) => res.json())
@@ -152,6 +158,54 @@ export default function ParametresPage() {
         setSubscriptionLoaded(true);
       });
   }, []);
+
+  useEffect(() => {
+    const supported = typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+    setNotifSupported(supported);
+    if (!supported) return;
+    setNotifPermission(Notification.permission);
+    navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((sub) => setNotifSubscribed(!!sub))
+      .catch(() => {});
+  }, []);
+
+  async function handleEnableNotifications() {
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) {
+      toast.error("Notifications push non configurées pour cet environnement.");
+      return;
+    }
+    setEnablingNotif(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      if (permission !== "granted") {
+        toast.error("Permission refusée — activez les notifications dans les réglages de votre navigateur.");
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const pushSubscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
+      });
+      const res = await fetchWithAuth("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pushSubscription.toJSON()),
+      });
+      if (!res.ok) {
+        toast.error("Impossible d'enregistrer l'abonnement aux notifications.");
+        return;
+      }
+      setNotifSubscribed(true);
+      toast.success("Notifications activées");
+    } catch {
+      toast.error("Impossible d'activer les notifications — réessayez.");
+    } finally {
+      setEnablingNotif(false);
+    }
+  }
 
   function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -473,9 +527,34 @@ export default function ParametresPage() {
         <Card>
           <CardTitle>
             <Bell size={16} strokeWidth={1.75} />
-            Préférences de notification
+            Notifications push
           </CardTitle>
-          <p className="nova-page-subtitle">Bientôt disponible — vous pourrez bientôt choisir quels événements déclenchent une notification.</p>
+          {notifSupported === false && (
+            <p className="nova-page-subtitle">Les notifications ne sont pas prises en charge par ce navigateur.</p>
+          )}
+          {notifSupported && notifPermission === "denied" && (
+            <p className="nova-page-subtitle">
+              Notifications bloquées — autorisez-les dans les réglages de votre navigateur pour ce site, puis
+              rechargez la page.
+            </p>
+          )}
+          {notifSupported && notifSubscribed && notifPermission !== "denied" && (
+            <p className="nova-page-subtitle">
+              <Badge tone="success">Activées</Badge> Vous recevrez les notifications importantes de votre activité
+              directement sur cet appareil.
+            </p>
+          )}
+          {notifSupported && !notifSubscribed && notifPermission !== "denied" && (
+            <>
+              <p className="nova-page-subtitle">
+                Recevez une alerte sur cet appareil pour les événements importants (devis accepté, paiement reçu...).
+              </p>
+              <Button onClick={handleEnableNotifications} disabled={enablingNotif}>
+                <BellRing size={16} strokeWidth={1.75} />
+                {enablingNotif ? "Activation..." : "Activer les notifications"}
+              </Button>
+            </>
+          )}
         </Card>
       )}
 
