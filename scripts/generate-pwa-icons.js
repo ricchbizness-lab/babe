@@ -1,6 +1,6 @@
 /**
  * Génère les deux icônes PWA (192x192 et 512x512) requises par
- * public/manifest.json : carré vert foncé #0D3B2E avec un "N" blanc
+ * public/manifest.json : carré bleu ardoise #152A45 avec un "N" blanc
  * centré. Rendu via une SVG rastérisée par sharp — aucune image externe.
  * Manrope n'étant pas installée comme police système dans cet
  * environnement de génération, on utilise DejaVu Sans Bold (police
@@ -9,7 +9,7 @@
 const sharp = require("sharp");
 const path = require("path");
 
-const BG = "#0D3B2E";
+const BG = "#152A45";
 const FG = "#FFFFFF";
 
 function iconSvg(size) {

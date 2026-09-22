@@ -4,8 +4,8 @@
   "description": "Plateforme de gestion BTP",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0D3B2E",
-  "theme_color": "#0D3B2E",
+  "background_color": "#152A45",
+  "theme_color": "#152A45",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },

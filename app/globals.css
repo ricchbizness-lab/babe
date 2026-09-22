@@ -6,9 +6,9 @@
   --nova-ink: #14181C;
   --nova-ink-soft: #6B7280;
   --nova-ink-faint: #9CA3AF;
-  --nova-teal: #14594A;
-  --nova-teal-deep: #0E3F35;
-  --nova-teal-tint: #E7F0ED;
+  --nova-teal: #1E3A5F;
+  --nova-teal-deep: #152A45;
+  --nova-teal-tint: #E8EEF5;
   --nova-amber: #C98A2B;
   --nova-amber-tint: #FBF1E2;
   --nova-success: #2F7A4D;
@@ -18,12 +18,13 @@
   --nova-linen-deep: #F1F1F2; /* fond des bulles Nova du copilote — neutre, plus soutenu que --nova-bg */
 
   /* Sidebar sombre (refonte design) */
-  --nova-sidebar-bg: #0D3B2E;
-  --nova-sidebar-hover-bg: #1A4A3A;
+  --nova-sidebar-bg: #152A45;
+  --nova-sidebar-hover-bg: #1E3A5F;
+  --nova-sidebar-active-bg: #243F6B;
   --nova-sidebar-text: var(--nova-bg); /* #FAFAFA */
 
   /* Cercles pastel des cartes métriques du dashboard */
-  --nova-metric-teal-tint: #E5EEEC;
+  --nova-metric-teal-tint: #E8EEF5;
   --nova-metric-blue: #3B82F6;
   --nova-metric-blue-tint: #EBF2FF;
   --nova-metric-amber-tint: #FFF3E0;
@@ -367,7 +368,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-sidebar-link:hover { background: var(--nova-sidebar-hover-bg); }
 .nova-sidebar-link-active {
-  background: var(--nova-teal);
+  background: var(--nova-sidebar-active-bg);
   color: #fff;
   font-weight: 700;
 }

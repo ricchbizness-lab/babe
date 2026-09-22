@@ -1453,7 +1453,7 @@ export function MiniLineChart({
 // MiniLineChart : une poignée de segments ne justifie pas une dépendance).
 // ---------------------------------------------------------------------------
 
-const DONUT_COLORS = ["#14594A", "#1D6FBF", "#C98A2B", "#991B1B", "#566072"];
+const DONUT_COLORS = ["var(--nova-teal)", "#1D6FBF", "#C98A2B", "#991B1B", "#566072"];
 
 export function DonutChart({ segments }: { segments: { label: string; value: number }[] }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
