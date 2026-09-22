@@ -61,3 +61,46 @@ export function monthGrid(monthStart: Date): { date: Date; inMonth: boolean }[] 
     return { date, inMonth: date.getMonth() === monthStart.getMonth() };
   });
 }
+
+export type PeriodRange = { start: Date; end: Date; label: string };
+
+/**
+ * Parse une période saisie pour le rapport stratégique (module copilote).
+ * Trois formats acceptés : trimestre ("2026-T3"), mois ("2026-09") ou année
+ * ("2026"). `end` est exclusif (borne haute du lendemain de la fin de
+ * période) pour des comparaisons `updatedAt < end` sans arrondi. Retourne
+ * `null` si aucun format ne correspond — à l'appelant de refuser proprement
+ * plutôt que de deviner une période par défaut.
+ */
+export function parsePeriod(period: string): PeriodRange | null {
+  const trimmed = period.trim();
+
+  const quarterMatch = trimmed.match(/^(\d{4})-T([1-4])$/);
+  if (quarterMatch) {
+    const year = Number(quarterMatch[1]);
+    const quarter = Number(quarterMatch[2]);
+    return {
+      start: new Date(year, (quarter - 1) * 3, 1),
+      end: new Date(year, quarter * 3, 1),
+      label: `T${quarter} ${year}`,
+    };
+  }
+
+  const monthMatch = trimmed.match(/^(\d{4})-(\d{2})$/);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+    if (month < 1 || month > 12) return null;
+    const start = new Date(year, month - 1, 1);
+    const rawLabel = start.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    return { start, end: new Date(year, month, 1), label: rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1) };
+  }
+
+  const yearMatch = trimmed.match(/^(\d{4})$/);
+  if (yearMatch) {
+    const year = Number(yearMatch[1]);
+    return { start: new Date(year, 0, 1), end: new Date(year + 1, 0, 1), label: String(year) };
+  }
+
+  return null;
+}
