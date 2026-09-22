@@ -1,0 +1,484 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Building2, FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  Avatar,
+  BackLink,
+  Badge,
+  Breadcrumb,
+  Button,
+  Card,
+  CardTitle,
+  ConfirmModal,
+  EditModal,
+  Field,
+  SelectField,
+  Table,
+  TableSkeleton,
+  Tabs,
+  TextareaField,
+  Timestamp,
+  useToast,
+  type BadgeTone,
+  type TableColumn,
+} from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
+
+type ClientDetail = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  typeClient: string;
+  createdAt: string;
+  projects: {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    tasks: { id: string; text: string; createdAt: string }[];
+    _count: { voiceReports: number };
+  }[];
+  devis: { id: string; label: string; status: string; amount: number | null; createdAt: string }[];
+};
+
+const CLIENT_TYPE_LABEL: Record<string, string> = {
+  particulier: "Particulier",
+  professionnel: "Pro",
+  collectivite: "Collectivité",
+};
+const CLIENT_TYPE_TONE: Record<string, BadgeTone> = {
+  particulier: "neutral",
+  professionnel: "teal",
+  collectivite: "blue",
+};
+
+const PROJECT_STATUS_LABEL: Record<string, string> = {
+  planifie: "Planifié",
+  en_cours: "En cours",
+  termine: "Terminé",
+  annule: "Annulé",
+};
+const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
+  planifie: "neutral",
+  en_cours: "blue",
+  termine: "success",
+  annule: "neutral",
+};
+const DEVIS_STATUS_LABEL: Record<string, string> = {
+  brouillon: "Brouillon",
+  envoye: "Envoyé",
+  accepte: "Accepté",
+  refuse: "Refusé",
+};
+const DEVIS_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success" | "danger"> = {
+  brouillon: "neutral",
+  envoye: "blue",
+  accepte: "success",
+  refuse: "danger",
+};
+
+export default function ClientDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [client, setClient] = useState<ClientDetail | null>(null);
+  const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", typeClient: "particulier" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [tab, setTab] = useState<"info" | "chantiers" | "devis" | "activite">("info");
+  const [deleteDevisTarget, setDeleteDevisTarget] = useState<ClientDetail["devis"][number] | null>(null);
+  const [deletingDevis, setDeletingDevis] = useState(false);
+
+  useEffect(() => {
+    fetchWithAuth(`/api/clients/${params.id}`).then(async (res) => {
+      if (!res.ok) {
+        setError("Client introuvable.");
+        return;
+      }
+      const data = await res.json();
+      setClient(data.client);
+    });
+  }, [params.id]);
+
+  function openEdit() {
+    if (!client) return;
+    setEditForm({
+      name: client.name,
+      email: client.email || "",
+      phone: client.phone || "",
+      address: client.address || "",
+      notes: client.notes || "",
+      typeClient: client.typeClient,
+    });
+    setEditing(true);
+  }
+
+  async function confirmEdit() {
+    if (!client) return;
+    if (!editForm.name.trim()) {
+      toast.error("Le nom est requis.");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetchWithAuth(`/api/clients/${client.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de modifier ce client.");
+        return;
+      }
+      const data = await res.json();
+      setClient((prev) => (prev ? { ...prev, ...data.client } : prev));
+      toast.success("Client mis à jour");
+      router.refresh();
+      setEditing(false);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function confirmDeleteDevis() {
+    if (!deleteDevisTarget) return;
+    setDeletingDevis(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${deleteDevisTarget.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Erreur lors de la suppression du devis.");
+        return;
+      }
+      setClient((prev) => (prev ? { ...prev, devis: prev.devis.filter((d) => d.id !== deleteDevisTarget.id) } : prev));
+      toast.success("Devis supprimé");
+      router.refresh();
+      setDeleteDevisTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setDeletingDevis(false);
+    }
+  }
+
+  async function confirmDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetchWithAuth(`/api/clients/${params.id}`, { method: "DELETE" });
+      setDeleting(false);
+      if (res.ok) {
+        toast.success("Client supprimé");
+        router.refresh();
+        router.push("/dashboard/clients");
+        return;
+      }
+      toast.error("Erreur lors de la suppression du client.");
+      setConfirmingDelete(false);
+    } catch {
+      setDeleting(false);
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setConfirmingDelete(false);
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="nova-page">
+        <BackLink href="/dashboard/clients" label="Retour aux clients" />
+        <p className="error">{error}</p>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="nova-page">
+        <BackLink href="/dashboard/clients" label="Retour aux clients" />
+        <TableSkeleton columns={3} rows={3} />
+      </div>
+    );
+  }
+
+  const projectColumns: TableColumn<ClientDetail["projects"][number]>[] = [
+    { key: "name", label: "Chantier" },
+    {
+      key: "status",
+      label: "Statut",
+      render: (p) => (
+        <Badge tone={PROJECT_STATUS_TONE[p.status] || "neutral"}>{PROJECT_STATUS_LABEL[p.status] || p.status}</Badge>
+      ),
+    },
+    { key: "createdAt", label: "Créé le", render: (p) => <Timestamp date={p.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (p) => (
+        <Link href={`/dashboard/chantiers/${p.id}`} className="nova-inline-link">
+          Voir →
+        </Link>
+      ),
+    },
+  ];
+
+  const caTotal = client.devis
+    .filter((d) => d.status === "accepte")
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+
+  const chantiersEnCours = client.projects.filter((p) => p.status === "en_cours").length;
+  const chantiersTermines = client.projects.filter((p) => p.status === "termine").length;
+
+  const dernieresDates = [
+    ...client.devis.map((d) => d.createdAt),
+    ...client.projects.map((p) => p.createdAt),
+  ];
+  const derniereInteraction =
+    dernieresDates.length > 0
+      ? dernieresDates.reduce((latest, d) => (new Date(d) > new Date(latest) ? d : latest))
+      : null;
+
+  const tachesEnAttente = client.projects.flatMap((p) =>
+    p.tasks.map((t) => ({ ...t, projectId: p.id, projectName: p.name }))
+  );
+  const nombreRapportsVocaux = client.projects.reduce((sum, p) => sum + p._count.voiceReports, 0);
+
+  const devisColumns: TableColumn<ClientDetail["devis"][number]>[] = [
+    { key: "label", label: "Devis" },
+    {
+      key: "status",
+      label: "Statut",
+      render: (d) => <Badge tone={DEVIS_STATUS_TONE[d.status] || "neutral"}>{DEVIS_STATUS_LABEL[d.status] || d.status}</Badge>,
+    },
+    {
+      key: "amount",
+      label: "Montant",
+      align: "right",
+      render: (d) => (d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "—"),
+    },
+    { key: "createdAt", label: "Créé le", render: (d) => <Timestamp date={d.createdAt} /> },
+    {
+      key: "actions",
+      label: "",
+      align: "right",
+      render: (d) => (
+        <div className="nova-table-row-actions" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/dashboard/devis/${d.id}`} className="nova-inline-link">
+            Voir →
+          </Link>
+          {d.status === "brouillon" && (
+            <Button variant="ghost" onClick={() => setDeleteDevisTarget(d)} aria-label="Supprimer le devis">
+              <Trash2 size={14} strokeWidth={1.75} />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="nova-page">
+      <Breadcrumb items={[{ label: "Clients", href: "/dashboard/clients" }, { label: client.name }]} />
+
+      <header className="nova-page-header-row">
+        <div className="nova-identity-cell" style={{ gap: 16 }}>
+          <Avatar name={client.name} size={56} />
+          <div>
+            <div className="nova-identity-cell" style={{ gap: 8 }}>
+              <h1>{client.name}</h1>
+              <Badge tone={CLIENT_TYPE_TONE[client.typeClient] || "neutral"}>
+                {CLIENT_TYPE_LABEL[client.typeClient] || client.typeClient}
+              </Badge>
+            </div>
+            <p className="nova-page-subtitle">
+              {client.address || client.email || `Client depuis le ${new Date(client.createdAt).toLocaleDateString("fr-FR")}`}
+            </p>
+          </div>
+        </div>
+        <div className="nova-header-actions">
+          <Link href={`/dashboard/devis/nouveau?clientId=${client.id}`} className="nova-btn nova-btn-secondary">
+            <FileText size={16} strokeWidth={1.75} />
+            Nouveau devis
+          </Link>
+          <Link href={`/dashboard/chantiers/nouveau?clientId=${client.id}`} className="nova-btn nova-btn-secondary">
+            <Building2 size={16} strokeWidth={1.75} />
+            Nouveau chantier
+          </Link>
+          <Button variant="secondary" onClick={openEdit}>
+            <Pencil size={16} strokeWidth={1.75} />
+            Modifier
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+            <Trash2 size={16} strokeWidth={1.75} />
+            Supprimer le client
+          </Button>
+        </div>
+      </header>
+
+      <div className="nova-header-actions">
+        <Badge tone={chantiersEnCours > 0 ? "blue" : "neutral"}>
+          {chantiersEnCours} chantier{chantiersEnCours > 1 ? "s" : ""} actif{chantiersEnCours > 1 ? "s" : ""}
+        </Badge>
+        <Badge tone="success">{caTotal.toLocaleString("fr-FR")} € CA total</Badge>
+      </div>
+
+      <Tabs
+        tabs={[
+          { key: "info", label: "Informations" },
+          { key: "chantiers", label: `Chantiers (${client.projects.length})` },
+          { key: "devis", label: `Devis (${client.devis.length})` },
+          { key: "activite", label: "Résumé d'activité" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+
+      {tab === "info" && (
+        <Card>
+          <CardTitle>Coordonnées</CardTitle>
+          <dl className="nova-detail-list">
+            <div>
+              <dt>Email</dt>
+              <dd>{client.email || "—"}</dd>
+            </div>
+            <div>
+              <dt>Téléphone</dt>
+              <dd>{client.phone || "—"}</dd>
+            </div>
+            <div>
+              <dt>Adresse</dt>
+              <dd>{client.address || "—"}</dd>
+            </div>
+          </dl>
+          {client.notes && <p className="nova-detail-notes">{client.notes}</p>}
+        </Card>
+      )}
+
+      {tab === "chantiers" && (
+        <Table
+          columns={projectColumns}
+          rows={client.projects}
+          getRowHref={(p) => `/dashboard/chantiers/${p.id}`}
+          emptyLabel="Aucun chantier rattaché à ce client."
+        />
+      )}
+
+      {tab === "devis" && (
+        <Table
+          columns={devisColumns}
+          rows={client.devis}
+          getRowHref={(d) => `/dashboard/devis/${d.id}`}
+          emptyLabel="Aucun devis rattaché à ce client."
+        />
+      )}
+
+      {tab === "activite" && (
+        <Card>
+          <div className="nova-summary-grid">
+            <div>
+              <div className="nova-analyse-value">{caTotal.toLocaleString("fr-FR")} €</div>
+              <div className="nova-analyse-label">CA total (devis acceptés)</div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">{client.projects.length}</div>
+              <div className="nova-analyse-label">
+                Chantiers ({chantiersEnCours} en cours, {chantiersTermines} terminés)
+              </div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">
+                {derniereInteraction ? new Date(derniereInteraction).toLocaleDateString("fr-FR") : "—"}
+              </div>
+              <div className="nova-analyse-label">Dernière interaction</div>
+            </div>
+            <div>
+              <div className="nova-analyse-value">{nombreRapportsVocaux}</div>
+              <div className="nova-analyse-label">Rapports vocaux</div>
+            </div>
+          </div>
+
+          <p className="nova-summary-subtitle">Tâches en attente ({tachesEnAttente.length})</p>
+          {tachesEnAttente.length === 0 ? (
+            <p className="nova-page-subtitle">Aucune tâche en attente sur les chantiers de ce client.</p>
+          ) : (
+            <ul className="nova-summary-task-list">
+              {tachesEnAttente.slice(0, 5).map((t) => (
+                <li key={t.id}>
+                  <span>{t.text}</span>
+                  <Link href={`/dashboard/chantiers/${t.projectId}`} className="nova-inline-link">
+                    {t.projectName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      <ConfirmModal
+        open={confirmingDelete}
+        itemLabel={`le client « ${client.name} »`}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+        confirming={deleting}
+      />
+
+      <ConfirmModal
+        open={deleteDevisTarget != null}
+        itemLabel={deleteDevisTarget ? `le devis « ${deleteDevisTarget.label} »` : ""}
+        onConfirm={confirmDeleteDevis}
+        onCancel={() => setDeleteDevisTarget(null)}
+        confirming={deletingDevis}
+      />
+
+      <EditModal open={editing} title="Modifier le client" onCancel={() => setEditing(false)} onSave={confirmEdit} saving={savingEdit}>
+        <Field
+          label="Nom"
+          required
+          value={editForm.name}
+          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+        />
+        <Field
+          label="Email"
+          type="email"
+          value={editForm.email}
+          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+        />
+        <Field
+          label="Téléphone"
+          value={editForm.phone}
+          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+        />
+        <Field
+          label="Adresse"
+          value={editForm.address}
+          onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+        />
+        <SelectField
+          label="Type de client"
+          value={editForm.typeClient}
+          onChange={(e) => setEditForm({ ...editForm, typeClient: e.target.value })}
+        >
+          <option value="particulier">Particulier</option>
+          <option value="professionnel">Professionnel</option>
+          <option value="collectivite">Collectivité</option>
+        </SelectField>
+        <TextareaField
+          label="Notes"
+          rows={3}
+          value={editForm.notes}
+          onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+        />
+      </EditModal>
+    </div>
+  );
+}

@@ -1,0 +1,277 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Mic, Square } from "lucide-react";
+import { Badge, Breadcrumb, Button, Card, Field, SelectField, TextareaField, useToast } from "@/components/ui";
+import { fetchWithAuth } from "@/lib/fetchClient";
+
+type ProjectOption = { id: string; name: string };
+type Mode = "texte" | "audio";
+
+type ReportResult = { summary: string };
+
+function formatTime(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+export function VoiceReportForm({
+  audioEnabled,
+  defaultProjectId,
+}: {
+  audioEnabled: boolean;
+  defaultProjectId?: string;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const t = useTranslations("rapportsVocaux.form");
+  const tParent = useTranslations("rapportsVocaux");
+  const tCommon = useTranslations("common");
+  const [mode, setMode] = useState<Mode>("texte");
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [authorLabel, setAuthorLabel] = useState("");
+  const [projectId, setProjectId] = useState(defaultProjectId || "");
+  const [transcriptText, setTranscriptText] = useState("");
+
+  const [recording, setRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<ReportResult | null>(null);
+
+  useEffect(() => {
+    fetchWithAuth("/api/projects")
+      .then((res) => res.json())
+      .then((data) => setProjects((data.projects ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function startRecording() {
+    setError("");
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    chunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
+      setAudioBlob(blob);
+      setAudioUrl(URL.createObjectURL(blob));
+      stream.getTracks().forEach((t) => t.stop());
+    };
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setSeconds(0);
+    setRecording(true);
+    timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (mode === "texte" && !transcriptText.trim()) {
+      const message = t("errorEmptyTranscript");
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (mode === "audio" && !audioBlob) {
+      const message = t("errorEmptyAudio");
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setSubmitting(true);
+    const body: Record<string, unknown> = {
+      authorLabel,
+      projectId: projectId || undefined,
+    };
+    if (mode === "texte") {
+      body.transcriptText = transcriptText;
+    } else if (audioBlob) {
+      body.audioBase64 = await blobToBase64(audioBlob);
+      body.audioMimeType = audioBlob.type || "audio/webm";
+    }
+
+    try {
+      const res = await fetchWithAuth("/api/voice-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data.error || t("errorSave");
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      const data = await res.json();
+      if (!data.report) {
+        const message = t("errorUnexpected");
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      toast.success(t("toastSubmitted"));
+      router.refresh();
+      setResult({ summary: data.report.summary });
+    } catch {
+      const message = tCommon("networkError");
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div className="nova-page">
+        <Breadcrumb items={[{ label: tParent("title"), href: "/dashboard/rapports-vocaux" }, { label: t("resultTitle") }]} />
+        <header className="nova-page-header">
+          <h1>{t("resultTitle")}</h1>
+        </header>
+        <Card accent={false} className="nova-ai-zone">
+          <div className="nova-ai-zone-header">
+            <Badge tone="teal">{t("novaSummaryBadge")}</Badge>
+          </div>
+          <p className="nova-ai-content">{result.summary}</p>
+        </Card>
+        <div>
+          <Button onClick={() => router.push("/dashboard/rapports-vocaux")}>{t("viewAllReports")}</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="nova-page">
+      <Breadcrumb items={[{ label: tParent("title"), href: "/dashboard/rapports-vocaux" }, { label: t("newReportTitle") }]} />
+
+      <header className="nova-page-header">
+        <h1>{t("newReportTitle")}</h1>
+      </header>
+
+      <div className="nova-notice">{t("privacyNotice")}</div>
+
+      <Card>
+        <form onSubmit={handleSubmit}>
+          <Field
+            label={t("authorLabel")}
+            required
+            value={authorLabel}
+            onChange={(e) => setAuthorLabel(e.target.value)}
+            placeholder={t("authorPlaceholder")}
+          />
+          <SelectField label={t("projectLabel")} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="">{t("noProject")}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </SelectField>
+
+          {audioEnabled && (
+            <div className="nova-filter-row nova-mode-toggle">
+              <button
+                type="button"
+                className={`nova-filter-chip ${mode === "texte" ? "nova-filter-chip-active" : ""}`}
+                onClick={() => setMode("texte")}
+              >
+                {t("modeManual")}
+              </button>
+              <button
+                type="button"
+                className={`nova-filter-chip ${mode === "audio" ? "nova-filter-chip-active" : ""}`}
+                onClick={() => setMode("audio")}
+              >
+                {t("modeAudio")}
+              </button>
+            </div>
+          )}
+
+          {mode === "texte" ? (
+            <TextareaField
+              label={t("transcriptLabel")}
+              rows={6}
+              value={transcriptText}
+              onChange={(e) => setTranscriptText(e.target.value)}
+              placeholder={t("transcriptPlaceholder")}
+            />
+          ) : (
+            <div className="nova-record-block">
+              <label>{t("recordingLabel")}</label>
+              <div className="nova-record-controls">
+                {recording ? (
+                  <Button type="button" variant="danger" className="nova-btn-recording" onClick={stopRecording}>
+                    <Square size={16} strokeWidth={1.75} />
+                    {t("stop")}
+                  </Button>
+                ) : (
+                  <Button type="button" variant="danger" onClick={startRecording}>
+                    <Mic size={16} strokeWidth={1.75} />
+                    {audioBlob ? t("reRecord") : t("startRecording")}
+                  </Button>
+                )}
+                {recording && (
+                  <div className="nova-record-indicator">
+                    <span className="nova-record-dot" />
+                    <span className="nova-record-timer">{formatTime(seconds)}</span>
+                  </div>
+                )}
+              </div>
+              {audioUrl && !recording && (
+                <audio className="nova-record-preview" controls src={audioUrl} />
+              )}
+            </div>
+          )}
+
+          {!audioEnabled && <p className="nova-hint-standalone">{t("audioHint")}</p>}
+
+          {error && <div className="error">{error}</div>}
+          <Button type="submit" disabled={submitting}>
+            {submitting ? t("submitting") : t("submit")}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}

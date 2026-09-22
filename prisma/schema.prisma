@@ -1,0 +1,420 @@
+// Schéma NOVA — socle opérationnel (Phase 0 + Phase 1), rapports vocaux
+// terrain (Phase 2, modèle VoiceReport) et copilote financier (Phase 3,
+// modèle StrategicReport) du brief technique — toutes construites
+// directement, choix produit assumé (voir README.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business?
+  subscription Subscription?
+  pushSubscriptions PushSubscription[]
+  langue       String        @default("fr") // fr | en | ar | pt — langue d'interface pour les pages terrain (sprint 1, point 2)
+}
+
+// Abonnements navigateur aux notifications push (module PWA, sprint 1
+// point 1) — un utilisateur peut avoir plusieurs abonnements (un par
+// appareil/navigateur installé).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Business {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  sector       String
+  mission      String?
+  tone         String    @default("pro")
+  tauxHoraire  Float     @default(40)
+  accountantEmail String? // comptable partenaire ou comptable habituel du client, pour l'envoi du rapport stratégique
+  address      String? // adresse (et ville) de l'entreprise, même convention que Client.address — mention légale facture + en-tête devis/facture
+  siret        String? // mention légale facture — éditable dans Paramètres (module 7)
+  formeJuridique String? // SARL, SAS, EI, auto-entrepreneur... — mention légale facture
+  capitalSocial  Float?  // mention légale facture, non pertinent en auto-entreprise
+  codeAPE        String? // code APE/NAF — mention légale facture
+  conditionsPaiement String? @default("Paiement sous 30 jours") // pied de page facture
+  metier       String? // plomberie | electricite | maconnerie | peinture | menuiserie | carrelage | chauffage | toiture | autre — pré-configure la bibliothèque d'ouvrages (module B4) et les couleurs d'accent (sprint 1, point 3)
+  onboardingCompleted Boolean @default(false) // passe à true quand le dirigeant masque le guide de démarrage (sprint 1, point 4)
+  logoBase64   String? // logo entreprise, encodé en data URL — affiché en haut de la sidebar
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  clients   Client[]
+  projects  Project[]
+  devis     Devis[]
+  tasks     Task[]
+  documents Document[]
+  voiceReports     VoiceReport[]
+  strategicReports StrategicReport[]
+  teamMembers      TeamMember[]
+  suppliers        Supplier[]
+  purchases        Purchase[]
+  attachments      Attachment[]
+  situations       SituationFacture[]
+  ouvrages         OuvrageType[]
+  attestationsTva  AttestationTVA[]
+}
+
+// --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
+
+model Client {
+  id        String   @id @default(cuid())
+  businessId String
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  typeClient String  @default("particulier") // particulier | professionnel | collectivite — influence le taux de TVA par défaut du devis (module 9)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+  devis    Devis[]
+  attestationsTva AttestationTVA[]
+
+  @@index([businessId])
+}
+
+model Project {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name       String
+  address    String?
+  status     String    @default("planifie") // planifie | en_cours | termine | annule
+  startDate  DateTime?
+  endDate    DateTime?
+  portalToken String?  @unique // portail client (module 4) — généré à la demande, jamais à la création
+  budgetPrevu Float?   // fiche chantier enrichie (module 6) — dépenses réelles viendront du futur module achats
+  photoCouverture String? // encodé en data URL, même pattern que Business.logoBase64
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tasks Task[]
+  voiceReports VoiceReport[]
+  assignments  Assignment[]
+  steps  ProjectStep[]
+  photos ProjectPhoto[]
+  purchases Purchase[]
+
+  @@index([businessId])
+  @@index([clientId])
+}
+
+model ProjectStep {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  status    String   @default("a_faire") // a_faire | en_cours | termine
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model ProjectPhoto {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  imageBase64 String
+  caption     String?
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Devis {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  label      String
+  description String?
+  amount     Float?
+  status     String   @default("brouillon") // brouillon | envoye | accepte | refuse
+  paymentStatus String @default("en_attente") // en_attente | payee | en_retard — pertinent une fois le devis accepté (facture)
+  content    String   // texte du devis généré (génération IA en texte libre — coexiste avec les lignes détaillées)
+  remise     Float?   // pourcentage de remise appliqué au total
+  notesDevis String?  // conditions, délais, remarques affichés sur le devis
+  typeTravauxTVA String @default("neuf") // neuf | renovation | energie | entretien — détermine le taux de TVA suggéré sur les lignes (module B1, obligation légale BTP)
+  clientTypeTVA  String @default("professionnel") // particulier | professionnel | collectivite — détermine le taux de TVA suggéré sur les lignes (module B1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lines DevisLine[]
+  situations SituationFacture[]
+  attestationsTva AttestationTVA[]
+
+  @@index([businessId])
+  @@index([clientId])
+}
+
+// Attestation simplifiée de TVA à taux réduit (sprint 1, point 5) : le client
+// doit signer cette attestation dès que le devis/facture applique un taux de
+// 10% (art. 279-0 bis du CGI, travaux dans un logement achevé depuis plus de
+// 2 ans) — obligation légale BTP, sans elle l'artisan risque un redressement.
+model AttestationTVA {
+  id               String    @id @default(cuid())
+  businessId       String
+  business         Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  devisId          String?
+  devis            Devis?    @relation(fields: [devisId], references: [id], onDelete: SetNull)
+  adresseTravaux   String
+  dateConstruction String    // saisie libre, ex. "avant 1990" — pas une date calendaire
+  typeLogement     String    // maison | appartement | immeuble_collectif
+  usageLogement    String    // residence_principale | residence_secondaire | locatif
+  signedAt         DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([devisId])
+}
+
+// Facturation de situation (module B2) : dans le BTP un chantier est
+// rarement facturé en une fois — chaque situation facture une partie du
+// devis accepté selon l'avancement réel du chantier.
+model SituationFacture {
+  id                    String   @id @default(cuid())
+  devisId               String
+  devis                 Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  businessId            String
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  numero                Int
+  pourcentageAvancement Float
+  montantHT             Float
+  statut                String   @default("brouillon") // brouillon | envoyee | payee
+  createdAt             DateTime @default(now())
+
+  @@index([devisId])
+  @@index([businessId])
+}
+
+model DevisLine {
+  id            String   @id @default(cuid())
+  devisId       String
+  devis         Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  type          String   // prestation | materiel | deplacement | maindoeuvre | autre
+  description   String
+  quantite      Float    @default(1)
+  unite         String?  // h, m², m³, forfait, unité...
+  prixUnitaire  Float
+  tva           Float    @default(20)
+  createdAt     DateTime @default(now())
+
+  @@index([devisId])
+}
+
+// Bibliothèque d'ouvrages (module B4) : prestations types réutilisables
+// d'un devis à l'autre, pour éviter de ressaisir les mêmes lignes.
+model OuvrageType {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  label          String
+  type           String   // plomberie | electricite | maconnerie | peinture | sol | menuiserie | autre
+  unite          String
+  prixUnitaireHT Float
+  tvaDefaut      Float    @default(20)
+  description    String?
+  createdAt      DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model Task {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  text       String
+  done       Boolean  @default(false)
+  dueDate    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([projectId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type       String   // brief | marketing | conseil
+  title      String
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+// Pièce jointe uploadée par le dirigeant (contrat, attestation, photo...) —
+// distincte de Document (contenu généré par l'IA) et de ProjectPhoto
+// (rattachée à un chantier) : ici un fichier externe, non lié à un
+// chantier précis, stocké en base64 comme logoBase64/photoCouverture.
+model Attachment {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  fileBase64 String
+  mimeType   String
+  category   String   // contrat | attestation | photo | autre
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+// --- Phase 2 : rapports terrain vocaux ---
+// Rappel légal (voir NOVA_Brief_Technique_v3.md) : ceci est un outil de
+// compte-rendu d'activité, jamais un outil de notation ou de surveillance
+// individuelle. Ne pas ajouter de champ de scoring/performance ici.
+model VoiceReport {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  authorLabel  String   // nom/rôle déclaré par le collaborateur, pas un champ RH
+  audioUrl     String?  // référence au fichier audio d'origine (stockage externe)
+  transcript   String   // texte transcrit
+  summary      String   // résumé structuré généré par l'IA à partir du transcript
+  language     String   @default("fr")
+  createdAt    DateTime @default(now())
+
+  @@index([businessId])
+  @@index([projectId])
+}
+
+// --- Planning / dispatch équipe (module 6) ---
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  role       String?
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now())
+
+  assignments Assignment[]
+
+  @@index([businessId])
+}
+
+model Assignment {
+  id           String     @id @default(cuid())
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date         DateTime
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@index([teamMemberId])
+  @@index([projectId])
+  @@index([date])
+}
+
+// --- Achats & fournisseurs (module 7 bis) ---
+
+model Supplier {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  contact    String?
+  email      String?
+  phone      String?
+  category   String?
+  createdAt  DateTime @default(now())
+
+  purchases Purchase[]
+
+  @@index([businessId])
+}
+
+model Purchase {
+  id           String    @id @default(cuid())
+  businessId   String
+  business     Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplierId   String
+  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  description  String
+  amount       Float
+  status       String    @default("en_attente") // en_attente | en_cours | recu | annule
+  orderDate    DateTime  @default(now())
+  expectedDate DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([supplierId])
+  @@index([projectId])
+}
+
+// --- Phase 3 : copilote financier (option premium) ---
+// Le diagnostic gratuit (avant inscription) reste stateless, non stocké ici.
+model StrategicReport {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  period       String   // ex. "2026-T3"
+  content      String   // jamais nommé "audit" ni "bilan" dans le contenu généré
+  reviewedBy   String?  // nom du comptable partenaire ayant relu le rapport
+  reviewedAt   DateTime?
+  status       String   @default("brouillon") // brouillon | en_relecture | envoye
+  createdAt    DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  plan                 String   @default("essentiel") // essentiel | pro | premium
+  status               String   @default("inactive")  // inactive | active | past_due | canceled
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
