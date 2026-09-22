@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     const monthsParam = Number(new URL(req.url).searchParams.get("months"));
     const monthsCount = [3, 6, 12].includes(monthsParam) ? monthsParam : 6;
 
-    const [user, business, devisAll, projectsAll, tasksOverdue] = await Promise.all([
+    const [user, business, devisAll, projectsAll, tasksOverdue, clientsCount, teamMembersCount] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } }),
       prisma.business.findUnique({ where: { id: businessId } }),
       prisma.devis.findMany({ where: { businessId }, include: { client: true }, orderBy: { createdAt: "desc" } }),
@@ -48,6 +48,8 @@ export async function GET(req: Request) {
         orderBy: { dueDate: "asc" },
         take: 5,
       }),
+      prisma.client.count({ where: { businessId } }),
+      prisma.teamMember.count({ where: { businessId } }),
     ]);
 
     const devisEnAttente = devisAll.filter((d) => d.status === "envoye");
@@ -182,6 +184,13 @@ export async function GET(req: Request) {
       chart,
       aFaire,
       activites,
+      onboarding: {
+        completed: business?.onboardingCompleted ?? false,
+        clientsCount,
+        devisCount: devisAll.length,
+        projectsCount: projectsAll.length,
+        teamMembersCount,
+      },
     });
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);

@@ -28,6 +28,10 @@ export const businessSchema = z.object({
   metier: z.enum(["plomberie", "electricite", "maconnerie", "peinture", "menuiserie", "carrelage", "chauffage", "toiture", "autre"]).optional(),
 });
 
+export const businessOnboardingSchema = z.object({
+  onboardingCompleted: z.boolean(),
+});
+
 export const clientSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email().optional().or(z.literal("")),

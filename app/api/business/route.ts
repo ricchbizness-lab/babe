@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { businessSchema } from "@/lib/validation";
-import { requireSession, ownershipErrorToStatus } from "@/lib/ownership";
+import { businessOnboardingSchema, businessSchema } from "@/lib/validation";
+import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 import { getOuvragesForMetier } from "@/lib/ouvragesByMetier";
 
 export async function GET() {
@@ -47,6 +47,28 @@ export async function POST(req: Request) {
       }
     }
 
+    return NextResponse.json({ business });
+  } catch (err) {
+    const { status, message } = ownershipErrorToStatus(err);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const { userId } = await requireSession();
+    const businessId = await requireBusinessId(userId);
+
+    const body = await req.json();
+    const parsed = businessOnboardingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    }
+
+    const business = await prisma.business.update({
+      where: { id: businessId },
+      data: parsed.data,
+    });
     return NextResponse.json({ business });
   } catch (err) {
     const { status, message } = ownershipErrorToStatus(err);

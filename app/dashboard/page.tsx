@@ -23,6 +23,7 @@ import {
   type TableColumn,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { OnboardingWizardBanner, type OnboardingData } from "./OnboardingWizardBanner";
 
 type Metrics = {
   caFacture: number;
@@ -62,6 +63,7 @@ type Overview = {
   chart: ChartPoint[];
   aFaire: AFaireItem[];
   activites: ActivityRow[];
+  onboarding: OnboardingData;
 };
 
 const DEVIS_STATUS_LABEL: Record<string, string> = {
@@ -137,12 +139,33 @@ export default function DashboardPage() {
   const [months, setMonths] = useState(6);
   const [deleteTarget, setDeleteTarget] = useState<ActivityRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [hidingOnboarding, setHidingOnboarding] = useState(false);
 
   useEffect(() => {
     fetchWithAuth(`/api/dashboard-overview?months=${months}`)
       .then((res) => res.json())
       .then((json) => setData(json));
   }, [months]);
+
+  async function handleHideOnboarding() {
+    setHidingOnboarding(true);
+    try {
+      const res = await fetchWithAuth("/api/business", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onboardingCompleted: true }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de masquer le guide — réessayez.");
+        return;
+      }
+      setData((prev) => (prev ? { ...prev, onboarding: { ...prev.onboarding, completed: true } } : prev));
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setHidingOnboarding(false);
+    }
+  }
 
   async function confirmDeleteRow() {
     if (!deleteTarget) return;
@@ -218,6 +241,10 @@ export default function DashboardPage() {
           <NewMenu />
         </div>
       </header>
+
+      {data !== null && !data.onboarding.completed && (
+        <OnboardingWizardBanner onboarding={data.onboarding} onHide={handleHideOnboarding} hiding={hidingOnboarding} />
+      )}
 
       {data === null ? (
         <div className="nova-stats-grid" aria-hidden="true">

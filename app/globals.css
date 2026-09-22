@@ -1515,6 +1515,73 @@ button.primary:hover { background: var(--nova-teal-deep); }
   flex-wrap: wrap;
 }
 
+.nova-onboarding-banner {
+  background: var(--nova-teal-tint);
+  border: 1px solid var(--nova-teal-tint);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-3);
+}
+.nova-onboarding-banner-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  flex-wrap: wrap;
+}
+.nova-onboarding-banner-title {
+  font-family: var(--nova-font-heading);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--nova-ink);
+  margin: 0 0 2px;
+}
+.nova-onboarding-steps {
+  display: flex;
+  align-items: stretch;
+  gap: var(--nova-space-2);
+}
+@media (max-width: 720px) {
+  .nova-onboarding-steps { flex-direction: column; }
+}
+.nova-onboarding-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--nova-space-1);
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-btn);
+  padding: var(--nova-space-1) var(--nova-space-2);
+  min-width: 0;
+}
+.nova-onboarding-step-top {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-1);
+  min-width: 0;
+}
+.nova-onboarding-step-marker {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--nova-linen-deep);
+  color: var(--nova-ink-faint);
+}
+.nova-onboarding-step-done .nova-onboarding-step-marker { background: var(--nova-success-tint); color: var(--nova-success); }
+.nova-onboarding-step-label { flex: 1; font-size: 13px; color: var(--nova-ink); min-width: 0; }
+.nova-onboarding-step-done .nova-onboarding-step-label { color: var(--nova-ink-soft); }
+.nova-onboarding-step-cta { width: 100%; text-align: center; padding: 6px 10px; font-size: 12.5px; }
+
 .nova-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
