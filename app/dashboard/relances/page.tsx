@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Send, X } from "lucide-react";
+import { MessageCircle, Send, X } from "lucide-react";
 import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Tabs, useToast, type TableColumn } from "@/components/ui";
 import { computeInvoiceAmounts } from "@/lib/facturation";
 import { daysSinceSent, joursRetardPaiement, relanceLevel } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { isInternationalPhone } from "@/lib/whatsapp";
 
 type DevisRow = {
   id: string;
@@ -15,7 +16,7 @@ type DevisRow = {
   status: string;
   paymentStatus: string;
   updatedAt: string;
-  client: { id: string; name: string; email: string | null } | null;
+  client: { id: string; name: string; email: string | null; phone: string | null } | null;
 };
 
 type TaskRow = {
@@ -53,7 +54,7 @@ export default function RelancesPage() {
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [tab, setTab] = useState<"factures" | "devis" | "rappels">("factures");
   const [sendingId, setSendingId] = useState<string | null>(null);
-  const [result, setResult] = useState<{ client: string; email: string; message: string } | null>(null);
+  const [result, setResult] = useState<{ client: string; destination: string; message: string } | null>(null);
 
   useEffect(() => {
     fetchWithAuth("/api/devis")
@@ -86,17 +87,22 @@ export default function RelancesPage() {
     facturesARelancer.reduce((sum, d) => sum + (d.amount || 0), 0) + devisARelancer.reduce((sum, d) => sum + (d.amount || 0), 0);
   const enRetard30j = facturesARelancer.filter((d) => joursRetardFacture(d) > 0).length;
 
-  async function handleRelancer(d: DevisRow) {
-    if (!d.client?.email) {
+  async function handleRelancer(d: DevisRow, channel: "email" | "whatsapp" = "email") {
+    if (channel === "email" && !d.client?.email) {
       toast.error("Ce client n'a pas d'adresse email renseignée.");
       return;
     }
-    setSendingId(d.id);
+    if (channel === "whatsapp" && !(d.client?.phone && isInternationalPhone(d.client.phone))) {
+      toast.error("Ce client n'a pas de numéro de téléphone au format international.");
+      return;
+    }
+    const sendingKey = channel === "whatsapp" ? `${d.id}:whatsapp` : d.id;
+    setSendingId(sendingKey);
     try {
       const res = await fetchWithAuth("/api/relances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ devisId: d.id }),
+        body: JSON.stringify({ devisId: d.id, channel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -104,8 +110,9 @@ export default function RelancesPage() {
         return;
       }
       const data = await res.json();
-      setResult({ client: d.client.name, email: d.client.email, message: data.message || "" });
-      toast.success("Relance envoyée");
+      const destination = channel === "whatsapp" ? (d.client?.phone as string) : (d.client?.email as string);
+      setResult({ client: d.client?.name || "", destination, message: data.message || "" });
+      toast.success(channel === "whatsapp" ? "Relance envoyée via WhatsApp" : "Relance envoyée");
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
@@ -165,17 +172,32 @@ export default function RelancesPage() {
       label: "",
       align: "right",
       render: (d) => (
-        <Button
-          variant="secondary"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRelancer(d);
-          }}
-          disabled={sendingId === d.id}
-        >
-          <Send size={13} strokeWidth={1.75} />
-          {sendingId === d.id ? "Envoi..." : "Relancer"}
-        </Button>
+        <div className="nova-table-actions">
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRelancer(d);
+            }}
+            disabled={sendingId === d.id}
+          >
+            <Send size={13} strokeWidth={1.75} />
+            {sendingId === d.id ? "Envoi..." : "Relancer par email"}
+          </Button>
+          {d.client?.phone && isInternationalPhone(d.client.phone) && (
+            <Button
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRelancer(d, "whatsapp");
+              }}
+              disabled={sendingId === `${d.id}:whatsapp`}
+            >
+              <MessageCircle size={13} strokeWidth={1.75} />
+              {sendingId === `${d.id}:whatsapp` ? "Envoi..." : "WhatsApp"}
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -205,17 +227,32 @@ export default function RelancesPage() {
       label: "",
       align: "right",
       render: (d) => (
-        <Button
-          variant="secondary"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRelancer(d);
-          }}
-          disabled={sendingId === d.id}
-        >
-          <Send size={13} strokeWidth={1.75} />
-          {sendingId === d.id ? "Envoi..." : "Relancer"}
-        </Button>
+        <div className="nova-table-actions">
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRelancer(d);
+            }}
+            disabled={sendingId === d.id}
+          >
+            <Send size={13} strokeWidth={1.75} />
+            {sendingId === d.id ? "Envoi..." : "Relancer par email"}
+          </Button>
+          {d.client?.phone && isInternationalPhone(d.client.phone) && (
+            <Button
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRelancer(d, "whatsapp");
+              }}
+              disabled={sendingId === `${d.id}:whatsapp`}
+            >
+              <MessageCircle size={13} strokeWidth={1.75} />
+              {sendingId === `${d.id}:whatsapp` ? "Envoi..." : "WhatsApp"}
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -301,7 +338,7 @@ export default function RelancesPage() {
                 <X size={18} strokeWidth={1.75} />
               </button>
             </div>
-            <p className="nova-page-subtitle">Envoyée à {result.email}</p>
+            <p className="nova-page-subtitle">Envoyée à {result.destination}</p>
             <p className="nova-ai-content">{result.message}</p>
             <div className="nova-modal-actions">
               <Button onClick={() => setResult(null)}>Fermer</Button>

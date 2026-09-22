@@ -3,12 +3,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateAgentText } from "@/lib/agent";
 import { sendEmail } from "@/lib/email";
+import { sendWhatsappMessage, isInternationalPhone } from "@/lib/whatsapp";
 import { computeInvoiceAmounts } from "@/lib/facturation";
 import { daysSinceSent } from "@/lib/relance";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 import { checkRateLimit, getRequestKey } from "@/lib/rateLimit";
 
-const relanceSendSchema = z.object({ devisId: z.string() });
+const relanceSendSchema = z.object({ devisId: z.string(), channel: z.enum(["email", "whatsapp"]).default("email") });
 
 const PAYMENT_TERMS_DAYS = 30;
 
@@ -41,8 +42,15 @@ export async function POST(req: Request) {
       businessId
     );
 
-    if (!devis.client?.email) {
+    const channel = parsed.data.channel;
+    if (!devis.client) {
+      return NextResponse.json({ error: "Ce devis n'a pas de client rattaché." }, { status: 400 });
+    }
+    if (channel === "email" && !devis.client.email) {
       return NextResponse.json({ error: "Ce client n'a pas d'adresse email renseignée." }, { status: 400 });
+    }
+    if (channel === "whatsapp" && (!devis.client.phone || !isInternationalPhone(devis.client.phone))) {
+      return NextResponse.json({ error: "Ce client n'a pas de numéro de téléphone au format international." }, { status: 400 });
     }
 
     const subscription = await prisma.subscription.findUnique({ where: { userId } });
@@ -74,13 +82,26 @@ export async function POST(req: Request) {
 
     const text = await generateAgentText(business, module, input);
 
-    await sendEmail(
-      [devis.client.email],
-      isFacture ? `Rappel de paiement — ${devis.label}` : `Relance — ${devis.label}`,
-      `<div style="font-family:sans-serif; white-space:pre-wrap;">${text}</div>`
-    );
+    if (channel === "whatsapp") {
+      if (!business.whatsappPhoneId || !business.whatsappToken) {
+        return NextResponse.json(
+          { error: "WhatsApp Business n'est pas configuré — renseignez vos identifiants dans Paramètres > Intégrations." },
+          { status: 400 }
+        );
+      }
+      const result = await sendWhatsappMessage(business.whatsappPhoneId, business.whatsappToken, devis.client!.phone as string, text);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 502 });
+      }
+    } else {
+      await sendEmail(
+        [devis.client!.email as string],
+        isFacture ? `Rappel de paiement — ${devis.label}` : `Relance — ${devis.label}`,
+        `<div style="font-family:sans-serif; white-space:pre-wrap;">${text}</div>`
+      );
+    }
 
-    return NextResponse.json({ sent: true, message: text });
+    return NextResponse.json({ sent: true, message: text, channel });
   } catch (err) {
     console.error("Erreur /api/relances:", err);
     const { status, message } = ownershipErrorToStatus(err);

@@ -60,6 +60,8 @@ model Business {
   metier       String? // plomberie | electricite | maconnerie | peinture | menuiserie | carrelage | chauffage | toiture | autre — pré-configure la bibliothèque d'ouvrages (module B4) et les couleurs d'accent (sprint 1, point 3)
   onboardingCompleted Boolean @default(false) // passe à true quand le dirigeant masque le guide de démarrage (sprint 1, point 4)
   logoBase64   String? // logo entreprise, encodé en data URL — affiché en haut de la sidebar
+  whatsappPhoneId String? // Phone Number ID de l'expéditeur WhatsApp Business (Meta Graph API) — sprint 2, point 2
+  whatsappToken   String? // access token Meta associé — champ password côté formulaire, jamais affiché en clair à l'écran
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

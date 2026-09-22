@@ -799,6 +799,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   padding: 14px 16px;
   border-bottom: 1px solid var(--nova-border);
 }
+.nova-table-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--nova-space-1); flex-wrap: wrap; }
 .nova-cell-title { font-size: 14px; font-weight: 600; color: var(--nova-ink); }
 .nova-cell-subtitle { font-size: 13px; font-weight: 400; color: var(--nova-ink-soft); }
 .nova-cell-amount { font-family: var(--nova-font-heading); font-size: 14px; font-weight: 700; color: var(--nova-ink); }
@@ -2733,6 +2734,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-quick-add input[type="text"] { flex: 2; min-width: 200px; margin: 0; }
 .nova-quick-add select { flex: 1; min-width: 160px; margin: 0; }
 .nova-quick-add button { flex-shrink: 0; }
+.nova-quick-add + .nova-hint { margin-top: var(--nova-space-1); }
 
 .nova-task-list {
   list-style: none;

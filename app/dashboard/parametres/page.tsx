@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, BellRing, Banknote, Building2, Check, CreditCard, Grid2x2, Mail, Trash2, Upload, UserCog, Users } from "lucide-react";
+import { Bell, BellRing, Banknote, Building2, Check, CreditCard, Grid2x2, Mail, MessageCircle, Trash2, Upload, UserCog, Users } from "lucide-react";
 import {
   Badge,
   Button,
@@ -102,11 +102,12 @@ const PLANS: { key: "essentiel" | "pro" | "premium"; label: string; price: numbe
   },
 ];
 
-const TABS: { key: "entreprise" | "utilisateurs" | "modules" | "notifications" | "abonnement"; label: string }[] = [
+const TABS: { key: "entreprise" | "utilisateurs" | "modules" | "notifications" | "integrations" | "abonnement"; label: string }[] = [
   { key: "entreprise", label: "Mon entreprise" },
   { key: "utilisateurs", label: "Utilisateurs" },
   { key: "modules", label: "Modules" },
   { key: "notifications", label: "Notifications" },
+  { key: "integrations", label: "Intégrations" },
   { key: "abonnement", label: "Abonnement" },
 ];
 
@@ -134,6 +135,12 @@ export default function ParametresPage() {
   const [metierChangePrompt, setMetierChangePrompt] = useState<Metier | null>(null);
   const [applyingMetier, setApplyingMetier] = useState(false);
 
+  const [whatsappForm, setWhatsappForm] = useState({ phoneId: "", token: "" });
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [testingWhatsapp, setTestingWhatsapp] = useState(false);
+  const [whatsappTestResult, setWhatsappTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   useEffect(() => {
     fetchWithAuth("/api/business")
       .then((res) => res.json())
@@ -156,6 +163,8 @@ export default function ParametresPage() {
           metier: b?.metier || "",
         });
         setInitialMetier(b?.metier || "");
+        setWhatsappForm({ phoneId: b?.whatsappPhoneId || "", token: b?.whatsappToken || "" });
+        setWhatsappConnected(!!b?.whatsappPhoneId && !!b?.whatsappToken);
       });
     fetchWithAuth("/api/user")
       .then((res) => res.json())
@@ -260,6 +269,53 @@ export default function ParametresPage() {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setApplyingMetier(false);
+    }
+  }
+
+  async function handleTestWhatsapp() {
+    if (!whatsappForm.phoneId.trim() || !whatsappForm.token.trim()) {
+      toast.error("Renseignez le Phone Number ID et l'access token avant de tester.");
+      return;
+    }
+    setTestingWhatsapp(true);
+    setWhatsappTestResult(null);
+    try {
+      const res = await fetchWithAuth("/api/whatsapp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneId: whatsappForm.phoneId.trim(), token: whatsappForm.token.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.connected) {
+        setWhatsappTestResult({ ok: false, message: data.error || "Connexion impossible." });
+        return;
+      }
+      setWhatsappTestResult({ ok: true, message: data.displayName ? `Connecté — ${data.displayName}` : "Connexion réussie." });
+    } catch {
+      setWhatsappTestResult({ ok: false, message: "Impossible de joindre le serveur — réessayez." });
+    } finally {
+      setTestingWhatsapp(false);
+    }
+  }
+
+  async function handleSaveWhatsapp() {
+    setSavingWhatsapp(true);
+    try {
+      const res = await fetchWithAuth("/api/business", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappPhoneId: whatsappForm.phoneId.trim(), whatsappToken: whatsappForm.token.trim() }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible d'enregistrer les identifiants WhatsApp.");
+        return;
+      }
+      setWhatsappConnected(!!whatsappForm.phoneId.trim() && !!whatsappForm.token.trim());
+      toast.success("Identifiants WhatsApp enregistrés");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingWhatsapp(false);
     }
   }
 
@@ -634,6 +690,44 @@ export default function ParametresPage() {
               </Button>
             </>
           )}
+        </Card>
+      )}
+
+      {tab === "integrations" && (
+        <Card>
+          <CardTitle>
+            <MessageCircle size={16} strokeWidth={1.75} />
+            WhatsApp Business
+          </CardTitle>
+          <p className="nova-page-subtitle">
+            Connectez votre compte WhatsApp Business (Meta) pour envoyer vos devis et relances directement aux
+            clients depuis Nova.
+          </p>
+          <Badge tone={whatsappConnected ? "success" : "neutral"}>{whatsappConnected ? "Connecté" : "Non connecté"}</Badge>
+          <Field
+            label="Phone Number ID"
+            value={whatsappForm.phoneId}
+            onChange={(e) => setWhatsappForm({ ...whatsappForm, phoneId: e.target.value })}
+            placeholder="123456789012345"
+          />
+          <Field
+            label="Access Token (Meta)"
+            type="password"
+            value={whatsappForm.token}
+            onChange={(e) => setWhatsappForm({ ...whatsappForm, token: e.target.value })}
+            placeholder="EAAG..."
+          />
+          {whatsappTestResult && (
+            <p className={whatsappTestResult.ok ? "nova-hint" : "nova-field-error"}>{whatsappTestResult.message}</p>
+          )}
+          <div className="nova-status-actions">
+            <Button onClick={handleSaveWhatsapp} disabled={savingWhatsapp}>
+              {savingWhatsapp ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+            <Button variant="secondary" onClick={handleTestWhatsapp} disabled={testingWhatsapp}>
+              {testingWhatsapp ? "Test en cours..." : "Tester la connexion"}
+            </Button>
+          </div>
         </Card>
       )}
 

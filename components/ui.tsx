@@ -39,7 +39,6 @@ import {
   Info,
   LayoutDashboard,
   MapPin,
-  MessageCircle,
   Mic,
   MoreHorizontal,
   Package,
@@ -1845,7 +1844,6 @@ export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Facturation électronique conforme", icon: Receipt },
   { label: "E-signature de devis", icon: FileSignature },
   { label: "Système téléphonique intégré", icon: Phone },
-  { label: "WhatsApp Business", icon: MessageCircle },
   { label: "GPS tracking équipe", icon: MapPin },
   { label: "Synchronisation comptable", icon: RefreshCw },
 ];
