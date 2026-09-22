@@ -242,3 +242,16 @@ export const attachmentSchema = z.object({
   mimeType: z.enum(["application/pdf", "image/png", "image/jpeg"]),
   category: z.enum(["contrat", "attestation", "photo", "autre"]),
 });
+
+export const attestationTvaSchema = z.object({
+  clientId: z.string().min(1),
+  devisId: z.string().optional(),
+  adresseTravaux: z.string().min(1).max(300),
+  dateConstruction: z.string().min(1).max(50),
+  typeLogement: z.enum(["maison", "appartement", "immeuble_collectif"]),
+  usageLogement: z.enum(["residence_principale", "residence_secondaire", "locatif"]),
+});
+
+export const attestationTvaSignSchema = z.object({
+  signed: z.boolean(),
+});

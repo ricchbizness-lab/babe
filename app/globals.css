@@ -2637,6 +2637,21 @@ button.primary:hover { background: var(--nova-teal-deep); }
   font-style: italic;
 }
 
+.nova-alert {
+  margin-top: var(--nova-space-2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nova-space-2);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  font-size: 13.5px;
+  color: var(--nova-ink);
+}
+.nova-alert p { margin: 0 0 var(--nova-space-1); }
+.nova-alert svg { flex-shrink: 0; margin-top: 2px; }
+.nova-alert-amber { background: var(--nova-amber-tint); color: var(--nova-ink); }
+.nova-alert-amber svg { color: var(--nova-amber); }
+
 .nova-slider {
   width: 100%;
   accent-color: var(--nova-teal);

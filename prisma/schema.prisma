@@ -76,6 +76,7 @@ model Business {
   attachments      Attachment[]
   situations       SituationFacture[]
   ouvrages         OuvrageType[]
+  attestationsTva  AttestationTVA[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -95,6 +96,7 @@ model Client {
 
   projects Project[]
   devis    Devis[]
+  attestationsTva AttestationTVA[]
 
   @@index([businessId])
 }
@@ -171,9 +173,34 @@ model Devis {
 
   lines DevisLine[]
   situations SituationFacture[]
+  attestationsTva AttestationTVA[]
 
   @@index([businessId])
   @@index([clientId])
+}
+
+// Attestation simplifiée de TVA à taux réduit (sprint 1, point 5) : le client
+// doit signer cette attestation dès que le devis/facture applique un taux de
+// 10% (art. 279-0 bis du CGI, travaux dans un logement achevé depuis plus de
+// 2 ans) — obligation légale BTP, sans elle l'artisan risque un redressement.
+model AttestationTVA {
+  id               String    @id @default(cuid())
+  businessId       String
+  business         Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  devisId          String?
+  devis            Devis?    @relation(fields: [devisId], references: [id], onDelete: SetNull)
+  adresseTravaux   String
+  dateConstruction String    // saisie libre, ex. "avant 1990" — pas une date calendaire
+  typeLogement     String    // maison | appartement | immeuble_collectif
+  usageLogement    String    // residence_principale | residence_secondaire | locatif
+  signedAt         DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([devisId])
 }
 
 // Facturation de situation (module B2) : dans le BTP un chantier est

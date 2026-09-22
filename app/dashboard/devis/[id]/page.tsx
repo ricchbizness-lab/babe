@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -193,6 +193,8 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [ouvrageOptions, setOuvrageOptions] = useState<OuvrageOption[] | null>(null);
   const [ouvrageQuery, setOuvrageQuery] = useState("");
 
+  const [attestationTva, setAttestationTva] = useState<{ id: string } | null | undefined>(undefined);
+
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
@@ -220,6 +222,16 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       .then((res) => res.json())
       .then((data) => setOuvrageOptions(data.ouvrages ?? []));
   }, [ouvragePickerOpen, ouvrageOptions]);
+
+  useEffect(() => {
+    if (!devis || !devis.lines.some((l) => l.tva === 10)) return;
+    fetchWithAuth("/api/attestations")
+      .then((res) => res.json())
+      .then((data) => {
+        const match = (data.attestations ?? []).find((a: { devisId?: string; id: string }) => a.devisId === devis.id);
+        setAttestationTva(match ? { id: match.id } : null);
+      });
+  }, [devis]);
 
   // Retour de Stripe Checkout (paiement direct depuis un devis accepté).
   useEffect(() => {
@@ -858,6 +870,28 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
                   {mention}
                 </p>
               ))}
+            </div>
+          )}
+
+          {devis.lines.some((l) => l.tva === 10) && attestationTva !== undefined && (
+            <div className="nova-alert nova-alert-amber">
+              <AlertTriangle size={18} strokeWidth={1.75} />
+              <div>
+                <p>
+                  Ce devis applique un taux de TVA réduit à 10% — une attestation TVA signée par le client peut être
+                  demandée par l&apos;administration fiscale en cas de contrôle.
+                </p>
+                <Link
+                  href={
+                    attestationTva
+                      ? `/dashboard/attestations/${attestationTva.id}/imprimer`
+                      : `/dashboard/attestations/nouveau?clientId=${devis.client?.id || ""}&devisId=${devis.id}`
+                  }
+                  className="nova-btn nova-btn-secondary"
+                >
+                  {attestationTva ? "Voir l'attestation" : "Créer l'attestation TVA"}
+                </Link>
+              </div>
             </div>
           )}
         </section>
