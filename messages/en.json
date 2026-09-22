@@ -17,8 +17,10 @@
     "copilote": "Copilot",
     "copiloteRapport": "Strategic report",
     "analyse": "Analytics",
+    "comptabilite": "Accounting",
     "documents": "Documents",
-    "parametres": "Settings"
+    "parametres": "Settings",
+    "aide": "Help & support"
   },
   "common": {
     "networkError": "Couldn't reach the server — please try again."

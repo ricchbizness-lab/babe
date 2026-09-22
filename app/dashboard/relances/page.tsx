@@ -338,8 +338,10 @@ export default function RelancesPage() {
                 <X size={18} strokeWidth={1.75} />
               </button>
             </div>
-            <p className="nova-page-subtitle">Envoyée à {result.destination}</p>
-            <p className="nova-ai-content">{result.message}</p>
+            <div className="nova-modal-body">
+              <p className="nova-page-subtitle">Envoyée à {result.destination}</p>
+              <p className="nova-ai-content">{result.message}</p>
+            </div>
             <div className="nova-modal-actions">
               <Button onClick={() => setResult(null)}>Fermer</Button>
             </div>

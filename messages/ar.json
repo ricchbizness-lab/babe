@@ -17,8 +17,10 @@
     "copilote": "المساعد الذكي",
     "copiloteRapport": "التقرير الاستراتيجي",
     "analyse": "التحليلات",
+    "comptabilite": "المحاسبة",
     "documents": "المستندات",
-    "parametres": "الإعدادات"
+    "parametres": "الإعدادات",
+    "aide": "المساعدة والدعم"
   },
   "common": {
     "networkError": "تعذّر الاتصال بالخادم — يرجى المحاولة مرة أخرى."
