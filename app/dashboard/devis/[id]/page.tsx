@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Send, Trash2 } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -32,6 +32,7 @@ import { fetchWithAuth } from "@/lib/fetchClient";
 import { computeDevisTotals, lineTotalHT, tvaByRate } from "@/lib/devisTotals";
 import { suggestedTvaRate, TVA_MENTION_LEGALE, TVA_RATES, TYPE_TRAVAUX_TVA_LABEL } from "@/lib/tva";
 import { OUVRAGE_TYPE_LABEL } from "@/lib/validation";
+import { isInternationalPhone } from "@/lib/whatsapp";
 
 type DevisLineType = "prestation" | "materiel" | "deplacement" | "maindoeuvre" | "autre";
 
@@ -59,7 +60,7 @@ type DevisDetail = {
   clientTypeTVA: string;
   createdAt: string;
   updatedAt: string;
-  client: { id: string; name: string; typeClient: string } | null;
+  client: { id: string; name: string; typeClient: string; phone: string | null } | null;
   lines: DevisLine[];
 };
 
@@ -168,6 +169,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [deleting, setDeleting] = useState(false);
   const [relanceMessage, setRelanceMessage] = useState<string | null>(null);
   const [generatingRelance, setGeneratingRelance] = useState(false);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
   const [chantierPromptDismissed, setChantierPromptDismissed] = useState(false);
 
   const [lineForm, setLineForm] = useState<LineFormState | null>(null);
@@ -336,6 +338,32 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setGeneratingRelance(false);
+    }
+  }
+
+  async function handleSendWhatsapp() {
+    if (!devis || !devis.client?.phone) return;
+    setSendingWhatsapp(true);
+    try {
+      const link = `${window.location.origin}/dashboard/devis/${devis.id}/imprimer`;
+      const message = `Bonjour ${devis.client.name}, voici le lien de votre devis « ${devis.label} »${
+        devis.amount != null ? ` (${devis.amount.toLocaleString("fr-FR")} €)` : ""
+      } : ${link}\nN'hésitez pas à nous contacter pour toute question.`;
+      const res = await fetchWithAuth("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: devis.client.phone, message }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'envoyer le message WhatsApp.");
+        return;
+      }
+      toast.success("Devis envoyé via WhatsApp");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSendingWhatsapp(false);
     }
   }
 
@@ -751,6 +779,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           <Button variant="secondary" disabled={generatingRelance} onClick={handleRelance}>
             <MessageCircle size={16} strokeWidth={1.75} />
             {generatingRelance ? "Génération..." : "Relancer le client"}
+          </Button>
+        )}
+        {devis.status === "envoye" && devis.client?.phone && isInternationalPhone(devis.client.phone) && (
+          <Button variant="secondary" disabled={sendingWhatsapp} onClick={handleSendWhatsapp}>
+            <Send size={16} strokeWidth={1.75} />
+            {sendingWhatsapp ? "Envoi..." : "Envoyer via WhatsApp"}
           </Button>
         )}
         {devis.status === "accepte" && devis.amount != null && devis.paymentStatus !== "payee" && (

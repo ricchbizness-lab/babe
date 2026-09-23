@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { businessOnboardingSchema, businessSchema } from "@/lib/validation";
+import { businessPatchSchema, businessSchema } from "@/lib/validation";
 import { requireSession, requireBusinessId, ownershipErrorToStatus } from "@/lib/ownership";
 import { getOuvragesForMetier } from "@/lib/ouvragesByMetier";
 
@@ -60,7 +60,7 @@ export async function PATCH(req: Request) {
     const businessId = await requireBusinessId(userId);
 
     const body = await req.json();
-    const parsed = businessOnboardingSchema.safeParse(body);
+    const parsed = businessPatchSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }

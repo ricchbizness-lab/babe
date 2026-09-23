@@ -17,8 +17,10 @@
     "copilote": "Copiloto",
     "copiloteRapport": "Relatório estratégico",
     "analyse": "Análise",
+    "comptabilite": "Contabilidade",
     "documents": "Documentos",
-    "parametres": "Definições"
+    "parametres": "Definições",
+    "aide": "Ajuda e suporte"
   },
   "common": {
     "networkError": "Não foi possível contactar o servidor — tente novamente."

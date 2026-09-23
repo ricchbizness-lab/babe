@@ -399,11 +399,13 @@ export default function FacturationPage() {
                 <X size={18} strokeWidth={1.75} />
               </button>
             </div>
-            {relanceLoading ? (
-              <p className="nova-page-subtitle">Nova rédige le message...</p>
-            ) : (
-              <p className="nova-ai-content">{relanceText}</p>
-            )}
+            <div className="nova-modal-body">
+              {relanceLoading ? (
+                <p className="nova-page-subtitle">Nova rédige le message...</p>
+              ) : (
+                <p className="nova-ai-content">{relanceText}</p>
+              )}
+            </div>
             <div className="nova-modal-actions">
               <Button variant="secondary" onClick={() => setRelanceTarget(null)}>
                 Fermer

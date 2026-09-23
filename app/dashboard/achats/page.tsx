@@ -781,31 +781,33 @@ export default function AchatsPage() {
               </p>
             ) : (
               <>
-                <p className="nova-page-subtitle">Sélectionnez 2 à 3 fournisseurs à contacter pour cette demande de devis.</p>
-                <div className="nova-concurrence-supplier-list">
-                  {concurrenceCandidates.map((s) => (
-                    <label key={s.id} className="nova-concurrence-supplier-row">
-                      <input
-                        type="checkbox"
-                        checked={selectedSupplierIds.includes(s.id)}
-                        onChange={() => toggleSupplierSelection(s.id)}
-                      />
-                      <span>
-                        <strong>{s.name}</strong>
-                        {s.email ? ` — ${s.email}` : " — aucun email renseigné"}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-
-                {concurrenceMessage && (
-                  <div className="nova-ai-zone" style={{ marginTop: "var(--nova-space-2)" }}>
-                    <div className="nova-ai-zone-header">
-                      <Badge tone="teal">Demande de devis générée</Badge>
-                    </div>
-                    <p className="nova-ai-content">{concurrenceMessage}</p>
+                <div className="nova-modal-body">
+                  <p className="nova-page-subtitle">Sélectionnez 2 à 3 fournisseurs à contacter pour cette demande de devis.</p>
+                  <div className="nova-concurrence-supplier-list">
+                    {concurrenceCandidates.map((s) => (
+                      <label key={s.id} className="nova-concurrence-supplier-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedSupplierIds.includes(s.id)}
+                          onChange={() => toggleSupplierSelection(s.id)}
+                        />
+                        <span>
+                          <strong>{s.name}</strong>
+                          {s.email ? ` — ${s.email}` : " — aucun email renseigné"}
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                )}
+
+                  {concurrenceMessage && (
+                    <div className="nova-ai-zone" style={{ marginTop: "var(--nova-space-2)" }}>
+                      <div className="nova-ai-zone-header">
+                        <Badge tone="teal">Demande de devis générée</Badge>
+                      </div>
+                      <p className="nova-ai-content">{concurrenceMessage}</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="nova-modal-actions">
                   <Button variant="secondary" onClick={closeConcurrence}>

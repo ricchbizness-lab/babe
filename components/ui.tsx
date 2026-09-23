@@ -21,6 +21,7 @@ import {
   BookOpen,
   Bot,
   Building2,
+  Calculator,
   CalendarDays,
   CheckCircle2,
   CheckSquare,
@@ -39,7 +40,6 @@ import {
   Info,
   LayoutDashboard,
   MapPin,
-  MessageCircle,
   Mic,
   MoreHorizontal,
   Package,
@@ -82,6 +82,7 @@ const ICONS = {
   ouvrages: BookOpen,
   stock: Package,
   analyse: TrendingUp,
+  comptabilite: Calculator,
   documents: FolderOpen,
   planning: CalendarDays,
   dispatch: UserCog,
@@ -92,6 +93,7 @@ const ICONS = {
   rapport: FileBarChart,
   parametres: Settings,
   "user-plus": UserPlus,
+  aide: HelpCircle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof ICONS;
@@ -301,7 +303,7 @@ export function EditModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="nova-modal-title">{title}</h3>
-        {children}
+        <div className="nova-modal-body">{children}</div>
         <div className="nova-modal-actions">
           <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
             Annuler
@@ -1814,27 +1816,72 @@ export function GlobalSearch() {
 // Sidebar — navigation fixe de la plateforme
 // ---------------------------------------------------------------------------
 
-export const NAV_ITEMS: { href: string; label: string; navKey: string; icon: IconKey }[] = [
-  { href: "/dashboard", label: "Vue d'ensemble", navKey: "dashboard", icon: "dashboard" },
-  { href: "/dashboard/clients", label: "Clients", navKey: "clients", icon: "crm" },
-  { href: "/dashboard/devis", label: "Devis", navKey: "devis", icon: "devis" },
-  { href: "/dashboard/chantiers", label: "Chantiers", navKey: "chantiers", icon: "chantiers" },
-  { href: "/dashboard/facturation", label: "Facturation", navKey: "facturation", icon: "facturation" },
-  { href: "/dashboard/attestations", label: "Attestations TVA", navKey: "attestations", icon: "attestations" },
-  { href: "/dashboard/relances", label: "Relances", navKey: "relances", icon: "relances" },
-  { href: "/dashboard/achats", label: "Achats", navKey: "achats", icon: "achats" },
-  { href: "/dashboard/ouvrages", label: "Bibliothèque", navKey: "ouvrages", icon: "ouvrages" },
-  { href: "/dashboard/taches", label: "Tâches", navKey: "taches", icon: "taches" },
-  { href: "/dashboard/equipe", label: "Équipe", navKey: "equipe", icon: "equipe" },
-  { href: "/dashboard/planning", label: "Planning", navKey: "planning", icon: "planning" },
-  { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", navKey: "planningDispatch", icon: "dispatch" },
-  { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", navKey: "rapportsVocaux", icon: "rapports-vocaux" },
-  { href: "/dashboard/copilote", label: "Copilote", navKey: "copilote", icon: "copilote" },
-  { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", navKey: "copiloteRapport", icon: "rapport" },
-  { href: "/dashboard/analyse", label: "Analyse", navKey: "analyse", icon: "analyse" },
-  { href: "/dashboard/documents", label: "Documents", navKey: "documents", icon: "documents" },
-  { href: "/dashboard/parametres", label: "Paramètres", navKey: "parametres", icon: "parametres" },
+export type NavItem = { href: string; label: string; navKey: string; icon: IconKey };
+export type NavCategory = { key: string; label: string | null; items: NavItem[] };
+
+const NAV_ITEM_DASHBOARD: NavItem = { href: "/dashboard", label: "Vue d'ensemble", navKey: "dashboard", icon: "dashboard" };
+const NAV_ITEM_PARAMETRES: NavItem = { href: "/dashboard/parametres", label: "Paramètres", navKey: "parametres", icon: "parametres" };
+
+/**
+ * Sidebar regroupée par catégories métier (correction sprint 2) — chaque
+ * catégorie est un ensemble de pages réellement construites (jamais de
+ * catégorie pour une fonctionnalité "Bientôt disponible", voir SOON_ITEMS).
+ */
+export const NAV_CATEGORIES: NavCategory[] = [
+  { key: "main", label: null, items: [NAV_ITEM_DASHBOARD] },
+  {
+    key: "commercial",
+    label: "Commercial",
+    items: [
+      { href: "/dashboard/clients", label: "Clients", navKey: "clients", icon: "crm" },
+      { href: "/dashboard/devis", label: "Devis", navKey: "devis", icon: "devis" },
+      { href: "/dashboard/facturation", label: "Facturation", navKey: "facturation", icon: "facturation" },
+      { href: "/dashboard/relances", label: "Relances", navKey: "relances", icon: "relances" },
+      { href: "/dashboard/attestations", label: "Attestations TVA", navKey: "attestations", icon: "attestations" },
+    ],
+  },
+  {
+    key: "chantiers",
+    label: "Chantiers",
+    items: [
+      { href: "/dashboard/chantiers", label: "Chantiers", navKey: "chantiers", icon: "chantiers" },
+      { href: "/dashboard/taches", label: "Tâches", navKey: "taches", icon: "taches" },
+      { href: "/dashboard/planning", label: "Planning", navKey: "planning", icon: "planning" },
+      { href: "/dashboard/planning/dispatch", label: "Dispatch équipe", navKey: "planningDispatch", icon: "dispatch" },
+      { href: "/dashboard/rapports-vocaux", label: "Rapports vocaux", navKey: "rapportsVocaux", icon: "rapports-vocaux" },
+    ],
+  },
+  {
+    key: "equipe-achats",
+    label: "Équipe & achats",
+    items: [
+      { href: "/dashboard/equipe", label: "Équipe", navKey: "equipe", icon: "equipe" },
+      { href: "/dashboard/achats", label: "Achats", navKey: "achats", icon: "achats" },
+    ],
+  },
+  {
+    key: "pilotage",
+    label: "Pilotage",
+    items: [
+      { href: "/dashboard/copilote", label: "Copilote", navKey: "copilote", icon: "copilote" },
+      { href: "/dashboard/copilote/rapport", label: "Rapport stratégique", navKey: "copiloteRapport", icon: "rapport" },
+      { href: "/dashboard/analyse", label: "Analyse", navKey: "analyse", icon: "analyse" },
+      { href: "/dashboard/comptabilite", label: "Comptabilité", navKey: "comptabilite", icon: "comptabilite" },
+    ],
+  },
+  {
+    key: "outils",
+    label: "Outils",
+    items: [
+      { href: "/dashboard/ouvrages", label: "Bibliothèque", navKey: "ouvrages", icon: "ouvrages" },
+      { href: "/dashboard/documents", label: "Documents", navKey: "documents", icon: "documents" },
+      { href: "/dashboard/aide", label: "Aide & support", navKey: "aide", icon: "aide" },
+    ],
+  },
 ];
+
+/** Liste à plat de toutes les pages réelles (catégories + Paramètres) — utilisée pour l'état actif de la sidebar et la liste "Modules" des Paramètres. */
+export const NAV_ITEMS: NavItem[] = [...NAV_CATEGORIES.flatMap((c) => c.items), NAV_ITEM_PARAMETRES];
 
 /**
  * Fonctionnalités hors scope de la phase en cours (voir CLAUDE.md /
@@ -1845,7 +1892,6 @@ export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Facturation électronique conforme", icon: Receipt },
   { label: "E-signature de devis", icon: FileSignature },
   { label: "Système téléphonique intégré", icon: Phone },
-  { label: "WhatsApp Business", icon: MessageCircle },
   { label: "GPS tracking équipe", icon: MapPin },
   { label: "Synchronisation comptable", icon: RefreshCw },
 ];
@@ -1885,16 +1931,21 @@ export function Sidebar({
       <GlobalSearch />
       <div className="nova-sidebar-scroll">
         <nav className="nova-sidebar-nav">
-          {NAV_ITEMS.map(({ href, navKey, icon }) => {
-            const Icon = ICONS[icon];
-            const active = href === activeHref;
-            return (
-              <Link key={href} href={href} className={`nova-sidebar-link ${active ? "nova-sidebar-link-active" : ""}`}>
-                <Icon size={18} strokeWidth={1.75} />
-                <span>{t(navKey)}</span>
-              </Link>
-            );
-          })}
+          {NAV_CATEGORIES.map((category) => (
+            <div key={category.key} className="nova-sidebar-category">
+              {category.label && <div className="nova-sidebar-category-label">{category.label}</div>}
+              {category.items.map(({ href, navKey, icon }) => {
+                const Icon = ICONS[icon];
+                const active = href === activeHref;
+                return (
+                  <Link key={href} href={href} className={`nova-sidebar-link ${active ? "nova-sidebar-link-active" : ""}`}>
+                    <Icon size={18} strokeWidth={1.75} />
+                    <span>{t(navKey)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="nova-sidebar-soon-title">Bientôt disponible</div>
         <div className="nova-sidebar-soon">
@@ -1909,9 +1960,12 @@ export function Sidebar({
           ))}
         </div>
       </div>
-      <Link href="/dashboard/aide" className="nova-sidebar-help">
-        <HelpCircle size={17} strokeWidth={1.75} />
-        <span>Aide &amp; support</span>
+      <Link
+        href="/dashboard/parametres"
+        className={`nova-sidebar-help ${activeHref === "/dashboard/parametres" ? "nova-sidebar-help-active" : ""}`}
+      >
+        <Settings size={17} strokeWidth={1.75} />
+        <span>{t("parametres")}</span>
       </Link>
       <Link href="/dashboard/compte" className="nova-sidebar-account">
         {userInitials && <span className="nova-sidebar-avatar">{userInitials}</span>}

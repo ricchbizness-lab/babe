@@ -150,13 +150,14 @@ export function RapportView() {
             type="text"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            placeholder="Période (ex. 2026-T3)"
+            placeholder="Période (ex. 2026-T3, 2026-09 ou 2026)"
             aria-label="Période"
           />
           <button type="submit" className="nova-btn nova-btn-primary" disabled={generating || !period.trim()}>
             {generating ? "Génération..." : "Générer le rapport"}
           </button>
         </form>
+        <p className="nova-hint">Trimestre ("2026-T3"), mois ("2026-09") ou année complète ("2026").</p>
       </Card>
 
       {reports === null ? null : reports.length === 0 ? (

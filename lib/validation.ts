@@ -28,9 +28,19 @@ export const businessSchema = z.object({
   metier: z.enum(["plomberie", "electricite", "maconnerie", "peinture", "menuiserie", "carrelage", "chauffage", "toiture", "autre"]).optional(),
 });
 
-export const businessOnboardingSchema = z.object({
-  onboardingCompleted: z.boolean(),
-});
+/**
+ * PATCH /api/business — mises à jour partielles du profil entreprise qui ne
+ * passent pas par le formulaire complet "Mon entreprise" (POST). Toutes les
+ * clés sont optionnelles : seuls les champs présents dans le body sont
+ * transmis à Prisma, les autres restent inchangés.
+ */
+export const businessPatchSchema = z
+  .object({
+    onboardingCompleted: z.boolean().optional(),
+    whatsappPhoneId: z.string().max(60).optional().or(z.literal("")),
+    whatsappToken: z.string().max(500).optional().or(z.literal("")),
+  })
+  .refine((d) => Object.keys(d).length > 0, { message: "Aucun champ à mettre à jour" });
 
 export const clientSchema = z.object({
   name: z.string().min(1).max(200),
@@ -254,4 +264,14 @@ export const attestationTvaSchema = z.object({
 
 export const attestationTvaSignSchema = z.object({
   signed: z.boolean(),
+});
+
+export const whatsappSendSchema = z.object({
+  to: z.string().min(8).max(20),
+  message: z.string().min(1).max(4096),
+});
+
+export const whatsappTestSchema = z.object({
+  phoneId: z.string().min(1).max(60).optional(),
+  token: z.string().min(1).max(500).optional(),
 });

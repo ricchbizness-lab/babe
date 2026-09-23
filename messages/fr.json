@@ -17,8 +17,10 @@
     "copilote": "Copilote",
     "copiloteRapport": "Rapport stratégique",
     "analyse": "Analyse",
+    "comptabilite": "Comptabilité",
     "documents": "Documents",
-    "parametres": "Paramètres"
+    "parametres": "Paramètres",
+    "aide": "Aide & support"
   },
   "common": {
     "networkError": "Impossible de joindre le serveur — réessayez."
