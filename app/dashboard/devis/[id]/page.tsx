@@ -17,6 +17,7 @@ import {
   Field,
   ProgressBar,
   RelanceIndicator,
+  RelanceModal,
   SearchInput,
   SelectField,
   Skeleton,
@@ -60,7 +61,7 @@ type DevisDetail = {
   clientTypeTVA: string;
   createdAt: string;
   updatedAt: string;
-  client: { id: string; name: string; typeClient: string; phone: string | null } | null;
+  client: { id: string; name: string; typeClient: string; phone: string | null; email: string | null } | null;
   lines: DevisLine[];
 };
 
@@ -169,6 +170,9 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [deleting, setDeleting] = useState(false);
   const [relanceMessage, setRelanceMessage] = useState<string | null>(null);
   const [generatingRelance, setGeneratingRelance] = useState(false);
+  const [relanceSending, setRelanceSending] = useState(false);
+  const [relanceConfirming, setRelanceConfirming] = useState(false);
+  const [resendConfigured, setResendConfigured] = useState(true);
   const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
   const [chantierPromptDismissed, setChantierPromptDismissed] = useState(false);
 
@@ -209,6 +213,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       setRemiseInput(String(data.devis.remise ?? 0));
       setNotesInput(data.devis.notesDevis || "");
     });
+    fetchWithAuth("/api/relances")
+      .then((res) => res.json())
+      .then((data) => setResendConfigured(!!data.resendConfigured))
+      .catch(() => {});
   }, [params.id]);
 
   useEffect(() => {
@@ -311,6 +319,7 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     if (!devis) return;
     setGeneratingRelance(true);
     setRelanceMessage(null);
+    setRelanceConfirming(false);
     try {
       const res = await fetchWithAuth("/api/agent", {
         method: "POST",
@@ -338,6 +347,36 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setGeneratingRelance(false);
+    }
+  }
+
+  function closeRelanceModal() {
+    setRelanceMessage(null);
+    setRelanceConfirming(false);
+  }
+
+  async function handleSendRelanceEmail() {
+    if (!devis?.client?.email || !relanceMessage) return;
+    setRelanceSending(true);
+    try {
+      const res = await fetchWithAuth("/api/relances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ devisId: devis.id, channel: "email", message: relanceMessage }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'envoyer l'email.");
+        setRelanceConfirming(false);
+        return;
+      }
+      toast.success(`Email envoyé à ${devis.client.email}`);
+      closeRelanceModal();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setRelanceConfirming(false);
+    } finally {
+      setRelanceSending(false);
     }
   }
 
@@ -820,19 +859,20 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       )}
 
       {(generatingRelance || relanceMessage) && (
-        <Card accent={false} className="nova-ai-zone">
-          <div className="nova-ai-zone-header">
-            <Badge tone="teal">Message de relance</Badge>
-          </div>
-          {generatingRelance ? (
-            <div className="nova-ai-loading">
-              <p className="nova-ai-loading-label">Nova rédige un message de relance...</p>
-              <Skeleton style={{ height: 80 }} />
-            </div>
-          ) : (
-            <p className="nova-ai-content">{relanceMessage}</p>
-          )}
-        </Card>
+        <RelanceModal
+          clientName={devis.client?.name || "client"}
+          clientEmail={devis.client?.email || null}
+          loading={generatingRelance}
+          text={relanceMessage || ""}
+          onTextChange={setRelanceMessage}
+          onClose={closeRelanceModal}
+          confirming={relanceConfirming}
+          onRequestConfirm={() => setRelanceConfirming(true)}
+          onCancelConfirm={() => setRelanceConfirming(false)}
+          onConfirmSend={handleSendRelanceEmail}
+          sending={relanceSending}
+          resendConfigured={resendConfigured}
+        />
       )}
 
       {devis.description && (

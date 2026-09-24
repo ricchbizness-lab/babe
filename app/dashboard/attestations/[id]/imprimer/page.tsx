@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Printer } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2, Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, useToast } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { TYPE_LOGEMENT_LABEL, USAGE_LOGEMENT_LABEL } from "@/lib/attestationTva";
@@ -86,6 +87,12 @@ export default function AttestationImprimerPage({ params }: { params: { id: stri
       </div>
 
       <div className="nova-invoice-actions nova-no-print">
+        {attestation.devis && (
+          <Link href={`/dashboard/devis/${attestation.devis.id}`} className="nova-btn nova-btn-secondary">
+            <ArrowLeft size={16} strokeWidth={1.75} />
+            Retour au devis
+          </Link>
+        )}
         <Button onClick={() => window.print()}>
           <Printer size={16} strokeWidth={1.75} />
           Imprimer / Télécharger PDF

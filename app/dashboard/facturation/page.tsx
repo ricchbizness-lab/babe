@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Download, FileCheck2, Send, X } from "lucide-react";
+import { ChevronRight, Download, FileCheck2, Send } from "lucide-react";
 import {
   Badge,
   Button,
@@ -9,6 +9,7 @@ import {
   FilterBar,
   FilterSelect,
   MetricBar,
+  RelanceModal,
   Table,
   TableSkeleton,
   Tabs,
@@ -28,7 +29,7 @@ type DevisRow = {
   status: string;
   paymentStatus: string;
   updatedAt: string;
-  client: { id: string; name: string } | null;
+  client: { id: string; name: string; email: string | null } | null;
 };
 
 type InvoiceRow = DevisRow & { numero: string };
@@ -97,6 +98,9 @@ export default function FacturationPage() {
   const [relanceTarget, setRelanceTarget] = useState<InvoiceRow | null>(null);
   const [relanceText, setRelanceText] = useState<string | null>(null);
   const [relanceLoading, setRelanceLoading] = useState(false);
+  const [relanceSending, setRelanceSending] = useState(false);
+  const [relanceConfirming, setRelanceConfirming] = useState(false);
+  const [resendConfigured, setResendConfigured] = useState(true);
   const [clientFilter, setClientFilter] = useState("all");
   const [periodeFilter, setPeriodeFilter] = useState<PeriodeFilter>("all");
 
@@ -104,6 +108,10 @@ export default function FacturationPage() {
     fetchWithAuth("/api/devis")
       .then((res) => res.json())
       .then((data) => setDevis(data.devis ?? []));
+    fetchWithAuth("/api/relances")
+      .then((res) => res.json())
+      .then((data) => setResendConfigured(!!data.resendConfigured))
+      .catch(() => {});
   }, []);
 
   const accepted = devis === null ? null : devis.filter((d) => d.status === "accepte");
@@ -156,6 +164,7 @@ export default function FacturationPage() {
   async function handleRelancer(d: InvoiceRow) {
     setRelanceTarget(d);
     setRelanceText(null);
+    setRelanceConfirming(false);
     setRelanceLoading(true);
     try {
       const amounts = computeInvoiceAmounts(d.amount);
@@ -187,10 +196,35 @@ export default function FacturationPage() {
     }
   }
 
-  async function handleCopyRelance() {
-    if (!relanceText) return;
-    await navigator.clipboard.writeText(relanceText);
-    toast.success("Message copié !");
+  function closeRelanceModal() {
+    setRelanceTarget(null);
+    setRelanceText(null);
+    setRelanceConfirming(false);
+  }
+
+  async function handleSendRelance() {
+    if (!relanceTarget?.client?.email || !relanceText) return;
+    setRelanceSending(true);
+    try {
+      const res = await fetchWithAuth("/api/relances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ devisId: relanceTarget.id, channel: "email", message: relanceText }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'envoyer l'email.");
+        setRelanceConfirming(false);
+        return;
+      }
+      toast.success(`Email envoyé à ${relanceTarget.client.email}`);
+      closeRelanceModal();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setRelanceConfirming(false);
+    } finally {
+      setRelanceSending(false);
+    }
   }
 
   const now = new Date();
@@ -385,37 +419,20 @@ export default function FacturationPage() {
       )}
 
       {relanceTarget && (
-        <div className="nova-modal-overlay" onClick={() => setRelanceTarget(null)}>
-          <div
-            className="nova-modal nova-modal-edit"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Message de relance"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="nova-planning-detail-header">
-              <h3 className="nova-modal-title">Relance — {relanceTarget.client?.name || "client"}</h3>
-              <button type="button" className="nova-icon-btn" onClick={() => setRelanceTarget(null)} aria-label="Fermer">
-                <X size={18} strokeWidth={1.75} />
-              </button>
-            </div>
-            <div className="nova-modal-body">
-              {relanceLoading ? (
-                <p className="nova-page-subtitle">Nova rédige le message...</p>
-              ) : (
-                <p className="nova-ai-content">{relanceText}</p>
-              )}
-            </div>
-            <div className="nova-modal-actions">
-              <Button variant="secondary" onClick={() => setRelanceTarget(null)}>
-                Fermer
-              </Button>
-              <Button onClick={handleCopyRelance} disabled={!relanceText}>
-                Copier le message
-              </Button>
-            </div>
-          </div>
-        </div>
+        <RelanceModal
+          clientName={relanceTarget.client?.name || "client"}
+          clientEmail={relanceTarget.client?.email || null}
+          loading={relanceLoading}
+          text={relanceText || ""}
+          onTextChange={setRelanceText}
+          onClose={closeRelanceModal}
+          confirming={relanceConfirming}
+          onRequestConfirm={() => setRelanceConfirming(true)}
+          onCancelConfirm={() => setRelanceConfirming(false)}
+          onConfirmSend={handleSendRelance}
+          sending={relanceSending}
+          resendConfigured={resendConfigured}
+        />
       )}
     </div>
   );

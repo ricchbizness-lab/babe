@@ -9,19 +9,30 @@ import { daysSinceSent } from "@/lib/relance";
 import { requireSession, requireBusinessId, assertOwnedByBusiness, ownershipErrorToStatus } from "@/lib/ownership";
 import { checkRateLimit, getRequestKey } from "@/lib/rateLimit";
 
-const relanceSendSchema = z.object({ devisId: z.string(), channel: z.enum(["email", "whatsapp"]).default("email") });
+const relanceSendSchema = z.object({
+  devisId: z.string(),
+  channel: z.enum(["email", "whatsapp"]).default("email"),
+  // Message déjà rédigé (et potentiellement édité) côté client — voir
+  // RelanceModal dans components/ui.tsx. Quand présent, on l'envoie tel
+  // quel, sans regénérer via l'IA.
+  message: z.string().min(1).max(4096).optional(),
+});
 
 const PAYMENT_TERMS_DAYS = 30;
 
+/** GET — utilisé par RelanceModal pour griser "Envoyer par email" avec une explication, avant même la première tentative d'envoi. */
+export async function GET() {
+  try {
+    await requireSession();
+    return NextResponse.json({ resendConfigured: !!process.env.RESEND_API_KEY });
+  } catch (err) {
+    const { status, message } = ownershipErrorToStatus(err);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "Génération IA non configurée pour le moment — clé Anthropic manquante." },
-        { status: 503 }
-      );
-    }
-
     const { userId } = await requireSession();
 
     const key = `relance:${getRequestKey(req)}:${userId}`;
@@ -64,23 +75,34 @@ export async function POST(req: Request) {
     }
 
     const isFacture = devis.status === "accepte";
-    const module = isFacture ? "relance" : "relance_devis";
-    const amounts = computeInvoiceAmounts(devis.amount);
 
-    const input = isFacture
-      ? {
-          client: devis.client.name,
-          montant: amounts ? `${amounts.ttc.toLocaleString("fr-FR")} €` : "",
-          joursRetard: Math.max(0, daysSinceSent(devis.updatedAt.toISOString()) - PAYMENT_TERMS_DAYS),
-        }
-      : {
-          client: devis.client.name,
-          devis: devis.label,
-          montant: devis.amount != null ? `${devis.amount.toLocaleString("fr-FR")} €` : "",
-          joursDepuisEnvoi: daysSinceSent(devis.updatedAt.toISOString()),
-        };
-
-    const text = await generateAgentText(business, module, input);
+    let text: string;
+    if (parsed.data.message) {
+      // Message déjà rédigé côté client (généré puis édité dans RelanceModal) — on l'envoie tel quel.
+      text = parsed.data.message;
+    } else {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return NextResponse.json(
+          { error: "Génération IA non configurée pour le moment — clé Anthropic manquante." },
+          { status: 503 }
+        );
+      }
+      const module = isFacture ? "relance" : "relance_devis";
+      const amounts = computeInvoiceAmounts(devis.amount);
+      const input = isFacture
+        ? {
+            client: devis.client.name,
+            montant: amounts ? `${amounts.ttc.toLocaleString("fr-FR")} €` : "",
+            joursRetard: Math.max(0, daysSinceSent(devis.updatedAt.toISOString()) - PAYMENT_TERMS_DAYS),
+          }
+        : {
+            client: devis.client.name,
+            devis: devis.label,
+            montant: devis.amount != null ? `${devis.amount.toLocaleString("fr-FR")} €` : "",
+            joursDepuisEnvoi: daysSinceSent(devis.updatedAt.toISOString()),
+          };
+      text = await generateAgentText(business, module, input);
+    }
 
     if (channel === "whatsapp") {
       if (!business.whatsappPhoneId || !business.whatsappToken) {
