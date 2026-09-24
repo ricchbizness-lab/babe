@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Send, Trash2, X } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -176,6 +176,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
   const [chantierPromptDismissed, setChantierPromptDismissed] = useState(false);
 
+  const [businessName, setBusinessName] = useState("");
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [sendForm, setSendForm] = useState({ to: "", subject: "", message: "" });
+  const [sendConfirming, setSendConfirming] = useState(false);
+  const [sendingDevis, setSendingDevis] = useState(false);
+
   const [lineForm, setLineForm] = useState<LineFormState | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [savingLine, setSavingLine] = useState(false);
@@ -216,6 +222,10 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     fetchWithAuth("/api/relances")
       .then((res) => res.json())
       .then((data) => setResendConfigured(!!data.resendConfigured))
+      .catch(() => {});
+    fetchWithAuth("/api/business")
+      .then((res) => res.json())
+      .then((data) => setBusinessName(data.business?.name || ""))
       .catch(() => {});
   }, [params.id]);
 
@@ -403,6 +413,57 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setSendingWhatsapp(false);
+    }
+  }
+
+  function openSendModal() {
+    if (!devis) return;
+    const devisTotals = computeDevisTotals(devis.lines, devis.remise || 0);
+    const amountTTC = devis.lines.length > 0 ? devisTotals.totalTTC : devis.amount != null ? devis.amount * 1.2 : 0;
+    setSendForm({
+      to: devis.client?.email || "",
+      subject: `Devis ${devis.label} — ${businessName}`,
+      message: `Bonjour ${devis.client?.name || ""},\nVeuillez trouver ci-joint notre devis ${devis.label} d'un montant de ${amountTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €.\nCe devis est valable 30 jours.\nN'hésitez pas à nous contacter.\nCordialement, ${businessName}`,
+    });
+    setSendConfirming(false);
+    setSendModalOpen(true);
+  }
+
+  function closeSendModal() {
+    setSendModalOpen(false);
+    setSendConfirming(false);
+  }
+
+  async function handleCopySendMessage() {
+    await navigator.clipboard.writeText(sendForm.message);
+    toast.success("Message copié !");
+  }
+
+  async function handleSendDevis() {
+    if (!devis) return;
+    setSendingDevis(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${devis.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sendForm),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'envoyer le devis.");
+        setSendConfirming(false);
+        return;
+      }
+      const data = await res.json();
+      setDevis(data.devis);
+      toast.success(`Devis envoyé à ${sendForm.to}`);
+      closeSendModal();
+      router.refresh();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setSendConfirming(false);
+    } finally {
+      setSendingDevis(false);
     }
   }
 
@@ -792,18 +853,29 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           </p>
         </div>
         <div className="nova-page-header-badges">
-          <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
+          <div className="nova-devis-status-badge">
+            <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
+          </div>
           {devis.paymentStatus === "payee" && <Badge tone="success">Payé</Badge>}
           <RelanceIndicator status={devis.status} updatedAt={devis.updatedAt} />
         </div>
       </header>
 
       <div className="nova-status-actions">
+        <Button variant="secondary" onClick={openSendModal}>
+          <Send size={16} strokeWidth={1.75} />
+          Envoyer au client
+        </Button>
         {STATUS_ACTIONS.filter((a) => a.status !== devis.status).map((a) => (
           <Button key={a.status} variant={a.variant} disabled={updating} onClick={() => handleStatusChange(a.status)}>
             {a.label}
           </Button>
         ))}
+        {devis.status === "envoye" && (
+          <Button variant="ghost" disabled={updating} onClick={() => handleStatusChange("brouillon")}>
+            Revenir en brouillon
+          </Button>
+        )}
         {devis.status === "accepte" && (
           <Link href={`/dashboard/facturation/${devis.id}`} className="nova-btn nova-btn-secondary">
             <FileText size={16} strokeWidth={1.75} />
@@ -873,6 +945,93 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           sending={relanceSending}
           resendConfigured={resendConfigured}
         />
+      )}
+
+      {sendModalOpen && (
+        <div className="nova-modal-overlay" onClick={sendingDevis ? undefined : closeSendModal}>
+          <div
+            className="nova-modal nova-modal-edit"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Envoyer le devis au client"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="nova-planning-detail-header">
+              <h3 className="nova-modal-title">Envoyer le devis</h3>
+              <button type="button" className="nova-icon-btn" onClick={closeSendModal} aria-label="Fermer" disabled={sendingDevis}>
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="nova-modal-body">
+              {sendConfirming ? (
+                <p className="nova-modal-message">Envoyer à {sendForm.to} ?</p>
+              ) : (
+                <>
+                  <Field
+                    label="Destinataire *"
+                    type="email"
+                    required
+                    value={sendForm.to}
+                    onChange={(e) => setSendForm({ ...sendForm, to: e.target.value })}
+                    placeholder="client@exemple.fr"
+                  />
+                  <Field
+                    label="Objet *"
+                    required
+                    value={sendForm.subject}
+                    onChange={(e) => setSendForm({ ...sendForm, subject: e.target.value })}
+                  />
+                  <div className="nova-field">
+                    <label>Message *</label>
+                    <textarea
+                      className="nova-relance-textarea"
+                      value={sendForm.message}
+                      onChange={(e) => setSendForm({ ...sendForm, message: e.target.value })}
+                      rows={10}
+                      aria-label="Message d'envoi"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="nova-modal-actions">
+              {sendConfirming ? (
+                <>
+                  <Button type="button" variant="ghost" onClick={() => setSendConfirming(false)} disabled={sendingDevis}>
+                    Annuler
+                  </Button>
+                  <Button type="button" onClick={handleSendDevis} disabled={sendingDevis}>
+                    {sendingDevis ? "Envoi..." : "Confirmer l'envoi"}
+                  </Button>
+                </>
+              ) : !resendConfigured ? (
+                <>
+                  <Button type="button" variant="ghost" onClick={closeSendModal}>
+                    Annuler
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={handleCopySendMessage}>
+                    Copier
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="ghost" onClick={closeSendModal}>
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setSendConfirming(true)}
+                    disabled={!sendForm.to.trim() || !sendForm.subject.trim() || !sendForm.message.trim()}
+                  >
+                    Envoyer →
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {devis.description && (
