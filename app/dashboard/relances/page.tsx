@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageCircle, Send, X } from "lucide-react";
-import { Badge, Button, EmptyState, MetricBar, Table, TableSkeleton, Tabs, useToast, type TableColumn } from "@/components/ui";
+import { Badge, Button, EmptyState, MetricBar, RelanceModal, Table, TableSkeleton, Tabs, useToast, type TableColumn } from "@/components/ui";
 import { computeInvoiceAmounts } from "@/lib/facturation";
 import { daysSinceSent, joursRetardPaiement, relanceLevel } from "@/lib/relance";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -56,6 +56,13 @@ export default function RelancesPage() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [result, setResult] = useState<{ client: string; destination: string; message: string } | null>(null);
 
+  const [relanceTarget, setRelanceTarget] = useState<DevisRow | null>(null);
+  const [relanceText, setRelanceText] = useState<string | null>(null);
+  const [relanceLoading, setRelanceLoading] = useState(false);
+  const [relanceSending, setRelanceSending] = useState(false);
+  const [relanceConfirming, setRelanceConfirming] = useState(false);
+  const [resendConfigured, setResendConfigured] = useState(true);
+
   useEffect(() => {
     fetchWithAuth("/api/devis")
       .then((res) => res.json())
@@ -63,6 +70,10 @@ export default function RelancesPage() {
     fetchWithAuth("/api/tasks")
       .then((res) => res.json())
       .then((data) => setTasks(data.tasks ?? []));
+    fetchWithAuth("/api/relances")
+      .then((res) => res.json())
+      .then((data) => setResendConfigured(!!data.resendConfigured))
+      .catch(() => {});
   }, []);
 
   const loading = devis === null || tasks === null;
@@ -87,22 +98,17 @@ export default function RelancesPage() {
     facturesARelancer.reduce((sum, d) => sum + (d.amount || 0), 0) + devisARelancer.reduce((sum, d) => sum + (d.amount || 0), 0);
   const enRetard30j = facturesARelancer.filter((d) => joursRetardFacture(d) > 0).length;
 
-  async function handleRelancer(d: DevisRow, channel: "email" | "whatsapp" = "email") {
-    if (channel === "email" && !d.client?.email) {
-      toast.error("Ce client n'a pas d'adresse email renseignée.");
-      return;
-    }
-    if (channel === "whatsapp" && !(d.client?.phone && isInternationalPhone(d.client.phone))) {
+  async function handleRelancerWhatsapp(d: DevisRow) {
+    if (!(d.client?.phone && isInternationalPhone(d.client.phone))) {
       toast.error("Ce client n'a pas de numéro de téléphone au format international.");
       return;
     }
-    const sendingKey = channel === "whatsapp" ? `${d.id}:whatsapp` : d.id;
-    setSendingId(sendingKey);
+    setSendingId(`${d.id}:whatsapp`);
     try {
       const res = await fetchWithAuth("/api/relances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ devisId: d.id, channel }),
+        body: JSON.stringify({ devisId: d.id, channel: "whatsapp" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -110,13 +116,84 @@ export default function RelancesPage() {
         return;
       }
       const data = await res.json();
-      const destination = channel === "whatsapp" ? (d.client?.phone as string) : (d.client?.email as string);
-      setResult({ client: d.client?.name || "", destination, message: data.message || "" });
-      toast.success(channel === "whatsapp" ? "Relance envoyée via WhatsApp" : "Relance envoyée");
+      setResult({ client: d.client?.name || "", destination: d.client?.phone as string, message: data.message || "" });
+      toast.success("Relance envoyée via WhatsApp");
     } catch {
       toast.error("Impossible de joindre le serveur — réessayez.");
     } finally {
       setSendingId(null);
+    }
+  }
+
+  function closeRelanceModal() {
+    setRelanceTarget(null);
+    setRelanceText(null);
+    setRelanceConfirming(false);
+  }
+
+  async function handleGenerateRelance(d: DevisRow) {
+    setRelanceTarget(d);
+    setRelanceText(null);
+    setRelanceConfirming(false);
+    setRelanceLoading(true);
+    try {
+      const isFacture = d.status === "accepte";
+      const amounts = computeInvoiceAmounts(d.amount);
+      const input = isFacture
+        ? {
+            client: d.client?.name || "client",
+            montant: amounts ? `${amounts.ttc.toLocaleString("fr-FR")} €` : "",
+            joursRetard: Math.max(0, daysSinceSent(d.updatedAt) - PAYMENT_TERMS_DAYS),
+          }
+        : {
+            client: d.client?.name || "client",
+            devis: d.label,
+            montant: d.amount != null ? `${d.amount.toLocaleString("fr-FR")} €` : "",
+            joursDepuisEnvoi: daysSinceSent(d.updatedAt),
+          };
+      const res = await fetchWithAuth("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module: isFacture ? "relance" : "relance_devis", input }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Erreur lors de la génération du message de relance.");
+        setRelanceTarget(null);
+        return;
+      }
+      const data = await res.json();
+      setRelanceText(data.result || "");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setRelanceTarget(null);
+    } finally {
+      setRelanceLoading(false);
+    }
+  }
+
+  async function handleSendRelanceEmail() {
+    if (!relanceTarget?.client?.email || !relanceText) return;
+    setRelanceSending(true);
+    try {
+      const res = await fetchWithAuth("/api/relances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ devisId: relanceTarget.id, channel: "email", message: relanceText }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible d'envoyer l'email.");
+        setRelanceConfirming(false);
+        return;
+      }
+      toast.success(`Email envoyé à ${relanceTarget.client.email}`);
+      closeRelanceModal();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+      setRelanceConfirming(false);
+    } finally {
+      setRelanceSending(false);
     }
   }
 
@@ -177,19 +254,18 @@ export default function RelancesPage() {
             variant="secondary"
             onClick={(e) => {
               e.stopPropagation();
-              handleRelancer(d);
+              handleGenerateRelance(d);
             }}
-            disabled={sendingId === d.id}
           >
             <Send size={13} strokeWidth={1.75} />
-            {sendingId === d.id ? "Envoi..." : "Relancer par email"}
+            Relancer par email
           </Button>
           {d.client?.phone && isInternationalPhone(d.client.phone) && (
             <Button
               variant="secondary"
               onClick={(e) => {
                 e.stopPropagation();
-                handleRelancer(d, "whatsapp");
+                handleRelancerWhatsapp(d);
               }}
               disabled={sendingId === `${d.id}:whatsapp`}
             >
@@ -232,19 +308,18 @@ export default function RelancesPage() {
             variant="secondary"
             onClick={(e) => {
               e.stopPropagation();
-              handleRelancer(d);
+              handleGenerateRelance(d);
             }}
-            disabled={sendingId === d.id}
           >
             <Send size={13} strokeWidth={1.75} />
-            {sendingId === d.id ? "Envoi..." : "Relancer par email"}
+            Relancer par email
           </Button>
           {d.client?.phone && isInternationalPhone(d.client.phone) && (
             <Button
               variant="secondary"
               onClick={(e) => {
                 e.stopPropagation();
-                handleRelancer(d, "whatsapp");
+                handleRelancerWhatsapp(d);
               }}
               disabled={sendingId === `${d.id}:whatsapp`}
             >
@@ -347,6 +422,23 @@ export default function RelancesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {relanceTarget && (
+        <RelanceModal
+          clientName={relanceTarget.client?.name || "client"}
+          clientEmail={relanceTarget.client?.email || null}
+          loading={relanceLoading}
+          text={relanceText || ""}
+          onTextChange={setRelanceText}
+          onClose={closeRelanceModal}
+          confirming={relanceConfirming}
+          onRequestConfirm={() => setRelanceConfirming(true)}
+          onCancelConfirm={() => setRelanceConfirming(false)}
+          onConfirmSend={handleSendRelanceEmail}
+          sending={relanceSending}
+          resendConfigured={resendConfigured}
+        />
       )}
     </div>
   );

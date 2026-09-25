@@ -13,12 +13,13 @@ export default function NewAttestationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const devisIdFromQuery = searchParams.get("devisId");
 
   const [clients, setClients] = useState<ClientOption[] | null>(null);
   const [devisList, setDevisList] = useState<DevisOption[] | null>(null);
   const [form, setForm] = useState({
     clientId: searchParams.get("clientId") || "",
-    devisId: searchParams.get("devisId") || "",
+    devisId: devisIdFromQuery || "",
     adresseTravaux: "",
     dateConstruction: "",
     typeLogement: "maison",
@@ -26,6 +27,7 @@ export default function NewAttestationPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/clients")
@@ -74,7 +76,12 @@ export default function NewAttestationPage() {
       }
       const data = await res.json();
       toast.success("Attestation créée");
-      router.push(`/dashboard/attestations/${data.attestation.id}/imprimer`);
+      if (devisIdFromQuery) {
+        setRedirecting(true);
+        setTimeout(() => router.push(`/dashboard/devis/${devisIdFromQuery}`), 2000);
+      } else {
+        router.push(`/dashboard/attestations/${data.attestation.id}/imprimer`);
+      }
     } catch {
       const message = "Impossible de joindre le serveur — réessayez.";
       setError(message);
@@ -86,7 +93,13 @@ export default function NewAttestationPage() {
 
   return (
     <div className="nova-page">
-      <Breadcrumb items={[{ label: "Attestations TVA", href: "/dashboard/attestations" }, { label: "Nouvelle attestation" }]} />
+      <Breadcrumb
+        items={
+          devisIdFromQuery
+            ? [{ label: "Devis", href: `/dashboard/devis/${devisIdFromQuery}` }, { label: "Attestation TVA" }]
+            : [{ label: "Attestations TVA", href: "/dashboard/attestations" }, { label: "Nouvelle attestation" }]
+        }
+      />
 
       <header className="nova-page-header">
         <h1>Nouvelle attestation TVA</h1>
@@ -169,8 +182,8 @@ export default function NewAttestationPage() {
           </SelectField>
 
           {error && <div className="error">{error}</div>}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Création..." : "Créer l'attestation"}
+          <Button type="submit" disabled={loading || redirecting}>
+            {loading ? "Création..." : redirecting ? "Retour au devis..." : "Créer l'attestation"}
           </Button>
         </form>
       </Card>

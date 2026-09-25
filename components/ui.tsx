@@ -31,6 +31,7 @@ import {
   ChevronUp,
   ChevronDown,
   Contact,
+  Copy,
   FileBarChart,
   FileCheck2,
   FileSignature,
@@ -48,6 +49,7 @@ import {
   Receipt,
   RefreshCw,
   Search,
+  Send,
   Settings,
   ShoppingCart,
   TrendingUp,
@@ -311,6 +313,129 @@ export function EditModal({
           <Button type="button" onClick={onSave} disabled={saving}>
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RelanceModal — modale de relance partagée (relances, facturation, fiche
+// devis) : message généré par l'IA, éditable avant envoi, avec une étape de
+// confirmation explicite avant l'envoi réel par email. L'état (texte,
+// chargement, envoi, étape de confirmation) reste contrôlé par la page
+// appelante — ce composant est purement présentation.
+// ---------------------------------------------------------------------------
+
+export function RelanceModal({
+  clientName,
+  clientEmail,
+  loading,
+  text,
+  onTextChange,
+  onClose,
+  confirming,
+  onRequestConfirm,
+  onCancelConfirm,
+  onConfirmSend,
+  sending,
+  resendConfigured,
+}: {
+  clientName: string;
+  clientEmail: string | null;
+  loading: boolean;
+  text: string;
+  onTextChange: (value: string) => void;
+  onClose: () => void;
+  confirming: boolean;
+  onRequestConfirm: () => void;
+  onCancelConfirm: () => void;
+  onConfirmSend: () => void;
+  sending: boolean;
+  resendConfigured: boolean;
+}) {
+  const toast = useToast();
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !sending) onClose();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose, sending]);
+
+  async function handleCopy() {
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    toast.success("Message copié !");
+  }
+
+  const sendDisabledReason = !clientEmail
+    ? "Email client non renseigné"
+    : !resendConfigured
+      ? "Resend non configuré"
+      : undefined;
+  const canSend = !loading && !!text.trim() && !sendDisabledReason;
+
+  return (
+    <div className="nova-modal-overlay" onClick={sending ? undefined : onClose}>
+      <div
+        className="nova-modal nova-modal-edit"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Relance — ${clientName}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="nova-planning-detail-header">
+          <h3 className="nova-modal-title">Relance — {clientName}</h3>
+          <button type="button" className="nova-icon-btn" onClick={onClose} aria-label="Fermer" disabled={sending}>
+            <X size={18} strokeWidth={1.75} />
+          </button>
+        </div>
+
+        <div className="nova-modal-body">
+          {confirming ? (
+            <p className="nova-modal-message">
+              Envoyer ce message à {clientName} ({clientEmail}) ?
+            </p>
+          ) : loading ? (
+            <p className="nova-page-subtitle">Nova rédige le message...</p>
+          ) : (
+            <textarea
+              className="nova-relance-textarea"
+              value={text}
+              onChange={(e) => onTextChange(e.target.value)}
+              rows={10}
+              aria-label="Message de relance"
+            />
+          )}
+        </div>
+
+        <div className="nova-modal-actions">
+          {confirming ? (
+            <>
+              <Button type="button" variant="ghost" onClick={onCancelConfirm} disabled={sending}>
+                Annuler
+              </Button>
+              <Button type="button" onClick={onConfirmSend} disabled={sending}>
+                {sending ? "Envoi..." : "Confirmer l'envoi"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Fermer
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleCopy} disabled={loading || !text}>
+                <Copy size={14} strokeWidth={1.75} />
+                Copier le message
+              </Button>
+              <Button type="button" onClick={onRequestConfirm} disabled={!canSend} title={sendDisabledReason}>
+                <Send size={14} strokeWidth={1.75} />
+                Envoyer par email
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
