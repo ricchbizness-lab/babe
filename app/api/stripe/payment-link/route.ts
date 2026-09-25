@@ -7,6 +7,7 @@ import { computeDevisTotals } from "@/lib/devisTotals";
 
 const paymentLinkSchema = z.object({
   devisId: z.string(),
+  acompteId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -25,15 +26,36 @@ export async function POST(req: Request) {
       businessId
     );
 
-    if (devis.status !== "accepte" || devis.amount == null) {
+    if (devis.status !== "accepte") {
       return NextResponse.json({ error: "Ce devis n'est pas éligible au paiement." }, { status: 400 });
     }
 
-    // Le montant TTC facturé reprend les lignes détaillées si elles existent
-    // (remise + TVA par ligne déjà appliquées), sinon le montant saisi tel
-    // quel — jamais recalculé.
-    const montantTTC =
-      devis.lines.length > 0 ? computeDevisTotals(devis.lines, devis.remise || 0).totalTTC : devis.amount;
+    let amountToCharge: number;
+    let productName: string;
+
+    if (parsed.data.acompteId) {
+      const acompte = await assertOwnedByBusiness(
+        await prisma.acompte.findUnique({ where: { id: parsed.data.acompteId } }),
+        businessId
+      );
+      if (acompte.devisId !== devis.id) {
+        return NextResponse.json({ error: "Cet acompte n'appartient pas à ce devis." }, { status: 400 });
+      }
+      if (acompte.statut !== "en_attente") {
+        return NextResponse.json({ error: "Cet acompte n'est plus en attente de paiement." }, { status: 400 });
+      }
+      amountToCharge = acompte.montantHT;
+      productName = `Acompte ${acompte.pourcentage}% — ${devis.label}`;
+    } else {
+      if (devis.amount == null) {
+        return NextResponse.json({ error: "Ce devis n'est pas éligible au paiement." }, { status: 400 });
+      }
+      // Le montant TTC facturé reprend les lignes détaillées si elles existent
+      // (remise + TVA par ligne déjà appliquées), sinon le montant saisi tel
+      // quel — jamais recalculé.
+      amountToCharge = devis.lines.length > 0 ? computeDevisTotals(devis.lines, devis.remise || 0).totalTTC : devis.amount;
+      productName = devis.label;
+    }
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -41,15 +63,17 @@ export async function POST(req: Request) {
         {
           price_data: {
             currency: "eur",
-            product_data: { name: devis.label },
-            unit_amount: Math.round(montantTTC * 100),
+            product_data: { name: productName },
+            unit_amount: Math.round(amountToCharge * 100),
           },
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXTAUTH_URL}/dashboard/devis/${devis.id}?payment=success`,
+      success_url: `${process.env.NEXTAUTH_URL}/dashboard/devis/${devis.id}?payment=success${
+        parsed.data.acompteId ? `&acompteId=${parsed.data.acompteId}` : ""
+      }`,
       cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/devis/${devis.id}?payment=cancel`,
-      metadata: { devisId: devis.id, businessId },
+      metadata: { devisId: devis.id, businessId, ...(parsed.data.acompteId ? { acompteId: parsed.data.acompteId } : {}) },
     });
 
     return NextResponse.json({ url: checkoutSession.url });

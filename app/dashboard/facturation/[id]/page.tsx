@@ -6,7 +6,10 @@ import { ChevronDown, Download, Info, Printer } from "lucide-react";
 import { Badge, BackLink, Breadcrumb, Button, Card, useToast } from "@/components/ui";
 import { PrintableDocument } from "@/components/PrintableDocument";
 import { invoiceNumber, sortByAcceptedDate } from "@/lib/facturation";
+import { computeDevisTotals } from "@/lib/devisTotals";
 import { fetchWithAuth } from "@/lib/fetchClient";
+
+type AcompteRow = { id: string; pourcentage: number; montantHT: number; statut: "en_attente" | "recu" | "annule" };
 
 type DevisLine = { id: string; description: string; quantite: number; unite: string | null; prixUnitaire: number; tva: number };
 
@@ -48,6 +51,7 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
   const [devis, setDevis] = useState<DevisDetail | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [numero, setNumero] = useState<string | null>(null);
+  const [acomptes, setAcomptes] = useState<AcompteRow[]>([]);
   const [error, setError] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
@@ -96,6 +100,11 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
       setDevis(current);
       setBusiness(businessData.business);
       setNumero(invoiceNumber(index === -1 ? 0 : index, current.updatedAt));
+
+      fetchWithAuth(`/api/devis/${params.id}/acomptes`)
+        .then((res) => res.json())
+        .then((data) => setAcomptes(data.acomptes ?? []))
+        .catch(() => {});
     });
   }, [params.id]);
 
@@ -141,6 +150,14 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
       </div>
     );
   }
+
+  const totalTTC = devis.lines.length > 0 ? computeDevisTotals(devis.lines, devis.remise || 0).totalTTC : (devis.amount || 0) * 1.2;
+  const acomptesRecus = acomptes.filter((a) => a.statut === "recu");
+  // Acompte ne porte qu'un montant HT (pas de ventilation par taux de TVA) —
+  // on applique la même approximation TVA 20% forfaitaire que le reste de la
+  // facturation pour obtenir un montant TTC comparable à déduire.
+  const montantAcomptesRecusTTC = acomptesRecus.reduce((sum, a) => sum + a.montantHT * 1.2, 0);
+  const resteAPayer = totalTTC - montantAcomptesRecusTTC;
 
   return (
     <div className="nova-page">
@@ -202,6 +219,23 @@ export default function FactureDetailPage({ params }: { params: { id: string } }
           )}
         </div>
       </div>
+
+      {acomptesRecus.length > 0 && (
+        <Card className="nova-no-print">
+          <div className="nova-invoice-balance">
+            <span>Total TTC</span>
+            <strong>{totalTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</strong>
+          </div>
+          <div className="nova-invoice-balance">
+            <span>Acomptes reçus ({acomptesRecus.length})</span>
+            <strong>− {montantAcomptesRecusTTC.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</strong>
+          </div>
+          <div className="nova-invoice-balance nova-invoice-balance-total">
+            <span>Solde restant à payer</span>
+            <strong>{resteAPayer.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</strong>
+          </div>
+        </Card>
+      )}
 
       <PrintableDocument
         kind="facture"

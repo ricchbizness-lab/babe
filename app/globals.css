@@ -785,6 +785,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-amber { background: var(--nova-badge-amber-bg); color: var(--nova-badge-amber-text); }
 .nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
 .nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
+.nova-badge-group { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
 .nova-facturx-indicator {
   display: inline-flex;
   align-items: center;
@@ -2102,6 +2103,24 @@ button.primary:hover { background: var(--nova-teal-deep); }
   margin-bottom: var(--nova-space-1);
 }
 
+.nova-invoice-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--nova-space-1) 0;
+  font-family: var(--nova-font-sans);
+  color: var(--nova-ink-soft);
+}
+.nova-invoice-balance-total {
+  border-top: 1px solid var(--nova-border);
+  margin-top: var(--nova-space-1);
+  padding-top: var(--nova-space-2);
+  color: var(--nova-ink);
+  font-family: var(--nova-font-heading);
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .nova-invoice {
   background: var(--nova-surface);
   border: 1px solid var(--nova-border);
@@ -2223,16 +2242,28 @@ button.primary:hover { background: var(--nova-teal-deep); }
   @page { size: A4; margin: 20mm; }
 }
 
-/* --- Portail client (page publique, hors dashboard) --- */
+/* --- Portail client (page publique, hors dashboard) ---
+   Vu par le client final, pas par le dirigeant : accent bleu ardoise dédié
+   (jamais le vert NOVA du dashboard), mobile-first renforcé (texte plus
+   grand, boutons plus larges, espacement généreux). */
 
 .nova-portal {
+  --nova-portal-accent: #1E3A5F;
+  --nova-portal-accent-tint: #E8EDF3;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: var(--nova-bg);
-  padding: var(--nova-space-4) var(--nova-space-2);
+  padding: var(--nova-space-3) var(--nova-space-2) var(--nova-space-4);
 }
+.nova-portal .nova-btn-primary { background: var(--nova-portal-accent); }
+.nova-portal .nova-btn-primary:hover { background: #142A44; }
+.nova-portal .nova-btn-secondary:hover { border-color: var(--nova-portal-accent); color: var(--nova-portal-accent); }
+.nova-portal .nova-progress-fill { background: var(--nova-portal-accent); }
+.nova-portal .nova-badge-blue { background: var(--nova-portal-accent-tint); color: var(--nova-portal-accent); }
+.nova-portal .nova-back-link { color: var(--nova-portal-accent); }
+
 .nova-portal-card {
   width: 100%;
   max-width: 560px;
@@ -2240,56 +2271,142 @@ button.primary:hover { background: var(--nova-teal-deep); }
   border: 1px solid var(--nova-border);
   border-radius: var(--nova-radius-card);
   box-shadow: var(--nova-shadow-card);
-  padding: var(--nova-space-4);
+  padding: var(--nova-space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--nova-space-3);
+  gap: var(--nova-space-4);
 }
 .nova-portal-card-center { text-align: center; align-items: center; margin: auto 0; }
+
+.nova-portal-header { display: flex; align-items: center; gap: var(--nova-space-2); }
+.nova-portal-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--nova-radius-card);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.nova-portal-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nova-portal-accent-tint);
+  color: var(--nova-portal-accent);
+  font-family: var(--nova-font-heading);
+  font-weight: 800;
+  font-size: 18px;
+}
 .nova-portal-business {
   font-family: var(--nova-font-heading);
   font-weight: 800;
-  font-size: 22px;
+  font-size: 19px;
   color: var(--nova-ink);
 }
+.nova-portal-tagline { font-size: 14px; color: var(--nova-ink-soft); }
+
 .nova-portal-project {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--nova-ink-soft);
-  margin: calc(var(--nova-space-1) * -1) 0 0;
+  font-family: var(--nova-font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--nova-ink);
+  margin: 0;
 }
-.nova-portal-card-center .nova-portal-project { font-size: 20px; color: var(--nova-ink); margin: 0; }
-.nova-portal-status .nova-badge { font-size: 13px; padding: 6px 14px; }
+.nova-portal-card-center .nova-portal-project { font-size: 20px; margin: 0; }
+
+.nova-portal-status { display: flex; flex-direction: column; gap: var(--nova-space-1); }
+.nova-portal-status .nova-badge { font-size: 14px; padding: 8px 16px; align-self: flex-start; }
+.nova-portal-status-desc { margin: 0; font-size: 16px; color: var(--nova-ink-soft); }
+
 .nova-portal-section h2 {
   font-family: var(--nova-font-heading);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   margin: 0 0 var(--nova-space-2);
 }
 .nova-portal-empty { color: var(--nova-ink-faint); font-size: 15px; margin: 0; }
+
+.nova-portal-task-groups { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-portal-task-group-title {
+  font-family: var(--nova-font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nova-ink-faint);
+  margin: 0 0 var(--nova-space-1);
+}
 .nova-portal-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--nova-space-2); }
 .nova-portal-tasks li { display: flex; align-items: flex-start; gap: var(--nova-space-2); font-size: 16px; color: var(--nova-ink); }
 .nova-portal-tasks li svg { flex-shrink: 0; margin-top: 2px; color: var(--nova-ink-faint); }
 .nova-portal-task-done { color: var(--nova-ink-soft); text-decoration: line-through; }
 .nova-portal-task-done svg { color: var(--nova-success) !important; }
+
+.nova-portal-devis-card {
+  background: var(--nova-portal-accent-tint);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-portal-devis-row { display: flex; align-items: center; justify-content: space-between; gap: var(--nova-space-2); flex-wrap: wrap; font-size: 16px; color: var(--nova-ink); }
+.nova-portal-devis-row strong { font-family: var(--nova-font-heading); font-size: 18px; }
+.nova-portal-devis-link { justify-content: center; width: 100%; }
+
+.nova-portal-acomptes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--nova-space-2); }
+.nova-portal-acompte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--nova-space-2);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  font-size: 15px;
+}
+.nova-portal-acompte-row { display: flex; align-items: center; justify-content: space-between; gap: var(--nova-space-2); }
+.nova-portal-acompte strong { font-family: var(--nova-font-heading); font-size: 17px; }
+
+.nova-portal-photos { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--nova-space-2); }
+.nova-portal-photo { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.nova-portal-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--nova-radius-card); }
+.nova-portal-photo figcaption { font-size: 13px; color: var(--nova-ink-soft); }
+.nova-portal-photo-date { font-family: var(--nova-font-mono); font-size: 11px; color: var(--nova-ink-faint); }
+
 .nova-portal-reports { display: flex; flex-direction: column; gap: var(--nova-space-2); }
 .nova-portal-report {
-  background: var(--nova-teal-tint);
+  background: var(--nova-portal-accent-tint);
   border-radius: var(--nova-radius-card);
   padding: var(--nova-space-2) var(--nova-space-3);
 }
 .nova-portal-report-meta {
   font-family: var(--nova-font-mono);
   font-size: 12.5px;
-  color: var(--nova-teal-deep);
+  color: var(--nova-portal-accent);
   margin-bottom: var(--nova-space-1);
 }
 .nova-portal-report p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--nova-ink); white-space: pre-wrap; }
+
+.nova-portal-contact-btn { justify-content: center; width: 100%; padding: 14px; font-size: 16px; }
+
 .nova-portal-footer {
   margin-top: var(--nova-space-3);
   font-size: 12px;
   color: var(--nova-ink-faint);
   text-align: center;
+}
+
+.nova-portal-print-page { max-width: 760px; margin: 0 auto; padding: var(--nova-space-3) var(--nova-space-2); }
+.nova-portal-print-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-2);
+  margin-bottom: var(--nova-space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .nova-portal-photos { grid-template-columns: 1fr 1fr; }
+  .nova-portal-card { padding: var(--nova-space-2); }
 }
 
 /* --- Planning --- */

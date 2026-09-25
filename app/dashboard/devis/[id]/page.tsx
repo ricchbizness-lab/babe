@@ -87,6 +87,27 @@ const SITUATION_STATUT_TONE: Record<SituationStatut, "neutral" | "blue" | "succe
   payee: "success",
 };
 
+type AcompteStatut = "en_attente" | "recu" | "annule";
+
+type AcompteRow = {
+  id: string;
+  pourcentage: number;
+  montantHT: number;
+  statut: AcompteStatut;
+  createdAt: string;
+};
+
+const ACOMPTE_STATUT_LABEL: Record<AcompteStatut, string> = {
+  en_attente: "En attente",
+  recu: "Reçu",
+  annule: "Annulé",
+};
+const ACOMPTE_STATUT_TONE: Record<AcompteStatut, "amber" | "success" | "neutral"> = {
+  en_attente: "amber",
+  recu: "success",
+  annule: "neutral",
+};
+
 const STATUS_LABEL: Record<string, string> = {
   brouillon: "Brouillon",
   envoye: "Envoyé",
@@ -201,6 +222,13 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
   const [deletingSituation, setDeletingSituation] = useState(false);
   const [updatingSituationId, setUpdatingSituationId] = useState<string | null>(null);
 
+  const [acomptes, setAcomptes] = useState<AcompteRow[] | null>(null);
+  const [acompteModalOpen, setAcompteModalOpen] = useState(false);
+  const [acomptePourcentage, setAcomptePourcentage] = useState(30);
+  const [creatingAcompte, setCreatingAcompte] = useState(false);
+  const [updatingAcompteId, setUpdatingAcompteId] = useState<string | null>(null);
+  const [payingAcompteId, setPayingAcompteId] = useState<string | null>(null);
+
   const [ouvragePickerOpen, setOuvragePickerOpen] = useState(false);
   const [ouvrageOptions, setOuvrageOptions] = useState<OuvrageOption[] | null>(null);
   const [ouvrageQuery, setOuvrageQuery] = useState("");
@@ -234,6 +262,9 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     fetchWithAuth(`/api/devis/${params.id}/situations`)
       .then((res) => res.json())
       .then((data) => setSituations(data.situations ?? []));
+    fetchWithAuth(`/api/devis/${params.id}/acomptes`)
+      .then((res) => res.json())
+      .then((data) => setAcomptes(data.acomptes ?? []));
   }, [params.id, devis?.status]);
 
   useEffect(() => {
@@ -253,10 +284,27 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       });
   }, [devis]);
 
-  // Retour de Stripe Checkout (paiement direct depuis un devis accepté).
+  // Retour de Stripe Checkout (paiement direct depuis un devis accepté, ou
+  // paiement d'un acompte spécifique — distingué par acompteId dans l'URL).
   useEffect(() => {
     if (!devis) return;
     const payment = searchParams.get("payment");
+    const acompteIdParam = searchParams.get("acompteId");
+    if (payment === "success" && acompteIdParam) {
+      fetchWithAuth(`/api/acomptes/${acompteIdParam}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: "recu" }),
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setAcomptes((prev) => (prev ? prev.map((a) => (a.id === acompteIdParam ? data.acompte : a)) : prev));
+          toast.success("Paiement de l'acompte reçu");
+        }
+      });
+      router.replace(`/dashboard/devis/${devis.id}`);
+      return;
+    }
     if (payment === "success" && devis.paymentStatus !== "payee") {
       fetchWithAuth(`/api/devis/${devis.id}`, {
         method: "PATCH",
@@ -704,6 +752,81 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       toast.error("Impossible de joindre le serveur — réessayez.");
     }
     setDeleteSituationTarget(null);
+  }
+
+  function openAcompteModal() {
+    setAcomptePourcentage(30);
+    setAcompteModalOpen(true);
+  }
+
+  async function confirmCreateAcompte() {
+    if (!devis) return;
+    setCreatingAcompte(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${devis.id}/acomptes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pourcentage: acomptePourcentage }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer l'acompte.");
+        return;
+      }
+      const data = await res.json();
+      setAcomptes((prev) => [...(prev ?? []), data.acompte]);
+      toast.success("Acompte créé");
+      setAcompteModalOpen(false);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setCreatingAcompte(false);
+    }
+  }
+
+  async function updateAcompteStatut(acompte: AcompteRow, statut: AcompteStatut) {
+    setUpdatingAcompteId(acompte.id);
+    try {
+      const res = await fetchWithAuth(`/api/acomptes/${acompte.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de mettre à jour cet acompte.");
+        return;
+      }
+      const data = await res.json();
+      setAcomptes((prev) => (prev ? prev.map((a) => (a.id === acompte.id ? data.acompte : a)) : prev));
+      toast.success(`Acompte marqué comme ${ACOMPTE_STATUT_LABEL[statut].toLowerCase()}`);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setUpdatingAcompteId(null);
+    }
+  }
+
+  async function handlePayAcompte(acompte: AcompteRow) {
+    if (!devis) return;
+    setPayingAcompteId(acompte.id);
+    try {
+      const res = await fetchWithAuth("/api/stripe/payment-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ devisId: devis.id, acompteId: acompte.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer le lien de paiement.");
+        return;
+      }
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setPayingAcompteId(null);
+    }
   }
 
   async function handleSaveSettings() {
@@ -1226,6 +1349,77 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         </section>
       )}
 
+      {devis.status === "accepte" && (
+        <section>
+          <div className="nova-section-header-row">
+            <h2 className="nova-section-title">Acomptes</h2>
+            <Button variant="secondary" onClick={openAcompteModal}>
+              <Plus size={16} strokeWidth={1.75} />
+              Demander un acompte
+            </Button>
+          </div>
+
+          {acomptes === null ? (
+            <Skeleton style={{ height: 120 }} />
+          ) : acomptes.length === 0 ? (
+            <EmptyState
+              icon="facturation"
+              title="Aucun acompte pour le moment"
+              description="Demandez un acompte à votre client avant de démarrer le chantier."
+            />
+          ) : (
+            <>
+              <div className="nova-situation-progress">
+                <ProgressBar
+                  value={
+                    montantTotalDevisHT(devis) > 0
+                      ? (acomptes.filter((a) => a.statut === "recu").reduce((sum, a) => sum + a.montantHT, 0) /
+                          montantTotalDevisHT(devis)) *
+                        100
+                      : 0
+                  }
+                  label={`${acomptes
+                    .filter((a) => a.statut === "recu")
+                    .reduce((sum, a) => sum + a.montantHT, 0)
+                    .toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € d'acomptes reçus sur ${montantTotalDevisHT(devis).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`}
+                />
+              </div>
+
+              <div className="nova-situation-list">
+                {acomptes.map((a) => (
+                  <Card key={a.id} className="nova-situation-card">
+                    <div className="nova-situation-card-header">
+                      <div>
+                        <span className="nova-cell-title">Acompte {a.pourcentage}%</span>{" "}
+                        <Badge tone={ACOMPTE_STATUT_TONE[a.statut]}>{ACOMPTE_STATUT_LABEL[a.statut]}</Badge>
+                      </div>
+                      <span className="nova-cell-amount">{a.montantHT.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € HT</span>
+                    </div>
+                    <p className="nova-page-subtitle">
+                      <Timestamp date={a.createdAt} />
+                    </p>
+                    {a.statut === "en_attente" && (
+                      <div className="nova-status-actions">
+                        <Button variant="success" disabled={updatingAcompteId === a.id} onClick={() => updateAcompteStatut(a, "recu")}>
+                          Marquer comme reçu
+                        </Button>
+                        <Button variant="secondary" disabled={payingAcompteId === a.id} onClick={() => handlePayAcompte(a)}>
+                          <Banknote size={16} strokeWidth={1.75} />
+                          {payingAcompteId === a.id ? "Redirection..." : "Paiement Stripe"}
+                        </Button>
+                        <Button variant="danger" disabled={updatingAcompteId === a.id} onClick={() => updateAcompteStatut(a, "annule")}>
+                          Annuler
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       <Card>
         <CardTitle>Remise et notes</CardTitle>
         <Field
@@ -1423,6 +1617,34 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         onCancel={() => setDeleteSituationTarget(null)}
         confirming={deletingSituation}
       />
+
+      <EditModal
+        open={acompteModalOpen}
+        title="Demander un acompte"
+        onCancel={() => setAcompteModalOpen(false)}
+        onSave={confirmCreateAcompte}
+        saving={creatingAcompte}
+      >
+        <div className="nova-field">
+          <label>Pourcentage ({acomptePourcentage}%)</label>
+          <input
+            type="range"
+            min="10"
+            max="90"
+            step="5"
+            value={acomptePourcentage}
+            onChange={(e) => setAcomptePourcentage(Number(e.target.value))}
+            className="nova-slider"
+          />
+        </div>
+        <Field
+          label="Montant HT (€)"
+          value={`${((acomptePourcentage / 100) * montantTotalDevisHT(devis)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`}
+          readOnly
+          disabled
+          hint="Calculé automatiquement à partir du montant total HT du devis."
+        />
+      </EditModal>
     </div>
   );
 }

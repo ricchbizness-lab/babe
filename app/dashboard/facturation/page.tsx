@@ -34,6 +34,8 @@ type DevisRow = {
 
 type InvoiceRow = DevisRow & { numero: string };
 
+type AcompteRow = { id: string; devisId: string; statut: string };
+
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
   en_attente: "En attente",
   payee: "Payée",
@@ -94,6 +96,7 @@ const TABS: { key: "toutes" | "en_attente" | "payees" | "en_retard"; label: stri
 export default function FacturationPage() {
   const toast = useToast();
   const [devis, setDevis] = useState<DevisRow[] | null>(null);
+  const [acomptes, setAcomptes] = useState<AcompteRow[]>([]);
   const [tab, setTab] = useState<"toutes" | "en_attente" | "payees" | "en_retard">("toutes");
   const [relanceTarget, setRelanceTarget] = useState<InvoiceRow | null>(null);
   const [relanceText, setRelanceText] = useState<string | null>(null);
@@ -112,7 +115,15 @@ export default function FacturationPage() {
       .then((res) => res.json())
       .then((data) => setResendConfigured(!!data.resendConfigured))
       .catch(() => {});
+    fetchWithAuth("/api/acomptes")
+      .then((res) => res.json())
+      .then((data) => setAcomptes(data.acomptes ?? []))
+      .catch(() => {});
   }, []);
+
+  const devisIdsAvecAcompteRecu = new Set(
+    acomptes.filter((a) => a.statut === "recu").map((a) => a.devisId)
+  );
 
   const accepted = devis === null ? null : devis.filter((d) => d.status === "accepte");
   const chronological = accepted ? sortByAcceptedDate(accepted) : [];
@@ -294,7 +305,10 @@ export default function FacturationPage() {
       key: "paymentStatus",
       label: "Statut paiement",
       render: (d) => (
-        <Badge tone={PAYMENT_STATUS_TONE[displayPaymentStatus(d)]}>{PAYMENT_STATUS_LABEL[displayPaymentStatus(d)]}</Badge>
+        <span className="nova-badge-group">
+          <Badge tone={PAYMENT_STATUS_TONE[displayPaymentStatus(d)]}>{PAYMENT_STATUS_LABEL[displayPaymentStatus(d)]}</Badge>
+          {devisIdsAvecAcompteRecu.has(d.id) && <Badge tone="amber">Acompte</Badge>}
+        </span>
       ),
       sortable: true,
       sortValue: (d) => PAYMENT_STATUS_ORDER[displayPaymentStatus(d)],
