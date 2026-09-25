@@ -6,5 +6,5 @@ export default async function PortalPage({ params }: { params: { token: string }
   const project = await getPortalData(params.token);
   if (!project) notFound();
 
-  return <PortalView project={project} />;
+  return <PortalView project={project} token={params.token} />;
 }
