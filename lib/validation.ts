@@ -275,3 +275,11 @@ export const whatsappTestSchema = z.object({
   phoneId: z.string().min(1).max(60).optional(),
   token: z.string().min(1).max(500).optional(),
 });
+
+export const acompteSchema = z.object({
+  pourcentage: z.number().min(10).max(90),
+});
+
+export const acompteUpdateSchema = z.object({
+  statut: z.enum(["en_attente", "recu", "annule"]),
+});

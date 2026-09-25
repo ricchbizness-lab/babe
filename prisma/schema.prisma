@@ -80,6 +80,7 @@ model Business {
   situations       SituationFacture[]
   ouvrages         OuvrageType[]
   attestationsTva  AttestationTVA[]
+  acomptes         Acompte[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -177,6 +178,7 @@ model Devis {
   lines DevisLine[]
   situations SituationFacture[]
   attestationsTva AttestationTVA[]
+  acomptes Acompte[]
 
   @@index([businessId])
   @@index([clientId])
@@ -220,6 +222,26 @@ model SituationFacture {
   montantHT             Float
   statut                String   @default("brouillon") // brouillon | envoyee | payee
   createdAt             DateTime @default(now())
+
+  @@index([devisId])
+  @@index([businessId])
+}
+
+// Acompte demandé sur un devis accepté (module B3, sprint 2 point 3) —
+// montant fixé en HT (le modèle ne porte pas de ventilation par taux de TVA,
+// contrairement aux lignes du devis) ; le pourcentage sert uniquement à
+// calculer ce montant depuis le total HT au moment de la création, il n'est
+// pas recalculé si le devis change ensuite.
+model Acompte {
+  id          String   @id @default(cuid())
+  devisId     String
+  devis       Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  pourcentage Float
+  montantHT   Float
+  statut      String   @default("en_attente") // en_attente | recu | annule
+  createdAt   DateTime @default(now())
 
   @@index([devisId])
   @@index([businessId])

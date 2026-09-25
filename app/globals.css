@@ -785,6 +785,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-amber { background: var(--nova-badge-amber-bg); color: var(--nova-badge-amber-text); }
 .nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
 .nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
+.nova-badge-group { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
 .nova-facturx-indicator {
   display: inline-flex;
   align-items: center;
@@ -2100,6 +2101,24 @@ button.primary:hover { background: var(--nova-teal-deep); }
   gap: var(--nova-space-2);
   flex-wrap: wrap;
   margin-bottom: var(--nova-space-1);
+}
+
+.nova-invoice-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--nova-space-1) 0;
+  font-family: var(--nova-font-sans);
+  color: var(--nova-ink-soft);
+}
+.nova-invoice-balance-total {
+  border-top: 1px solid var(--nova-border);
+  margin-top: var(--nova-space-1);
+  padding-top: var(--nova-space-2);
+  color: var(--nova-ink);
+  font-family: var(--nova-font-heading);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .nova-invoice {
