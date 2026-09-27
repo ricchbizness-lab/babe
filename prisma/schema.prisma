@@ -81,6 +81,7 @@ model Business {
   ouvrages         OuvrageType[]
   attestationsTva  AttestationTVA[]
   acomptes         Acompte[]
+  signatureRequests SignatureRequest[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -179,6 +180,7 @@ model Devis {
   situations SituationFacture[]
   attestationsTva AttestationTVA[]
   acomptes Acompte[]
+  signatureRequests SignatureRequest[]
 
   @@index([businessId])
   @@index([clientId])
@@ -242,6 +244,27 @@ model Acompte {
   montantHT   Float
   statut      String   @default("en_attente") // en_attente | recu | annule
   createdAt   DateTime @default(now())
+
+  @@index([devisId])
+  @@index([businessId])
+}
+
+// Demande de signature électronique d'un devis envoyé (sprint 3, point 1) —
+// signature manuscrite capturée via canvas HTML5, pas de service tiers.
+// signatureData stocke l'image du tracé (PNG en data URL) ; le token permet
+// l'accès public à /signature/[token] sans compte, comme portalToken pour
+// le portail client.
+model SignatureRequest {
+  id            String    @id @default(cuid())
+  devisId       String
+  devis         Devis     @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  token         String    @unique
+  signedAt      DateTime?
+  signatureData String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
 
   @@index([devisId])
   @@index([businessId])

@@ -786,6 +786,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
 .nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
 .nova-badge-group { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-signature-badge-row { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-signature-badge-row button.nova-inline-link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; }
 .nova-facturx-indicator {
   display: inline-flex;
   align-items: center;
@@ -2408,6 +2410,30 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-portal-photos { grid-template-columns: 1fr 1fr; }
   .nova-portal-card { padding: var(--nova-space-2); }
 }
+
+/* --- Signature électronique (page publique /signature/[token]) --- */
+
+.nova-signature-card { max-width: 700px; }
+.nova-signature-card .nova-invoice { box-shadow: none; border: 1px solid var(--nova-border); padding: var(--nova-space-3); }
+.nova-signature-zone { display: flex; flex-direction: column; gap: var(--nova-space-2); align-items: flex-start; }
+.nova-signature-instructions { margin: 0; font-size: 15px; color: var(--nova-ink-soft); }
+.nova-signature-canvas {
+  width: 100%;
+  aspect-ratio: 600 / 220;
+  background: #fff;
+  border: 2px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  touch-action: none;
+  cursor: crosshair;
+}
+.nova-signature-legal { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--nova-ink-soft); }
+.nova-signature-checkbox { display: flex; align-items: flex-start; gap: var(--nova-space-1); font-size: 15px; color: var(--nova-ink); cursor: pointer; }
+.nova-signature-checkbox input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--nova-portal-accent); }
+.nova-signature-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--nova-space-1); padding: var(--nova-space-3) 0; }
+.nova-signature-done-icon { color: var(--nova-success); }
+.nova-signature-done h2 { margin: 0; font-family: var(--nova-font-heading); font-size: 19px; }
+.nova-signature-done p { margin: 0; color: var(--nova-ink-soft); font-size: 15px; }
+.nova-signature-preview { margin-top: var(--nova-space-2); max-width: 320px; width: 100%; border: 1px solid var(--nova-border); border-radius: var(--nova-radius-card); background: #fff; }
 
 /* --- Planning --- */
 

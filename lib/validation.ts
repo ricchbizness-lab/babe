@@ -283,3 +283,8 @@ export const acompteSchema = z.object({
 export const acompteUpdateSchema = z.object({
   statut: z.enum(["en_attente", "recu", "annule"]),
 });
+
+export const signatureSubmitSchema = z.object({
+  signatureData: z.string().min(1).max(2_900_000),
+  accepted: z.literal(true),
+});

@@ -26,6 +26,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: "Profil entreprise introuvable" }, { status: 404 });
     }
 
+    const signedRequest = await prisma.signatureRequest.findFirst({
+      where: { devisId: devis.id, businessId, signedAt: { not: null } },
+      orderBy: { signedAt: "desc" },
+    });
+
     const accepted = await prisma.devis.findMany({ where: { businessId, status: "accepte" }, select: { id: true, updatedAt: true } });
     const chronological = sortByAcceptedDate(accepted.map((d) => ({ id: d.id, updatedAt: d.updatedAt.toISOString() })));
     const index = chronological.findIndex((d) => d.id === devis.id);
@@ -50,6 +55,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       lines: devis.lines,
       fallbackAmountHT: devis.amount,
       remisePct: devis.remise || 0,
+      signature:
+        signedRequest?.signatureData && signedRequest.signedAt
+          ? { imageBase64: signedRequest.signatureData, signedAt: signedRequest.signedAt.toISOString() }
+          : null,
     });
 
     return new NextResponse(Buffer.from(pdfBytes), {
