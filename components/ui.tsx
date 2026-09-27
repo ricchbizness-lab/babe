@@ -34,9 +34,9 @@ import {
   Copy,
   FileBarChart,
   FileCheck2,
-  FileSignature,
   FileText,
   FolderOpen,
+  Handshake,
   HelpCircle,
   Info,
   LayoutDashboard,
@@ -90,6 +90,7 @@ const ICONS = {
   dispatch: UserCog,
   taches: CheckSquare,
   equipe: Contact,
+  "sous-traitance": Handshake,
   "rapports-vocaux": Mic,
   copilote: Bot,
   rapport: FileBarChart,
@@ -1982,6 +1983,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { href: "/dashboard/equipe", label: "Équipe", navKey: "equipe", icon: "equipe" },
       { href: "/dashboard/achats", label: "Achats", navKey: "achats", icon: "achats" },
+      { href: "/dashboard/sous-traitance", label: "Sous-traitance", navKey: "sousTraitance", icon: "sous-traitance" },
     ],
   },
   {
@@ -2015,7 +2017,6 @@ export const NAV_ITEMS: NavItem[] = [...NAV_CATEGORIES.flatMap((c) => c.items), 
  */
 export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Facturation électronique conforme", icon: Receipt },
-  { label: "E-signature de devis", icon: FileSignature },
   { label: "Système téléphonique intégré", icon: Phone },
   { label: "GPS tracking équipe", icon: MapPin },
   { label: "Synchronisation comptable", icon: RefreshCw },

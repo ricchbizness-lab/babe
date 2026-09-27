@@ -82,6 +82,8 @@ model Business {
   attestationsTva  AttestationTVA[]
   acomptes         Acompte[]
   signatureRequests SignatureRequest[]
+  sousTraitants    SousTraitant[]
+  contratsSousTraitance ContratSousTraitance[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -129,6 +131,7 @@ model Project {
   steps  ProjectStep[]
   photos ProjectPhoto[]
   purchases Purchase[]
+  contratsSousTraitance ContratSousTraitance[]
 
   @@index([businessId])
   @@index([clientId])
@@ -181,6 +184,7 @@ model Devis {
   attestationsTva AttestationTVA[]
   acomptes Acompte[]
   signatureRequests SignatureRequest[]
+  contratsSousTraitance ContratSousTraitance[]
 
   @@index([businessId])
   @@index([clientId])
@@ -436,6 +440,48 @@ model Purchase {
   @@index([businessId])
   @@index([supplierId])
   @@index([projectId])
+}
+
+// --- Sous-traitance (sprint 3, point 2) ---
+
+model SousTraitant {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  siret       String?
+  email       String?
+  phone       String?
+  specialty   String   // plomberie | electricite | maconnerie | autre
+  tvaIntracom String?
+  createdAt   DateTime @default(now())
+
+  contrats ContratSousTraitance[]
+
+  @@index([businessId])
+}
+
+model ContratSousTraitance {
+  id             String        @id @default(cuid())
+  businessId     String
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sousTraitantId String
+  sousTraitant   SousTraitant  @relation(fields: [sousTraitantId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  devisId        String?
+  devis          Devis?        @relation(fields: [devisId], references: [id], onDelete: SetNull)
+  description    String
+  montantHT      Float
+  statut         String        @default("en_cours") // en_cours | termine | annule
+  dateDebut      DateTime?
+  dateFin        DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([businessId])
+  @@index([sousTraitantId])
+  @@index([projectId])
+  @@index([devisId])
 }
 
 // --- Phase 3 : copilote financier (option premium) ---

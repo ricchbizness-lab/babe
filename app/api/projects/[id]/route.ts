@@ -18,6 +18,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         steps: { orderBy: { order: "asc" } },
         photos: { orderBy: { createdAt: "desc" } },
         purchases: { orderBy: { createdAt: "desc" } },
+        contratsSousTraitance: {
+          include: { sousTraitant: { select: { id: true, name: true, specialty: true } } },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
     await assertOwnedByBusiness(project, businessId);

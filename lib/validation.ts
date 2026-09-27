@@ -288,3 +288,38 @@ export const signatureSubmitSchema = z.object({
   signatureData: z.string().min(1).max(2_900_000),
   accepted: z.literal(true),
 });
+
+export const SOUS_TRAITANT_SPECIALTIES = ["plomberie", "electricite", "maconnerie", "autre"] as const;
+
+export const sousTraitantSchema = z.object({
+  name: z.string().min(1).max(200),
+  siret: z.string().max(20).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().max(30).optional(),
+  specialty: z.enum(SOUS_TRAITANT_SPECIALTIES),
+  tvaIntracom: z.string().max(30).optional(),
+});
+
+export const sousTraitantUpdateSchema = sousTraitantSchema.partial();
+
+export const contratSousTraitanceSchema = z.object({
+  sousTraitantId: z.string(),
+  projectId: z.string().optional(),
+  devisId: z.string().optional(),
+  description: z.string().min(1).max(1000),
+  montantHT: z.number().min(0),
+  statut: z.enum(["en_cours", "termine", "annule"]).default("en_cours"),
+  dateDebut: z.string().datetime().optional(),
+  dateFin: z.string().datetime().optional(),
+});
+
+export const contratSousTraitanceUpdateSchema = z.object({
+  sousTraitantId: z.string().optional(),
+  projectId: z.string().optional(),
+  devisId: z.string().optional(),
+  description: z.string().min(1).max(1000).optional(),
+  montantHT: z.number().min(0).optional(),
+  statut: z.enum(["en_cours", "termine", "annule"]).optional(),
+  dateDebut: z.string().datetime().optional(),
+  dateFin: z.string().datetime().optional(),
+});
