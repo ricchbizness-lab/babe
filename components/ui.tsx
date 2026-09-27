@@ -40,7 +40,6 @@ import {
   HelpCircle,
   Info,
   LayoutDashboard,
-  MapPin,
   Mic,
   MoreHorizontal,
   Package,
@@ -2018,7 +2017,6 @@ export const NAV_ITEMS: NavItem[] = [...NAV_CATEGORIES.flatMap((c) => c.items), 
 export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: "Facturation électronique conforme", icon: Receipt },
   { label: "Système téléphonique intégré", icon: Phone },
-  { label: "GPS tracking équipe", icon: MapPin },
   { label: "Synchronisation comptable", icon: RefreshCw },
 ];
 

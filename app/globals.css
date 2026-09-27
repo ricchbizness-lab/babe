@@ -2528,6 +2528,23 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-signature-done p { margin: 0; color: var(--nova-ink-soft); font-size: 15px; }
 .nova-signature-preview { margin-top: var(--nova-space-2); max-width: 320px; width: 100%; border: 1px solid var(--nova-border); border-radius: var(--nova-radius-card); background: #fff; }
 
+/* --- Pointage terrain (page publique /terrain/[teamMemberId]/[token]) --- */
+
+.nova-terrain-assignments { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-terrain-assignment-card {
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-terrain-assignment-title { font-family: var(--nova-font-heading); font-size: 18px; font-weight: 700; color: var(--nova-ink); }
+.nova-terrain-assignment-address { font-size: 14px; color: var(--nova-ink-soft); margin-top: -8px; }
+.nova-terrain-assignment-note { font-size: 14px; color: var(--nova-ink-soft); background: var(--nova-portal-accent-tint); padding: var(--nova-space-1) var(--nova-space-2); border-radius: var(--nova-radius-btn); }
+.nova-terrain-status { display: flex; align-items: center; gap: var(--nova-space-1); margin: 0; font-size: 15px; color: var(--nova-ink-soft); }
+.nova-terrain-status-success { color: var(--nova-success); font-weight: 600; }
+
 /* --- Planning --- */
 
 .nova-week-nav { display: flex; gap: var(--nova-space-1); }
@@ -2823,6 +2840,18 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-photo-card-delete:hover { background: var(--nova-danger); }
 .nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
 .nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
+.nova-team-card-pointage {
+  border-top: 1px dashed var(--nova-border);
+  padding-top: var(--nova-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+}
+.nova-team-card-pointage-none { margin: 0; font-size: 13px; color: var(--nova-ink-faint); }
+.nova-team-card-pointage-arrivee { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--nova-success); font-weight: 600; }
+.nova-team-card-pointage-depart { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--nova-ink-soft); }
+.nova-team-card-terrain-link { display: flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-terrain-qrcode { border-radius: var(--nova-radius-btn); border: 1px solid var(--nova-border); }
 .nova-team-card-footer {
   display: flex;
   gap: var(--nova-space-1);

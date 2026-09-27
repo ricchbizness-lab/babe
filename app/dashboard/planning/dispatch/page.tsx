@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Sparkles, X } from "lucide-react";
+import { Copy, MapPin, Pencil, QrCode, Sparkles, X } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -19,10 +19,18 @@ import {
   TextareaField,
   useToast,
 } from "@/components/ui";
+import { TerrainQrCode } from "@/components/TerrainQrCode";
 import { toDateKey } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 
 type Member = { id: string; name: string; role: string | null; email: string | null; phone: string | null };
+type PointageRow = {
+  id: string;
+  teamMemberId: string;
+  type: "arrivee" | "depart";
+  timestamp: string;
+  assignment: { project: { id: string; name: string } | null } | null;
+};
 type ProjectOption = { id: string; name: string };
 type AssignmentRow = {
   id: string;
@@ -73,6 +81,10 @@ export default function DispatchPage() {
   const [suggesting, setSuggesting] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
 
+  const [pointages, setPointages] = useState<PointageRow[]>([]);
+  const [terrainLinks, setTerrainLinks] = useState<Record<string, string>>({});
+  const [generatingTerrainId, setGeneratingTerrainId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchWithAuth("/api/team")
       .then((res) => res.json())
@@ -83,7 +95,38 @@ export default function DispatchPage() {
     fetchWithAuth(`/api/assignments?date=${todayKey}`)
       .then((res) => res.json())
       .then((data) => setAssignments(data.assignments ?? []));
+    fetchWithAuth("/api/pointage")
+      .then((res) => res.json())
+      .then((data) => setPointages(data.pointages ?? []))
+      .catch(() => {});
   }, []);
+
+  function lastPointageForMember(memberId: string): PointageRow | null {
+    const list = pointages.filter((p) => p.teamMemberId === memberId);
+    return list.length > 0 ? list[list.length - 1] : null;
+  }
+
+  async function handleGenerateTerrainLink(memberId: string) {
+    setGeneratingTerrainId(memberId);
+    try {
+      const res = await fetchWithAuth(`/api/team/${memberId}/terrain-token`, { method: "POST" });
+      if (!res.ok) {
+        toast.error("Impossible de générer le lien terrain.");
+        return;
+      }
+      const data = await res.json();
+      setTerrainLinks((prev) => ({ ...prev, [memberId]: data.url }));
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setGeneratingTerrainId(null);
+    }
+  }
+
+  async function handleCopyTerrainLink(url: string) {
+    await navigator.clipboard.writeText(url);
+    toast.success("Lien copié !");
+  }
 
   async function handleAddMember(e: FormEvent) {
     e.preventDefault();
@@ -510,6 +553,39 @@ export default function DispatchPage() {
                         </span>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                <div className="nova-team-card-pointage">
+                  {(() => {
+                    const last = lastPointageForMember(m.id);
+                    if (!last) {
+                      return <p className="nova-team-card-pointage-none">Pas encore pointé aujourd'hui</p>;
+                    }
+                    const heure = new Date(last.timestamp).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                    const projectName = last.assignment?.project?.name || "un chantier";
+                    return (
+                      <p className={last.type === "arrivee" ? "nova-team-card-pointage-arrivee" : "nova-team-card-pointage-depart"}>
+                        <MapPin size={14} strokeWidth={1.75} />
+                        {last.type === "arrivee" ? `Arrivé sur ${projectName} à ${heure}` : `Parti de ${projectName} à ${heure}`}
+                      </p>
+                    );
+                  })()}
+
+                  {terrainLinks[m.id] ? (
+                    <div className="nova-team-card-terrain-link">
+                      <code className="nova-portal-link">{terrainLinks[m.id]}</code>
+                      <Button variant="secondary" onClick={() => handleCopyTerrainLink(terrainLinks[m.id])}>
+                        <Copy size={14} strokeWidth={1.75} />
+                        Copier
+                      </Button>
+                      <TerrainQrCode value={terrainLinks[m.id]} size={96} />
+                    </div>
+                  ) : (
+                    <Button variant="secondary" disabled={generatingTerrainId === m.id} onClick={() => handleGenerateTerrainLink(m.id)}>
+                      <QrCode size={14} strokeWidth={1.75} />
+                      {generatingTerrainId === m.id ? "Génération..." : "Générer le lien terrain"}
+                    </Button>
                   )}
                 </div>
               </div>

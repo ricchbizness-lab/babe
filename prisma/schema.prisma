@@ -84,6 +84,7 @@ model Business {
   signatureRequests SignatureRequest[]
   sousTraitants    SousTraitant[]
   contratsSousTraitance ContratSousTraitance[]
+  pointages        Pointage[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -375,16 +376,18 @@ model VoiceReport {
 // --- Planning / dispatch équipe (module 6) ---
 
 model TeamMember {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  role       String?
-  email      String?
-  phone      String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  role         String?
+  email        String?
+  phone        String?
+  terrainToken String?  @unique // portail terrain (sprint 3, point 4) — généré à la demande, jamais à la création, même principe que Project.portalToken
+  createdAt    DateTime @default(now())
 
   assignments Assignment[]
+  pointages   Pointage[]
 
   @@index([businessId])
 }
@@ -399,9 +402,34 @@ model Assignment {
   note         String?
   createdAt    DateTime   @default(now())
 
+  pointages Pointage[]
+
   @@index([teamMemberId])
   @@index([projectId])
   @@index([date])
+}
+
+// Pointage terrain (sprint 3, point 4) — le collaborateur indique lui-même
+// son arrivée/départ depuis /terrain/[teamMemberId]/[token], pas de tracking
+// GPS continu (trop intrusif) : une géolocalisation ponctuelle au moment du
+// pointage, optionnelle si le navigateur/l'utilisateur la refuse.
+model Pointage {
+  id           String     @id @default(cuid())
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  type         String     // arrivee | depart
+  latitude     Float?
+  longitude    Float?
+  timestamp    DateTime
+  createdAt    DateTime   @default(now())
+
+  @@index([teamMemberId])
+  @@index([businessId])
+  @@index([assignmentId])
 }
 
 // --- Achats & fournisseurs (module 7 bis) ---

@@ -313,6 +313,15 @@ export const contratSousTraitanceSchema = z.object({
   dateFin: z.string().datetime().optional(),
 });
 
+export const pointageSchema = z.object({
+  teamMemberId: z.string(),
+  token: z.string(),
+  assignmentId: z.string(),
+  type: z.enum(["arrivee", "depart"]),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+});
+
 export const contratSousTraitanceUpdateSchema = z.object({
   sousTraitantId: z.string().optional(),
   projectId: z.string().optional(),
