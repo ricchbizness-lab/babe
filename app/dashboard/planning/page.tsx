@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { Avatar, Badge, EmptyState, Skeleton, colorFromName, initialsFromName, type BadgeTone } from "@/components/ui";
+import { Avatar, Badge, Button, DatePickerField, EmptyState, Skeleton, colorFromName, initialsFromName, useToast, type BadgeTone } from "@/components/ui";
 import { addDays, addMonths, formatShortDate, isSameDay, monthGrid, startOfWeek, toDateKey, weekDays } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { LOCALE_TO_BCP47, resolveLocale } from "@/lib/i18n";
@@ -68,6 +68,9 @@ export default function PlanningPage() {
   const [assignments, setAssignments] = useState<AssignmentRow[] | null>(null);
   const [detail, setDetail] = useState<AssignmentRow | null>(null);
   const [ganttDetail, setGanttDetail] = useState<ProjectRow | null>(null);
+  const [ganttDateForm, setGanttDateForm] = useState({ startDate: "", endDate: "" });
+  const [savingGanttDates, setSavingGanttDates] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     fetchWithAuth("/api/projects")
@@ -117,6 +120,43 @@ export default function PlanningPage() {
   function ganttAvancement(p: ProjectRow): number {
     if (p.tasks.length === 0) return 0;
     return Math.round((p.tasks.filter((t) => t.done).length / p.tasks.length) * 100);
+  }
+
+  function openGanttDetail(p: ProjectRow) {
+    setGanttDetail(p);
+    setGanttDateForm({
+      startDate: p.startDate ? toDateKey(new Date(p.startDate)) : "",
+      endDate: p.endDate ? toDateKey(new Date(p.endDate)) : "",
+    });
+  }
+
+  async function handleSaveGanttDates() {
+    if (!ganttDetail || !ganttDateForm.startDate || !ganttDateForm.endDate) return;
+    setSavingGanttDates(true);
+    try {
+      const res = await fetchWithAuth(`/api/projects/${ganttDetail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: new Date(`${ganttDateForm.startDate}T00:00:00.000Z`).toISOString(),
+          endDate: new Date(`${ganttDateForm.endDate}T00:00:00.000Z`).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de mettre à jour les dates.");
+        return;
+      }
+      const data = await res.json();
+      setProjects((prev) =>
+        (prev ?? []).map((p) => (p.id === data.project.id ? { ...p, startDate: data.project.startDate, endDate: data.project.endDate } : p))
+      );
+      setGanttDetail((prev) => (prev ? { ...prev, startDate: data.project.startDate, endDate: data.project.endDate } : prev));
+      toast.success("Dates mises à jour");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingGanttDates(false);
+    }
   }
 
   /** Position/largeur de la barre en % de la fenêtre visible, tronquée aux bords si le chantier déborde. */
@@ -348,9 +388,9 @@ export default function PlanningPage() {
                         type="button"
                         className={`nova-gantt-bar ${GANTT_STATUS_BAR_CLASS[p.status] || ""}`}
                         style={{ left: bar.left, width: bar.width }}
-                        onClick={() => setGanttDetail(p)}
+                        onClick={() => openGanttDetail(p)}
+                        aria-label={`${p.name} — modifier les dates ou voir le détail`}
                       >
-                        <span className="nova-gantt-bar-label">{p.name}</span>
                         <span className="nova-gantt-tooltip">
                           <strong>{p.client?.name || "Sans client"}</strong>
                           <span>
@@ -362,8 +402,12 @@ export default function PlanningPage() {
                         </span>
                       </button>
                     ) : !bar ? (
-                      <button type="button" className="nova-gantt-bar nova-gantt-bar-undated" onClick={() => setGanttDetail(p)}>
-                        <span className="nova-gantt-bar-label">Dates non définies</span>
+                      <button
+                        type="button"
+                        className="nova-gantt-bar nova-gantt-bar-undated"
+                        onClick={() => openGanttDetail(p)}
+                      >
+                        Dates non définies
                       </button>
                     ) : null}
                   </div>
@@ -452,18 +496,31 @@ export default function PlanningPage() {
                 </dd>
               </div>
               <div>
-                <dt>Dates</dt>
-                <dd>
-                  {ganttDetail.startDate && ganttDetail.endDate
-                    ? `${formatShortDate(new Date(ganttDetail.startDate))} → ${formatShortDate(new Date(ganttDetail.endDate))}`
-                    : "Dates non définies"}
-                </dd>
-              </div>
-              <div>
                 <dt>Avancement</dt>
                 <dd>{ganttAvancement(ganttDetail)}%</dd>
               </div>
             </dl>
+
+            <div className="nova-gantt-detail-dates">
+              <DatePickerField
+                label="Date de début"
+                value={ganttDateForm.startDate}
+                onChange={(value) => setGanttDateForm({ ...ganttDateForm, startDate: value })}
+              />
+              <DatePickerField
+                label="Date de fin"
+                value={ganttDateForm.endDate}
+                onChange={(value) => setGanttDateForm({ ...ganttDateForm, endDate: value })}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleSaveGanttDates}
+                disabled={savingGanttDates || !ganttDateForm.startDate || !ganttDateForm.endDate}
+              >
+                {savingGanttDates ? "Enregistrement..." : "Enregistrer les dates"}
+              </Button>
+            </div>
+
             <div className="nova-modal-actions">
               <Link href={`/dashboard/chantiers/${ganttDetail.id}`} className="nova-btn nova-btn-secondary">
                 Voir la fiche chantier

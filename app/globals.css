@@ -1243,6 +1243,14 @@ button.primary:hover { background: var(--nova-teal-deep); }
 }
 .nova-gantt-bar:hover .nova-gantt-tooltip,
 .nova-gantt-bar:focus-visible .nova-gantt-tooltip { opacity: 1; }
+.nova-gantt-detail-dates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+  border-top: 1px solid var(--nova-border);
+  padding-top: var(--nova-space-2);
+  margin-top: var(--nova-space-2);
+}
 
 /* --- Avatar (initiales) --- */
 
