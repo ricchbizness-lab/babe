@@ -156,6 +156,19 @@ export default function PlanningPage() {
     return Math.round((p.tasks.filter((t) => t.done).length / p.tasks.length) * 100);
   }
 
+  /** Collaborateurs affectés à ce chantier (toutes dates confondues), dédupliqués — pour répondre à "qui travaille dessus" au premier coup d'œil sur le Gantt. */
+  function teamForProject(projectId: string): { id: string; name: string }[] {
+    const seen = new Set<string>();
+    const team: { id: string; name: string }[] = [];
+    for (const a of assignmentsList) {
+      if (a.project?.id === projectId && !seen.has(a.teamMember.id)) {
+        seen.add(a.teamMember.id);
+        team.push(a.teamMember);
+      }
+    }
+    return team;
+  }
+
   function openGanttDetail(p: ProjectRow) {
     setGanttDetail(p);
     setGanttDateForm({
@@ -492,11 +505,24 @@ export default function PlanningPage() {
           <div className="nova-gantt-body">
             {ganttProjects.map((p) => {
               const bar = ganttBarStyle(p);
+              const team = teamForProject(p.id);
               return (
                 <div key={p.id} className="nova-gantt-row">
                   <div className="nova-gantt-row-label">
                     <span className="nova-gantt-row-name">{p.name}</span>
                     {p.client && <span className="nova-gantt-row-client">{p.client.name}</span>}
+                    {team.length > 0 ? (
+                      <span className="nova-gantt-row-team">
+                        {team.slice(0, 3).map((m) => (
+                          <span key={m.id} className="nova-gantt-row-avatar" style={{ background: colorFromName(m.name) }} title={m.name}>
+                            {initialsFromName(m.name)}
+                          </span>
+                        ))}
+                        {team.length > 3 && <span className="nova-gantt-row-avatar nova-gantt-row-avatar-more">+{team.length - 3}</span>}
+                      </span>
+                    ) : (
+                      <span className="nova-gantt-row-no-team">Personne affecté</span>
+                    )}
                   </div>
                   <div className="nova-gantt-row-track">
                     {ganttWeeks.map((weekDate, i) => {
@@ -532,6 +558,7 @@ export default function PlanningPage() {
                           <span>
                             {GANTT_STATUS_LABEL[p.status] || p.status} · {ganttAvancement(p)}%
                           </span>
+                          <span>{team.length > 0 ? `Équipe : ${team.map((m) => m.name).join(", ")}` : "Personne affecté"}</span>
                         </span>
                       </button>
                     ) : !bar ? (
