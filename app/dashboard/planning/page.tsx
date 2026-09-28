@@ -4,12 +4,39 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { Avatar, Badge, EmptyState, Skeleton, colorFromName, initialsFromName } from "@/components/ui";
+import { Avatar, Badge, EmptyState, Skeleton, colorFromName, initialsFromName, type BadgeTone } from "@/components/ui";
 import { addDays, addMonths, formatShortDate, isSameDay, monthGrid, startOfWeek, toDateKey, weekDays } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { LOCALE_TO_BCP47, resolveLocale } from "@/lib/i18n";
 
-type ProjectRow = { id: string; name: string; status: string; startDate: string | null; endDate: string | null };
+type ProjectRow = {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  client: { id: string; name: string } | null;
+  tasks: { done: boolean }[];
+};
+
+const GANTT_WEEKS_VISIBLE = 8;
+const GANTT_DAYS_VISIBLE = GANTT_WEEKS_VISIBLE * 7;
+
+const GANTT_STATUS_LABEL: Record<string, string> = {
+  planifie: "Planifié",
+  en_cours: "En cours",
+  termine: "Terminé",
+};
+const GANTT_STATUS_TONE: Record<string, BadgeTone> = {
+  planifie: "blue",
+  en_cours: "teal",
+  termine: "success",
+};
+const GANTT_STATUS_BAR_CLASS: Record<string, string> = {
+  planifie: "nova-gantt-bar-planifie",
+  en_cours: "nova-gantt-bar-en-cours",
+  termine: "nova-gantt-bar-termine",
+};
 type MemberRow = { id: string; name: string; role: string | null };
 type AssignmentRow = {
   id: string;
@@ -29,16 +56,18 @@ export default function PlanningPage() {
   const locale = resolveLocale(useLocale());
   const bcp47 = LOCALE_TO_BCP47[locale];
   const WEEKDAY_LABELS = [t("weekdayMon"), t("weekdayTue"), t("weekdayWed"), t("weekdayThu"), t("weekdayFri"), t("weekdaySat"), t("weekdaySun")];
-  const [mode, setMode] = useState<"semaine" | "mois">("semaine");
+  const [mode, setMode] = useState<"semaine" | "mois" | "gantt">("semaine");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [monthStart, setMonthStart] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [ganttStart, setGanttStart] = useState(() => startOfWeek(new Date()));
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [members, setMembers] = useState<MemberRow[] | null>(null);
   const [assignments, setAssignments] = useState<AssignmentRow[] | null>(null);
   const [detail, setDetail] = useState<AssignmentRow | null>(null);
+  const [ganttDetail, setGanttDetail] = useState<ProjectRow | null>(null);
 
   useEffect(() => {
     fetchWithAuth("/api/projects")
@@ -74,12 +103,53 @@ export default function PlanningPage() {
     });
   }
 
+  // --- Vue Gantt (sprint 3, point 3) — SVG maison via CSS, pas de lib tierce ---
+
+  const ganttProjects = projectsList.filter((p) => p.status === "en_cours" || p.status === "planifie");
+  const ganttWeeks = Array.from({ length: GANTT_WEEKS_VISIBLE }, (_, i) => addDays(ganttStart, i * 7));
+  const ganttRangeEnd = addDays(ganttStart, GANTT_DAYS_VISIBLE);
+
+  function isCurrentGanttWeek(weekDate: Date): boolean {
+    const now = new Date();
+    return weekDate <= now && now < addDays(weekDate, 7);
+  }
+
+  function ganttAvancement(p: ProjectRow): number {
+    if (p.tasks.length === 0) return 0;
+    return Math.round((p.tasks.filter((t) => t.done).length / p.tasks.length) * 100);
+  }
+
+  /** Position/largeur de la barre en % de la fenêtre visible, tronquée aux bords si le chantier déborde. */
+  function ganttBarStyle(p: ProjectRow): { left: string; width: string; hidden: boolean } | null {
+    if (!p.startDate || !p.endDate) return null;
+    const start = new Date(p.startDate);
+    const end = new Date(p.endDate);
+    if (end < ganttStart || start > ganttRangeEnd) {
+      return { left: "0%", width: "0%", hidden: true };
+    }
+    const clampedStart = start < ganttStart ? ganttStart : start;
+    const clampedEnd = end > ganttRangeEnd ? ganttRangeEnd : end;
+    const offsetDays = (clampedStart.getTime() - ganttStart.getTime()) / 86_400_000;
+    const durationDays = Math.max(1, (clampedEnd.getTime() - clampedStart.getTime()) / 86_400_000 + 1);
+    return {
+      left: `${(offsetDays / GANTT_DAYS_VISIBLE) * 100}%`,
+      width: `${(durationDays / GANTT_DAYS_VISIBLE) * 100}%`,
+      hidden: false,
+    };
+  }
+
   return (
     <div className="nova-page">
       <header className="nova-page-header-row">
         <div>
           <h1>{t("title")}</h1>
-          <p className="nova-page-subtitle">{mode === "semaine" ? rangeLabel : formatMonthYear(monthStart, bcp47)}</p>
+          <p className="nova-page-subtitle">
+            {mode === "semaine"
+              ? rangeLabel
+              : mode === "mois"
+                ? formatMonthYear(monthStart, bcp47)
+                : `${formatShortDate(ganttStart)} – ${formatShortDate(addDays(ganttStart, GANTT_DAYS_VISIBLE - 1))}`}
+          </p>
         </div>
         <div className="nova-header-actions">
           <div className="nova-mode-toggle">
@@ -96,6 +166,13 @@ export default function PlanningPage() {
               onClick={() => setMode("mois")}
             >
               {t("month")}
+            </button>
+            <button
+              type="button"
+              className={`nova-mode-toggle-btn ${mode === "gantt" ? "nova-mode-toggle-btn-active" : ""}`}
+              onClick={() => setMode("gantt")}
+            >
+              Gantt
             </button>
           </div>
           <Link href="/dashboard/planning/dispatch" className="nova-btn nova-btn-primary">
@@ -126,6 +203,22 @@ export default function PlanningPage() {
           </button>
           <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setMonthStart((m) => addMonths(m, 1))}>
             {t("nextMonth")}
+            <ChevronRight size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
+
+      {mode === "gantt" && (
+        <div className="nova-week-nav">
+          <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setGanttStart((d) => addDays(d, -7))}>
+            <ChevronLeft size={16} strokeWidth={1.75} />
+            Semaine précédente
+          </button>
+          <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setGanttStart(startOfWeek(new Date()))}>
+            Aujourd'hui
+          </button>
+          <button type="button" className="nova-btn nova-btn-secondary" onClick={() => setGanttStart((d) => addDays(d, 7))}>
+            Semaine suivante
             <ChevronRight size={16} strokeWidth={1.75} />
           </button>
         </div>
@@ -188,7 +281,7 @@ export default function PlanningPage() {
             </Fragment>
           ))}
         </div>
-      ) : (
+      ) : mode === "mois" ? (
         <div className="nova-calendar">
           <div className="nova-calendar-grid">
             {WEEKDAY_LABELS.map((label, i) => (
@@ -213,6 +306,66 @@ export default function PlanningPage() {
                       </Link>
                     ))}
                     {dayProjects.length > 3 && <span className="nova-calendar-task-more">+{dayProjects.length - 3}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : ganttProjects.length === 0 ? (
+        <EmptyState
+          icon="planning"
+          title="Aucun chantier en cours ou planifié"
+          description="Les chantiers planifiés ou en cours apparaîtront ici sur une vue chronologique."
+        />
+      ) : (
+        <div className="nova-gantt">
+          <div className="nova-gantt-header">
+            <div className="nova-gantt-header-label" />
+            <div className="nova-gantt-header-weeks">
+              {ganttWeeks.map((weekDate, i) => (
+                <div key={i} className={`nova-gantt-week-col ${isCurrentGanttWeek(weekDate) ? "nova-gantt-week-current" : ""}`}>
+                  {formatShortDate(weekDate)}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="nova-gantt-body">
+            {ganttProjects.map((p) => {
+              const bar = ganttBarStyle(p);
+              return (
+                <div key={p.id} className="nova-gantt-row">
+                  <div className="nova-gantt-row-label">
+                    <span className="nova-gantt-row-name">{p.name}</span>
+                    {p.client && <span className="nova-gantt-row-client">{p.client.name}</span>}
+                  </div>
+                  <div className="nova-gantt-row-track">
+                    {ganttWeeks.map((weekDate, i) => (
+                      <div key={i} className={`nova-gantt-grid-col ${isCurrentGanttWeek(weekDate) ? "nova-gantt-week-current" : ""}`} />
+                    ))}
+                    {bar && !bar.hidden ? (
+                      <button
+                        type="button"
+                        className={`nova-gantt-bar ${GANTT_STATUS_BAR_CLASS[p.status] || ""}`}
+                        style={{ left: bar.left, width: bar.width }}
+                        onClick={() => setGanttDetail(p)}
+                      >
+                        <span className="nova-gantt-bar-label">{p.name}</span>
+                        <span className="nova-gantt-tooltip">
+                          <strong>{p.client?.name || "Sans client"}</strong>
+                          <span>
+                            {formatShortDate(new Date(p.startDate!))} → {formatShortDate(new Date(p.endDate!))}
+                          </span>
+                          <span>
+                            {GANTT_STATUS_LABEL[p.status] || p.status} · {ganttAvancement(p)}%
+                          </span>
+                        </span>
+                      </button>
+                    ) : !bar ? (
+                      <button type="button" className="nova-gantt-bar nova-gantt-bar-undated" onClick={() => setGanttDetail(p)}>
+                        <span className="nova-gantt-bar-label">Dates non définies</span>
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -269,6 +422,53 @@ export default function PlanningPage() {
                 </Link>
               )}
               <button type="button" className="nova-btn nova-btn-primary" onClick={() => setDetail(null)}>
+                {t("close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ganttDetail && (
+        <div className="nova-modal-overlay" onClick={() => setGanttDetail(null)}>
+          <div className="nova-modal" role="dialog" aria-modal="true" aria-label={ganttDetail.name} onClick={(e) => e.stopPropagation()}>
+            <div className="nova-planning-detail-header">
+              <h3 className="nova-modal-title">{ganttDetail.name}</h3>
+              <button type="button" className="nova-icon-btn" onClick={() => setGanttDetail(null)} aria-label={t("close")}>
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+            <dl className="nova-detail-list">
+              <div>
+                <dt>Client</dt>
+                <dd>{ganttDetail.client?.name || "Sans client rattaché"}</dd>
+              </div>
+              <div>
+                <dt>Statut</dt>
+                <dd>
+                  <Badge tone={GANTT_STATUS_TONE[ganttDetail.status] || "neutral"}>
+                    {GANTT_STATUS_LABEL[ganttDetail.status] || ganttDetail.status}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt>Dates</dt>
+                <dd>
+                  {ganttDetail.startDate && ganttDetail.endDate
+                    ? `${formatShortDate(new Date(ganttDetail.startDate))} → ${formatShortDate(new Date(ganttDetail.endDate))}`
+                    : "Dates non définies"}
+                </dd>
+              </div>
+              <div>
+                <dt>Avancement</dt>
+                <dd>{ganttAvancement(ganttDetail)}%</dd>
+              </div>
+            </dl>
+            <div className="nova-modal-actions">
+              <Link href={`/dashboard/chantiers/${ganttDetail.id}`} className="nova-btn nova-btn-secondary">
+                Voir la fiche chantier
+              </Link>
+              <button type="button" className="nova-btn nova-btn-primary" onClick={() => setGanttDetail(null)}>
                 {t("close")}
               </button>
             </div>

@@ -64,6 +64,8 @@ export type FacturXInput = {
   lines: FacturXLine[];
   fallbackAmountHT?: number | null;
   remisePct?: number;
+  /** Signature électronique du devis (sprint 3, point 1), si le devis a été signé via /signature/[token] plutôt qu'accepté manuellement. */
+  signature?: { imageBase64: string; signedAt: string } | null;
 };
 
 type VatBucket = { rate: number; base: number; tva: number };
@@ -394,8 +396,28 @@ export async function generateFacturX(input: FacturXInput): Promise<Uint8Array> 
   footerY -= 20;
   const sigBoxWidth = (tableRight - MARGIN - 20) / 2;
   const sigBoxHeight = 70;
-  page.drawRectangle({ x: MARGIN, y: footerY - sigBoxHeight, width: sigBoxWidth, height: sigBoxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
-  page.drawText("Bon pour accord — signature du client", { x: MARGIN + 8, y: footerY - 14, size: 8, font, color: BODY_SOFT });
+  const clientSigX = MARGIN;
+  page.drawRectangle({ x: clientSigX, y: footerY - sigBoxHeight, width: sigBoxWidth, height: sigBoxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: input.signature ? undefined : [3, 3] });
+  if (input.signature) {
+    try {
+      const match = input.signature.imageBase64.match(/^data:image\/png;base64,(.*)$/i);
+      if (match) {
+        const image = await pdfDoc.embedPng(Buffer.from(match[1], "base64"));
+        const maxW = sigBoxWidth - 12;
+        const maxH = sigBoxHeight - 24;
+        const scale = Math.min(maxW / image.width, maxH / image.height, 1);
+        const w = image.width * scale;
+        const h = image.height * scale;
+        page.drawImage(image, { x: clientSigX + (sigBoxWidth - w) / 2, y: footerY - sigBoxHeight + 18 + (maxH - h) / 2, width: w, height: h });
+      }
+      const signedLabel = `Signé électroniquement le ${new Date(input.signature.signedAt).toLocaleDateString("fr-FR")}`;
+      page.drawText(signedLabel, { x: clientSigX + 8, y: footerY - sigBoxHeight + 8, size: 7, font, color: BODY_SOFT });
+    } catch {
+      // image invalide — on garde au moins l'encadré, pas de texte de secours nécessaire
+    }
+  } else {
+    page.drawText("Bon pour accord — signature du client", { x: clientSigX + 8, y: footerY - 14, size: 8, font, color: BODY_SOFT });
+  }
   page.drawRectangle({ x: MARGIN + sigBoxWidth + 20, y: footerY - sigBoxHeight, width: sigBoxWidth, height: sigBoxHeight, borderColor: BORDER, borderWidth: 1, borderDashArray: [3, 3] });
   page.drawText("Signature de l'émetteur", { x: MARGIN + sigBoxWidth + 28, y: footerY - 14, size: 8, font, color: BODY_SOFT });
 

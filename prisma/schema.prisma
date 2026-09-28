@@ -81,6 +81,10 @@ model Business {
   ouvrages         OuvrageType[]
   attestationsTva  AttestationTVA[]
   acomptes         Acompte[]
+  signatureRequests SignatureRequest[]
+  sousTraitants    SousTraitant[]
+  contratsSousTraitance ContratSousTraitance[]
+  pointages        Pointage[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -128,6 +132,7 @@ model Project {
   steps  ProjectStep[]
   photos ProjectPhoto[]
   purchases Purchase[]
+  contratsSousTraitance ContratSousTraitance[]
 
   @@index([businessId])
   @@index([clientId])
@@ -179,6 +184,8 @@ model Devis {
   situations SituationFacture[]
   attestationsTva AttestationTVA[]
   acomptes Acompte[]
+  signatureRequests SignatureRequest[]
+  contratsSousTraitance ContratSousTraitance[]
 
   @@index([businessId])
   @@index([clientId])
@@ -242,6 +249,27 @@ model Acompte {
   montantHT   Float
   statut      String   @default("en_attente") // en_attente | recu | annule
   createdAt   DateTime @default(now())
+
+  @@index([devisId])
+  @@index([businessId])
+}
+
+// Demande de signature électronique d'un devis envoyé (sprint 3, point 1) —
+// signature manuscrite capturée via canvas HTML5, pas de service tiers.
+// signatureData stocke l'image du tracé (PNG en data URL) ; le token permet
+// l'accès public à /signature/[token] sans compte, comme portalToken pour
+// le portail client.
+model SignatureRequest {
+  id            String    @id @default(cuid())
+  devisId       String
+  devis         Devis     @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  token         String    @unique
+  signedAt      DateTime?
+  signatureData String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
 
   @@index([devisId])
   @@index([businessId])
@@ -348,16 +376,18 @@ model VoiceReport {
 // --- Planning / dispatch équipe (module 6) ---
 
 model TeamMember {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  role       String?
-  email      String?
-  phone      String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  role         String?
+  email        String?
+  phone        String?
+  terrainToken String?  @unique // portail terrain (sprint 3, point 4) — généré à la demande, jamais à la création, même principe que Project.portalToken
+  createdAt    DateTime @default(now())
 
   assignments Assignment[]
+  pointages   Pointage[]
 
   @@index([businessId])
 }
@@ -372,9 +402,34 @@ model Assignment {
   note         String?
   createdAt    DateTime   @default(now())
 
+  pointages Pointage[]
+
   @@index([teamMemberId])
   @@index([projectId])
   @@index([date])
+}
+
+// Pointage terrain (sprint 3, point 4) — le collaborateur indique lui-même
+// son arrivée/départ depuis /terrain/[teamMemberId]/[token], pas de tracking
+// GPS continu (trop intrusif) : une géolocalisation ponctuelle au moment du
+// pointage, optionnelle si le navigateur/l'utilisateur la refuse.
+model Pointage {
+  id           String     @id @default(cuid())
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  type         String     // arrivee | depart
+  latitude     Float?
+  longitude    Float?
+  timestamp    DateTime
+  createdAt    DateTime   @default(now())
+
+  @@index([teamMemberId])
+  @@index([businessId])
+  @@index([assignmentId])
 }
 
 // --- Achats & fournisseurs (module 7 bis) ---
@@ -413,6 +468,48 @@ model Purchase {
   @@index([businessId])
   @@index([supplierId])
   @@index([projectId])
+}
+
+// --- Sous-traitance (sprint 3, point 2) ---
+
+model SousTraitant {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  siret       String?
+  email       String?
+  phone       String?
+  specialty   String   // plomberie | electricite | maconnerie | autre
+  tvaIntracom String?
+  createdAt   DateTime @default(now())
+
+  contrats ContratSousTraitance[]
+
+  @@index([businessId])
+}
+
+model ContratSousTraitance {
+  id             String        @id @default(cuid())
+  businessId     String
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sousTraitantId String
+  sousTraitant   SousTraitant  @relation(fields: [sousTraitantId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  devisId        String?
+  devis          Devis?        @relation(fields: [devisId], references: [id], onDelete: SetNull)
+  description    String
+  montantHT      Float
+  statut         String        @default("en_cours") // en_cours | termine | annule
+  dateDebut      DateTime?
+  dateFin        DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([businessId])
+  @@index([sousTraitantId])
+  @@index([projectId])
+  @@index([devisId])
 }
 
 // --- Phase 3 : copilote financier (option premium) ---

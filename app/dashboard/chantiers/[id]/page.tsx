@@ -49,6 +49,15 @@ type ChantierDetail = {
   steps: { id: string; title: string; status: string; order: number }[];
   photos: { id: string; imageBase64: string; caption: string | null; createdAt: string }[];
   purchases: { id: string; amount: number; status: string }[];
+  contratsSousTraitance: {
+    id: string;
+    description: string;
+    montantHT: number;
+    statut: string;
+    dateDebut: string | null;
+    dateFin: string | null;
+    sousTraitant: { id: string; name: string; specialty: string };
+  }[];
 };
 
 type ClientOption = { id: string; name: string };
@@ -115,7 +124,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     budgetPrevu: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
-  const [tab, setTab] = useState<"overview" | "planning" | "taches" | "photos" | "documents" | "equipe" | "factures" | "rapports" | "portail">(
+  const [tab, setTab] = useState<"overview" | "planning" | "taches" | "photos" | "documents" | "equipe" | "sous-traitance" | "factures" | "rapports" | "portail">(
     "overview"
   );
   const [factures, setFactures] = useState<FactureRow[] | null>(null);
@@ -423,6 +432,45 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
     : null;
   const montantFacture = (factureRows ?? []).reduce((sum, d) => sum + (d.amount || 0), 0);
 
+  const contratSousTraitanceColumns: TableColumn<ChantierDetail["contratsSousTraitance"][number]>[] = [
+    { key: "sousTraitant", label: "Sous-traitant", render: (c) => c.sousTraitant.name, emphasis: "title" },
+    { key: "description", label: "Description", render: (c) => c.description },
+    {
+      key: "montantHT",
+      label: "Montant HT",
+      align: "right",
+      render: (c) => `${c.montantHT.toLocaleString("fr-FR")} €`,
+      emphasis: "amount",
+    },
+    {
+      key: "statut",
+      label: "Statut",
+      render: (c) => (
+        <Badge tone={c.statut === "termine" ? "success" : c.statut === "annule" ? "neutral" : "blue"}>
+          {c.statut === "termine" ? "Terminé" : c.statut === "annule" ? "Annulé" : "En cours"}
+        </Badge>
+      ),
+    },
+    {
+      key: "dates",
+      label: "Dates",
+      render: (c) =>
+        c.dateDebut ? (
+          <>
+            <Timestamp date={c.dateDebut} />
+            {c.dateFin && (
+              <>
+                {" → "}
+                <Timestamp date={c.dateFin} />
+              </>
+            )}
+          </>
+        ) : (
+          "—"
+        ),
+    },
+  ];
+
   return (
     <div className="nova-page">
       <Breadcrumb
@@ -477,6 +525,7 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
           { key: "photos", label: `Photos (${project.photos.length})` },
           { key: "documents", label: "Documents" },
           { key: "equipe", label: `Équipe (${project.assignments.length})` },
+          { key: "sous-traitance", label: `Sous-traitance (${project.contratsSousTraitance.length})` },
           { key: "factures", label: `Factures (${factureRows?.length ?? 0})` },
           { key: "rapports", label: `Rapports vocaux (${project.voiceReports.length})` },
           { key: "portail", label: "Portail client" },
@@ -565,6 +614,30 @@ export default function ChantierDetailPage({ params }: { params: { id: string } 
             rows={project.assignments}
             emptyLabel="Aucun collaborateur affecté à ce chantier."
           />
+        </>
+      )}
+
+      {tab === "sous-traitance" && (
+        <>
+          <div className="nova-section-header-row">
+            <span />
+            <Link href="/dashboard/sous-traitance" className="nova-btn nova-btn-secondary">
+              Gérer la sous-traitance
+            </Link>
+          </div>
+          {project.contratsSousTraitance.length === 0 ? (
+            <EmptyState
+              icon="sous-traitance"
+              title="Aucun contrat de sous-traitance sur ce chantier"
+              description="Rattachez un contrat à ce chantier depuis la page Sous-traitance pour le voir apparaître ici et l'inclure dans le calcul de marge."
+            />
+          ) : (
+            <Table
+              columns={contratSousTraitanceColumns}
+              rows={project.contratsSousTraitance}
+              emptyLabel="Aucun contrat de sous-traitance rattaché à ce chantier."
+            />
+          )}
         </>
       )}
 

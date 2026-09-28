@@ -9,6 +9,7 @@ import { margeTone } from "@/lib/rentabilite";
 type Step = { id: string; title: string; status: string; order: number };
 type Assignment = { id: string; teamMember: { id: string; name: string; role: string | null } };
 type Purchase = { amount: number; status: string };
+type ContratSousTraitance = { montantHT: number; statut: string };
 
 type OverviewProject = {
   id: string;
@@ -19,6 +20,7 @@ type OverviewProject = {
   assignments: Assignment[];
   steps: Step[];
   purchases: Purchase[];
+  contratsSousTraitance: ContratSousTraitance[];
 };
 
 const STEP_STATUS_LABEL: Record<string, string> = { a_faire: "À faire", en_cours: "En cours", termine: "Terminé" };
@@ -46,10 +48,13 @@ export function ChantierOverviewTab({
   const [deletingStep, setDeletingStep] = useState(false);
 
   const progressValue = project.tasks.length === 0 ? 0 : (project.tasks.filter((t) => t.done).length / project.tasks.length) * 100;
-  // Rentabilité réelle = facturé - coûts réels (module B3). Les achats annulés
-  // ne sont pas des coûts réels, on les exclut — même règle que
-  // lib/achats.ts#depensesForProject côté page Analyse.
-  const coutsReels = project.purchases.filter((p) => p.status !== "annule").reduce((sum, p) => sum + p.amount, 0);
+  // Rentabilité réelle = facturé - coûts réels (module B3). Les achats et
+  // contrats de sous-traitance annulés ne sont pas des coûts réels, on les
+  // exclut — même règle que lib/achats.ts#depensesForProject côté page
+  // Analyse (sprint 3, point 2 : la sous-traitance s'ajoute aux coûts réels).
+  const coutsReels =
+    project.purchases.filter((p) => p.status !== "annule").reduce((sum, p) => sum + p.amount, 0) +
+    project.contratsSousTraitance.filter((c) => c.statut !== "annule").reduce((sum, c) => sum + c.montantHT, 0);
   const margeReelle = montantFacture - coutsReels;
   const margePct = montantFacture > 0 ? (margeReelle / montantFacture) * 100 : 0;
 

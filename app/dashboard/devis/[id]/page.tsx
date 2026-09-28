@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Banknote, BookOpen, Building2, Download, FileText, MessageCircle, Pencil, Plus, Printer, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, Banknote, BookOpen, Building2, Copy, Download, FileSignature, FileText, MessageCircle, Pencil, Plus, Printer, Send, Trash2, X } from "lucide-react";
 import {
   BackLink,
   Badge,
@@ -106,6 +106,14 @@ const ACOMPTE_STATUT_TONE: Record<AcompteStatut, "amber" | "success" | "neutral"
   en_attente: "amber",
   recu: "success",
   annule: "neutral",
+};
+
+type SignatureRequestRow = {
+  id: string;
+  token: string;
+  signedAt: string | null;
+  signatureData: string | null;
+  createdAt: string;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -235,6 +243,11 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
 
   const [attestationTva, setAttestationTva] = useState<{ id: string } | null | undefined>(undefined);
 
+  const [signatureRequests, setSignatureRequests] = useState<SignatureRequestRow[] | null>(null);
+  const [requestingSignature, setRequestingSignature] = useState(false);
+  const [signatureLinkUrl, setSignatureLinkUrl] = useState<string | null>(null);
+  const [viewingSignature, setViewingSignature] = useState<SignatureRequestRow | null>(null);
+
   useEffect(() => {
     fetchWithAuth(`/api/devis/${params.id}`).then(async (res) => {
       if (!res.ok) {
@@ -265,6 +278,13 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     fetchWithAuth(`/api/devis/${params.id}/acomptes`)
       .then((res) => res.json())
       .then((data) => setAcomptes(data.acomptes ?? []));
+  }, [params.id, devis?.status]);
+
+  useEffect(() => {
+    if (!devis || (devis.status !== "envoye" && devis.status !== "accepte")) return;
+    fetchWithAuth(`/api/devis/${params.id}/signature-request`)
+      .then((res) => res.json())
+      .then((data) => setSignatureRequests(data.signatureRequests ?? []));
   }, [params.id, devis?.status]);
 
   useEffect(() => {
@@ -829,6 +849,35 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
     }
   }
 
+  async function handleRequestSignature() {
+    if (!devis) return;
+    setRequestingSignature(true);
+    try {
+      const res = await fetchWithAuth(`/api/devis/${devis.id}/signature-request`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de générer le lien de signature.");
+        return;
+      }
+      const data = await res.json();
+      setSignatureRequests((prev) => {
+        const withoutExisting = (prev ?? []).filter((r) => r.id !== data.signatureRequest.id);
+        return [data.signatureRequest, ...withoutExisting];
+      });
+      setSignatureLinkUrl(data.url);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setRequestingSignature(false);
+    }
+  }
+
+  async function handleCopySignatureLink() {
+    if (!signatureLinkUrl) return;
+    await navigator.clipboard.writeText(signatureLinkUrl);
+    toast.success("Lien copié !");
+  }
+
   async function handleSaveSettings() {
     if (!devis) return;
     setSavingSettings(true);
@@ -875,6 +924,8 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
       </div>
     );
   }
+
+  const signedSignatureRequest = signatureRequests?.find((r) => r.signedAt) ?? null;
 
   const remisePct = devis.remise || 0;
   const totals = computeDevisTotals(devis.lines, remisePct);
@@ -980,6 +1031,23 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
             <Badge tone={STATUS_TONE[devis.status] || "neutral"}>{STATUS_LABEL[devis.status] || devis.status}</Badge>
           </div>
           {devis.paymentStatus === "payee" && <Badge tone="success">Payé</Badge>}
+          {signedSignatureRequest && (
+            <span className="nova-signature-badge-row">
+              <Badge tone="success">Signé électroniquement</Badge>
+              <span className="nova-timestamp">
+                {new Date(signedSignatureRequest.signedAt!).toLocaleString("fr-FR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+              <button type="button" className="nova-inline-link" onClick={() => setViewingSignature(signedSignatureRequest)}>
+                Voir la signature
+              </button>
+            </span>
+          )}
           <RelanceIndicator status={devis.status} updatedAt={devis.updatedAt} />
         </div>
       </header>
@@ -997,6 +1065,12 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
         {devis.status === "envoye" && (
           <Button variant="ghost" disabled={updating} onClick={() => handleStatusChange("brouillon")}>
             Revenir en brouillon
+          </Button>
+        )}
+        {devis.status === "envoye" && (
+          <Button variant="secondary" disabled={requestingSignature} onClick={handleRequestSignature}>
+            <FileSignature size={16} strokeWidth={1.75} />
+            {requestingSignature ? "Génération..." : "Demander la signature"}
           </Button>
         )}
         {devis.status === "accepte" && (
@@ -1032,6 +1106,20 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           Supprimer
         </Button>
       </div>
+
+      {signatureLinkUrl && devis.status === "envoye" && (
+        <Card>
+          <CardTitle>Lien de signature</CardTitle>
+          <p className="nova-card-text">Partagez ce lien avec votre client pour qu'il signe le devis en ligne.</p>
+          <div className="nova-portal-link-row">
+            <code className="nova-portal-link">{signatureLinkUrl}</code>
+            <Button variant="secondary" onClick={handleCopySignatureLink}>
+              <Copy size={16} strokeWidth={1.75} />
+              Copier le lien
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {devis.status === "accepte" && !chantierPromptDismissed && (
         <Card accent={false} className="nova-ai-zone">
@@ -1645,6 +1733,32 @@ export default function DevisDetailPage({ params }: { params: { id: string } }) 
           hint="Calculé automatiquement à partir du montant total HT du devis."
         />
       </EditModal>
+
+      {viewingSignature && (
+        <div className="nova-modal-overlay" onClick={() => setViewingSignature(null)}>
+          <div className="nova-modal nova-modal-edit" role="dialog" aria-modal="true" aria-label="Signature du client" onClick={(e) => e.stopPropagation()}>
+            <h3 className="nova-modal-title">Signature du client</h3>
+            <div className="nova-modal-body">
+              {viewingSignature.signatureData ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={viewingSignature.signatureData} alt="Signature du client" className="nova-signature-preview" />
+              ) : (
+                <p className="nova-page-subtitle">Aucune image de signature disponible.</p>
+              )}
+              {viewingSignature.signedAt && (
+                <p className="nova-page-subtitle">
+                  Signé le {new Date(viewingSignature.signedAt).toLocaleString("fr-FR")}
+                </p>
+              )}
+            </div>
+            <div className="nova-modal-actions">
+              <Button type="button" variant="ghost" onClick={() => setViewingSignature(null)}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

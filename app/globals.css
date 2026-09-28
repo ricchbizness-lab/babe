@@ -786,6 +786,8 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-badge-success { background: var(--nova-badge-success-bg); color: var(--nova-badge-success-text); }
 .nova-badge-danger { background: var(--nova-badge-danger-bg); color: var(--nova-badge-danger-text); }
 .nova-badge-group { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-signature-badge-row { display: inline-flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-signature-badge-row button.nova-inline-link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; }
 .nova-facturx-indicator {
   display: inline-flex;
   align-items: center;
@@ -1148,6 +1150,99 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-calendar-task-late { background: var(--nova-danger-tint); color: var(--nova-danger); }
 .nova-calendar-task-done { background: var(--nova-badge-neutral-bg); color: var(--nova-badge-neutral-text); text-decoration: line-through; }
 .nova-calendar-task-more { font-size: 10.5px; color: var(--nova-ink-faint); padding-left: 5px; }
+
+/* --- Planning : vue Gantt (sprint 3, point 3) — CSS grid maison, pas de lib tierce --- */
+
+.nova-gantt {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  background: var(--nova-surface);
+  overflow-x: auto;
+}
+.nova-gantt-header { display: flex; border-bottom: 1px solid var(--nova-border); position: sticky; top: 0; background: var(--nova-surface); z-index: 2; }
+.nova-gantt-header-label { width: 200px; flex-shrink: 0; }
+.nova-gantt-header-weeks { display: flex; flex: 1; min-width: 640px; }
+.nova-gantt-week-col {
+  flex: 1;
+  text-align: center;
+  padding: var(--nova-space-1) 4px;
+  font-family: var(--nova-font-mono);
+  font-size: 11px;
+  color: var(--nova-ink-soft);
+  border-left: 1px solid var(--nova-border);
+}
+.nova-gantt-week-current { background: var(--nova-teal-tint); color: var(--nova-teal-deep); font-weight: 600; }
+.nova-gantt-body { display: flex; flex-direction: column; }
+.nova-gantt-row { display: flex; border-bottom: 1px solid var(--nova-border); }
+.nova-gantt-row:last-child { border-bottom: none; }
+.nova-gantt-row-label {
+  width: 200px;
+  flex-shrink: 0;
+  padding: var(--nova-space-2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.nova-gantt-row-name { font-weight: 600; font-size: 13.5px; color: var(--nova-ink); }
+.nova-gantt-row-client { font-size: 12px; color: var(--nova-ink-faint); }
+.nova-gantt-row-track { position: relative; flex: 1; min-width: 640px; display: flex; min-height: 56px; }
+.nova-gantt-grid-col { flex: 1; border-left: 1px solid var(--nova-border); }
+.nova-gantt-bar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--nova-font-sans);
+  font-size: 12px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  min-width: 28px;
+  transition: filter 150ms ease;
+}
+.nova-gantt-bar:hover, .nova-gantt-bar:focus-visible { filter: brightness(0.92); }
+.nova-gantt-bar-planifie { background: var(--nova-badge-blue-text); }
+.nova-gantt-bar-en-cours { background: var(--nova-teal); }
+.nova-gantt-bar-termine { background: var(--nova-success); }
+.nova-gantt-bar-undated {
+  position: relative;
+  left: auto;
+  width: auto !important;
+  margin: auto 8px;
+  background: transparent;
+  border: 1.5px dashed var(--nova-ink-faint);
+  color: var(--nova-ink-faint);
+}
+.nova-gantt-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--nova-ink);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+  z-index: 5;
+}
+.nova-gantt-bar:hover .nova-gantt-tooltip,
+.nova-gantt-bar:focus-visible .nova-gantt-tooltip { opacity: 1; }
 
 /* --- Avatar (initiales) --- */
 
@@ -2409,6 +2504,47 @@ button.primary:hover { background: var(--nova-teal-deep); }
   .nova-portal-card { padding: var(--nova-space-2); }
 }
 
+/* --- Signature électronique (page publique /signature/[token]) --- */
+
+.nova-signature-card { max-width: 700px; }
+.nova-signature-card .nova-invoice { box-shadow: none; border: 1px solid var(--nova-border); padding: var(--nova-space-3); }
+.nova-signature-zone { display: flex; flex-direction: column; gap: var(--nova-space-2); align-items: flex-start; }
+.nova-signature-instructions { margin: 0; font-size: 15px; color: var(--nova-ink-soft); }
+.nova-signature-canvas {
+  width: 100%;
+  aspect-ratio: 600 / 220;
+  background: #fff;
+  border: 2px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  touch-action: none;
+  cursor: crosshair;
+}
+.nova-signature-legal { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--nova-ink-soft); }
+.nova-signature-checkbox { display: flex; align-items: flex-start; gap: var(--nova-space-1); font-size: 15px; color: var(--nova-ink); cursor: pointer; }
+.nova-signature-checkbox input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--nova-portal-accent); }
+.nova-signature-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--nova-space-1); padding: var(--nova-space-3) 0; }
+.nova-signature-done-icon { color: var(--nova-success); }
+.nova-signature-done h2 { margin: 0; font-family: var(--nova-font-heading); font-size: 19px; }
+.nova-signature-done p { margin: 0; color: var(--nova-ink-soft); font-size: 15px; }
+.nova-signature-preview { margin-top: var(--nova-space-2); max-width: 320px; width: 100%; border: 1px solid var(--nova-border); border-radius: var(--nova-radius-card); background: #fff; }
+
+/* --- Pointage terrain (page publique /terrain/[teamMemberId]/[token]) --- */
+
+.nova-terrain-assignments { display: flex; flex-direction: column; gap: var(--nova-space-3); }
+.nova-terrain-assignment-card {
+  border: 1px solid var(--nova-border);
+  border-radius: var(--nova-radius-card);
+  padding: var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+}
+.nova-terrain-assignment-title { font-family: var(--nova-font-heading); font-size: 18px; font-weight: 700; color: var(--nova-ink); }
+.nova-terrain-assignment-address { font-size: 14px; color: var(--nova-ink-soft); margin-top: -8px; }
+.nova-terrain-assignment-note { font-size: 14px; color: var(--nova-ink-soft); background: var(--nova-portal-accent-tint); padding: var(--nova-space-1) var(--nova-space-2); border-radius: var(--nova-radius-btn); }
+.nova-terrain-status { display: flex; align-items: center; gap: var(--nova-space-1); margin: 0; font-size: 15px; color: var(--nova-ink-soft); }
+.nova-terrain-status-success { color: var(--nova-success); font-weight: 600; }
+
 /* --- Planning --- */
 
 .nova-week-nav { display: flex; gap: var(--nova-space-1); }
@@ -2704,6 +2840,18 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-photo-card-delete:hover { background: var(--nova-danger); }
 .nova-team-card-contact { font-size: 12.5px; color: var(--nova-ink-soft); display: flex; flex-direction: column; gap: 2px; }
 .nova-team-card-assignments { border-top: 1px dashed var(--nova-border); padding-top: var(--nova-space-2); }
+.nova-team-card-pointage {
+  border-top: 1px dashed var(--nova-border);
+  padding-top: var(--nova-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+}
+.nova-team-card-pointage-none { margin: 0; font-size: 13px; color: var(--nova-ink-faint); }
+.nova-team-card-pointage-arrivee { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--nova-success); font-weight: 600; }
+.nova-team-card-pointage-depart { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--nova-ink-soft); }
+.nova-team-card-terrain-link { display: flex; align-items: center; gap: var(--nova-space-1); flex-wrap: wrap; }
+.nova-terrain-qrcode { border-radius: var(--nova-radius-btn); border: 1px solid var(--nova-border); }
 .nova-team-card-footer {
   display: flex;
   gap: var(--nova-space-1);
