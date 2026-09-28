@@ -4,7 +4,22 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { Avatar, Badge, EmptyState, Skeleton, colorFromName, initialsFromName, type BadgeTone } from "@/components/ui";
+import {
+  Avatar,
+  Badge,
+  Button,
+  DatePickerField,
+  EditModal,
+  EmptyState,
+  Field,
+  SelectField,
+  Skeleton,
+  TextareaField,
+  colorFromName,
+  initialsFromName,
+  useToast,
+  type BadgeTone,
+} from "@/components/ui";
 import { addDays, addMonths, formatShortDate, isSameDay, monthGrid, startOfWeek, toDateKey, weekDays } from "@/lib/dates";
 import { fetchWithAuth } from "@/lib/fetchClient";
 import { LOCALE_TO_BCP47, resolveLocale } from "@/lib/i18n";
@@ -38,6 +53,7 @@ const GANTT_STATUS_BAR_CLASS: Record<string, string> = {
   termine: "nova-gantt-bar-termine",
 };
 type MemberRow = { id: string; name: string; role: string | null };
+type ClientOption = { id: string; name: string };
 type AssignmentRow = {
   id: string;
   date: string;
@@ -68,6 +84,18 @@ export default function PlanningPage() {
   const [assignments, setAssignments] = useState<AssignmentRow[] | null>(null);
   const [detail, setDetail] = useState<AssignmentRow | null>(null);
   const [ganttDetail, setGanttDetail] = useState<ProjectRow | null>(null);
+  const [ganttDateForm, setGanttDateForm] = useState({ startDate: "", endDate: "" });
+  const [savingGanttDates, setSavingGanttDates] = useState(false);
+  const toast = useToast();
+
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [newChantierOpen, setNewChantierOpen] = useState(false);
+  const [newChantierForm, setNewChantierForm] = useState({ name: "", clientId: "", startDate: "", endDate: "" });
+  const [creatingChantier, setCreatingChantier] = useState(false);
+
+  const [quickAssignTarget, setQuickAssignTarget] = useState<{ project: ProjectRow; weekDate: Date } | null>(null);
+  const [quickAssignForm, setQuickAssignForm] = useState({ teamMemberId: "", date: "", note: "" });
+  const [creatingQuickAssign, setCreatingQuickAssign] = useState(false);
 
   useEffect(() => {
     fetchWithAuth("/api/projects")
@@ -79,7 +107,16 @@ export default function PlanningPage() {
     fetchWithAuth("/api/assignments")
       .then((res) => res.json())
       .then((data) => setAssignments(data.assignments ?? []));
+    fetchWithAuth("/api/clients")
+      .then((res) => res.json())
+      .then((data) => setClients((data.clients ?? []).map((c: ClientOption) => ({ id: c.id, name: c.name }))));
   }, []);
+
+  function reloadProjects() {
+    fetchWithAuth("/api/projects")
+      .then((res) => res.json())
+      .then((data) => setProjects(data.projects ?? []));
+  }
 
   const loading = projects === null || members === null || assignments === null;
   const membersList = members ?? [];
@@ -117,6 +154,120 @@ export default function PlanningPage() {
   function ganttAvancement(p: ProjectRow): number {
     if (p.tasks.length === 0) return 0;
     return Math.round((p.tasks.filter((t) => t.done).length / p.tasks.length) * 100);
+  }
+
+  function openGanttDetail(p: ProjectRow) {
+    setGanttDetail(p);
+    setGanttDateForm({
+      startDate: p.startDate ? toDateKey(new Date(p.startDate)) : "",
+      endDate: p.endDate ? toDateKey(new Date(p.endDate)) : "",
+    });
+  }
+
+  async function handleSaveGanttDates() {
+    if (!ganttDetail || !ganttDateForm.startDate || !ganttDateForm.endDate) return;
+    setSavingGanttDates(true);
+    try {
+      const res = await fetchWithAuth(`/api/projects/${ganttDetail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: new Date(`${ganttDateForm.startDate}T00:00:00.000Z`).toISOString(),
+          endDate: new Date(`${ganttDateForm.endDate}T00:00:00.000Z`).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Impossible de mettre à jour les dates.");
+        return;
+      }
+      const data = await res.json();
+      setProjects((prev) =>
+        (prev ?? []).map((p) => (p.id === data.project.id ? { ...p, startDate: data.project.startDate, endDate: data.project.endDate } : p))
+      );
+      setGanttDetail((prev) => (prev ? { ...prev, startDate: data.project.startDate, endDate: data.project.endDate } : prev));
+      toast.success("Dates mises à jour");
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setSavingGanttDates(false);
+    }
+  }
+
+  function openNewChantier(weekDate: Date) {
+    setNewChantierForm({ name: "", clientId: "", startDate: toDateKey(weekDate), endDate: toDateKey(addDays(weekDate, 6)) });
+    setNewChantierOpen(true);
+  }
+
+  async function handleCreateChantier() {
+    if (!newChantierForm.name.trim()) {
+      toast.error("Le nom du chantier est requis.");
+      return;
+    }
+    setCreatingChantier(true);
+    try {
+      const res = await fetchWithAuth("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newChantierForm.name,
+          clientId: newChantierForm.clientId || undefined,
+          status: "planifie",
+          startDate: newChantierForm.startDate ? new Date(`${newChantierForm.startDate}T00:00:00.000Z`).toISOString() : undefined,
+          endDate: newChantierForm.endDate ? new Date(`${newChantierForm.endDate}T00:00:00.000Z`).toISOString() : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer ce chantier.");
+        return;
+      }
+      toast.success("Chantier créé");
+      setNewChantierOpen(false);
+      reloadProjects();
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setCreatingChantier(false);
+    }
+  }
+
+  function openQuickAssign(project: ProjectRow, weekDate: Date) {
+    setQuickAssignTarget({ project, weekDate });
+    setQuickAssignForm({ teamMemberId: "", date: toDateKey(weekDate), note: "" });
+  }
+
+  async function handleCreateQuickAssign() {
+    if (!quickAssignTarget) return;
+    if (!quickAssignForm.teamMemberId) {
+      toast.error("Choisissez un collaborateur.");
+      return;
+    }
+    setCreatingQuickAssign(true);
+    try {
+      const res = await fetchWithAuth("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamMemberId: quickAssignForm.teamMemberId,
+          projectId: quickAssignTarget.project.id,
+          date: new Date(`${quickAssignForm.date}T00:00:00.000Z`).toISOString(),
+          note: quickAssignForm.note || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Impossible de créer l'affectation.");
+        return;
+      }
+      const data = await res.json();
+      setAssignments((prev) => [...(prev ?? []), data.assignment]);
+      toast.success("Affectation créée");
+      setQuickAssignTarget(null);
+    } catch {
+      toast.error("Impossible de joindre le serveur — réessayez.");
+    } finally {
+      setCreatingQuickAssign(false);
+    }
   }
 
   /** Position/largeur de la barre en % de la fenêtre visible, tronquée aux bords si le chantier déborde. */
@@ -313,11 +464,19 @@ export default function PlanningPage() {
           </div>
         </div>
       ) : ganttProjects.length === 0 ? (
-        <EmptyState
-          icon="planning"
-          title="Aucun chantier en cours ou planifié"
-          description="Les chantiers planifiés ou en cours apparaîtront ici sur une vue chronologique."
-        />
+        <>
+          <EmptyState
+            icon="planning"
+            title="Aucun chantier en cours ou planifié"
+            description="Les chantiers planifiés ou en cours apparaîtront ici sur une vue chronologique."
+          />
+          <div className="nova-gantt-empty-add">
+            <Button variant="secondary" onClick={() => openNewChantier(ganttStart)}>
+              <Plus size={16} strokeWidth={1.75} />
+              Nouveau chantier
+            </Button>
+          </div>
+        </>
       ) : (
         <div className="nova-gantt">
           <div className="nova-gantt-header">
@@ -340,17 +499,31 @@ export default function PlanningPage() {
                     {p.client && <span className="nova-gantt-row-client">{p.client.name}</span>}
                   </div>
                   <div className="nova-gantt-row-track">
-                    {ganttWeeks.map((weekDate, i) => (
-                      <div key={i} className={`nova-gantt-grid-col ${isCurrentGanttWeek(weekDate) ? "nova-gantt-week-current" : ""}`} />
-                    ))}
+                    {ganttWeeks.map((weekDate, i) => {
+                      const weekEnd = addDays(weekDate, 7);
+                      const cellCount = assignmentsList.filter(
+                        (a) => a.project?.id === p.id && new Date(a.date) >= weekDate && new Date(a.date) < weekEnd
+                      ).length;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          className={`nova-gantt-grid-col ${isCurrentGanttWeek(weekDate) ? "nova-gantt-week-current" : ""}`}
+                          onClick={() => openQuickAssign(p, weekDate)}
+                          aria-label={`Affecter un collaborateur — ${p.name}, semaine du ${formatShortDate(weekDate)}`}
+                        >
+                          {cellCount > 0 && <span className="nova-gantt-cell-count">{cellCount}</span>}
+                        </button>
+                      );
+                    })}
                     {bar && !bar.hidden ? (
                       <button
                         type="button"
                         className={`nova-gantt-bar ${GANTT_STATUS_BAR_CLASS[p.status] || ""}`}
                         style={{ left: bar.left, width: bar.width }}
-                        onClick={() => setGanttDetail(p)}
+                        onClick={() => openGanttDetail(p)}
+                        aria-label={`${p.name} — modifier les dates ou voir le détail`}
                       >
-                        <span className="nova-gantt-bar-label">{p.name}</span>
                         <span className="nova-gantt-tooltip">
                           <strong>{p.client?.name || "Sans client"}</strong>
                           <span>
@@ -362,14 +535,38 @@ export default function PlanningPage() {
                         </span>
                       </button>
                     ) : !bar ? (
-                      <button type="button" className="nova-gantt-bar nova-gantt-bar-undated" onClick={() => setGanttDetail(p)}>
-                        <span className="nova-gantt-bar-label">Dates non définies</span>
+                      <button
+                        type="button"
+                        className="nova-gantt-bar nova-gantt-bar-undated"
+                        onClick={() => openGanttDetail(p)}
+                      >
+                        Dates non définies
                       </button>
                     ) : null}
                   </div>
                 </div>
               );
             })}
+
+            <div className="nova-gantt-row nova-gantt-row-add">
+              <div className="nova-gantt-row-label nova-gantt-row-add-label">
+                <Plus size={14} strokeWidth={1.75} />
+                Nouveau chantier
+              </div>
+              <div className="nova-gantt-row-track">
+                {ganttWeeks.map((weekDate, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`nova-gantt-grid-col nova-gantt-grid-col-add ${isCurrentGanttWeek(weekDate) ? "nova-gantt-week-current" : ""}`}
+                    onClick={() => openNewChantier(weekDate)}
+                    aria-label={`Nouveau chantier — semaine du ${formatShortDate(weekDate)}`}
+                  >
+                    <Plus size={14} strokeWidth={1.75} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -452,18 +649,31 @@ export default function PlanningPage() {
                 </dd>
               </div>
               <div>
-                <dt>Dates</dt>
-                <dd>
-                  {ganttDetail.startDate && ganttDetail.endDate
-                    ? `${formatShortDate(new Date(ganttDetail.startDate))} → ${formatShortDate(new Date(ganttDetail.endDate))}`
-                    : "Dates non définies"}
-                </dd>
-              </div>
-              <div>
                 <dt>Avancement</dt>
                 <dd>{ganttAvancement(ganttDetail)}%</dd>
               </div>
             </dl>
+
+            <div className="nova-gantt-detail-dates">
+              <DatePickerField
+                label="Date de début"
+                value={ganttDateForm.startDate}
+                onChange={(value) => setGanttDateForm({ ...ganttDateForm, startDate: value })}
+              />
+              <DatePickerField
+                label="Date de fin"
+                value={ganttDateForm.endDate}
+                onChange={(value) => setGanttDateForm({ ...ganttDateForm, endDate: value })}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleSaveGanttDates}
+                disabled={savingGanttDates || !ganttDateForm.startDate || !ganttDateForm.endDate}
+              >
+                {savingGanttDates ? "Enregistrement..." : "Enregistrer les dates"}
+              </Button>
+            </div>
+
             <div className="nova-modal-actions">
               <Link href={`/dashboard/chantiers/${ganttDetail.id}`} className="nova-btn nova-btn-secondary">
                 Voir la fiche chantier
@@ -475,6 +685,78 @@ export default function PlanningPage() {
           </div>
         </div>
       )}
+
+      <EditModal
+        open={newChantierOpen}
+        title="Nouveau chantier"
+        onCancel={() => setNewChantierOpen(false)}
+        onSave={handleCreateChantier}
+        saving={creatingChantier}
+      >
+        <Field
+          label="Nom"
+          required
+          value={newChantierForm.name}
+          onChange={(e) => setNewChantierForm({ ...newChantierForm, name: e.target.value })}
+          placeholder="Rénovation toiture"
+        />
+        <SelectField
+          label="Client"
+          value={newChantierForm.clientId}
+          onChange={(e) => setNewChantierForm({ ...newChantierForm, clientId: e.target.value })}
+        >
+          <option value="">Aucun client</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </SelectField>
+        <DatePickerField
+          label="Date de début"
+          value={newChantierForm.startDate}
+          onChange={(value) => setNewChantierForm({ ...newChantierForm, startDate: value })}
+        />
+        <DatePickerField
+          label="Date de fin"
+          value={newChantierForm.endDate}
+          onChange={(value) => setNewChantierForm({ ...newChantierForm, endDate: value })}
+        />
+      </EditModal>
+
+      <EditModal
+        open={quickAssignTarget !== null}
+        title={quickAssignTarget ? `Affecter un collaborateur — ${quickAssignTarget.project.name}` : ""}
+        onCancel={() => setQuickAssignTarget(null)}
+        onSave={handleCreateQuickAssign}
+        saving={creatingQuickAssign}
+      >
+        <SelectField
+          label="Collaborateur"
+          required
+          value={quickAssignForm.teamMemberId}
+          onChange={(e) => setQuickAssignForm({ ...quickAssignForm, teamMemberId: e.target.value })}
+        >
+          <option value="">Sélectionner...</option>
+          {membersList.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </SelectField>
+        <DatePickerField
+          label="Date"
+          value={quickAssignForm.date}
+          onChange={(value) => setQuickAssignForm({ ...quickAssignForm, date: value })}
+        />
+        <TextareaField
+          label="Note (optionnel)"
+          rows={2}
+          value={quickAssignForm.note}
+          onChange={(e) => setQuickAssignForm({ ...quickAssignForm, note: e.target.value })}
+          placeholder="Matériel à apporter, horaire particulier..."
+        />
+      </EditModal>
     </div>
   );
 }
