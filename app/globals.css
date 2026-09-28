@@ -1162,7 +1162,7 @@ button.primary:hover { background: var(--nova-teal-deep); }
   overflow-x: auto;
 }
 .nova-gantt-header { display: flex; border-bottom: 1px solid var(--nova-border); position: sticky; top: 0; background: var(--nova-surface); z-index: 2; }
-.nova-gantt-header-label { width: 200px; flex-shrink: 0; }
+.nova-gantt-header-label { width: 220px; flex-shrink: 0; }
 .nova-gantt-header-weeks { display: flex; flex: 1; min-width: 640px; }
 .nova-gantt-week-col {
   flex: 1;
@@ -1178,16 +1178,33 @@ button.primary:hover { background: var(--nova-teal-deep); }
 .nova-gantt-row { display: flex; border-bottom: 1px solid var(--nova-border); }
 .nova-gantt-row:last-child { border-bottom: none; }
 .nova-gantt-row-label {
-  width: 200px;
+  width: 220px;
   flex-shrink: 0;
   padding: var(--nova-space-2);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
 }
 .nova-gantt-row-name { font-weight: 600; font-size: 13.5px; color: var(--nova-ink); }
 .nova-gantt-row-client { font-size: 12px; color: var(--nova-ink-faint); }
+.nova-gantt-row-team { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.nova-gantt-row-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--nova-font-mono);
+  flex-shrink: 0;
+  border: 1.5px solid var(--nova-surface);
+}
+.nova-gantt-row-avatar-more { background: var(--nova-ink-faint); }
+.nova-gantt-row-no-team { font-size: 11.5px; color: var(--nova-ink-faint); font-style: italic; margin-top: 2px; }
 .nova-gantt-row-track { position: relative; flex: 1; min-width: 640px; display: flex; min-height: 56px; }
 .nova-gantt-grid-col {
   flex: 1;
