@@ -62,6 +62,7 @@ import {
 import { addDays, addMonths, monthGrid, startOfWeek, toDateKey } from "@/lib/dates";
 import { relanceLevel } from "@/lib/relance";
 import { SESSION_EXPIRED_EVENT, fetchWithAuth } from "@/lib/fetchClient";
+import { flushPendingTaskToggles } from "@/lib/offlineSync";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -79,6 +80,7 @@ const ICONS = {
   facturation: Banknote,
   attestations: FileCheck2,
   relances: Bell,
+  alertes: AlertTriangle,
   achats: ShoppingCart,
   ouvrages: BookOpen,
   stock: Package,
@@ -1309,22 +1311,6 @@ export function StatCard({
 }
 
 // ---------------------------------------------------------------------------
-// PriorityBadge — "Urgent" / "Important" / "Aujourd'hui" (À faire)
-// ---------------------------------------------------------------------------
-
-export type PriorityLevel = "urgent" | "important" | "today";
-
-const PRIORITY_LABEL: Record<PriorityLevel, string> = {
-  urgent: "Urgent",
-  important: "Important",
-  today: "Aujourd'hui",
-};
-
-export function PriorityBadge({ level }: { level: PriorityLevel }) {
-  return <span className={`nova-priority-badge nova-priority-${level}`}>{PRIORITY_LABEL[level]}</span>;
-}
-
-// ---------------------------------------------------------------------------
 // RowActionsMenu — bouton "..." avec menu Voir / Modifier / Supprimer
 // ---------------------------------------------------------------------------
 
@@ -1963,6 +1949,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { href: "/dashboard/facturation", label: "Facturation", navKey: "facturation", icon: "facturation" },
       { href: "/dashboard/relances", label: "Relances", navKey: "relances", icon: "relances" },
       { href: "/dashboard/attestations", label: "Attestations TVA", navKey: "attestations", icon: "attestations" },
+      { href: "/dashboard/alertes", label: "Alertes", navKey: "alertes", icon: "alertes" },
     ],
   },
   {
@@ -2033,6 +2020,45 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
+  const toast = useToast();
+  const [unreadAlertes, setUnreadAlertes] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    async function handleOnline() {
+      setIsOnline(true);
+      const synced = await flushPendingTaskToggles();
+      if (synced > 0) {
+        toast.success(`${synced} action${synced > 1 ? "s" : ""} synchronisée${synced > 1 ? "s" : ""}`);
+      }
+    }
+    function handleOffline() {
+      setIsOnline(false);
+    }
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    function loadUnread() {
+      fetchWithAuth("/api/alertes?lu=false")
+        .then((res) => res.json())
+        .then((data) => setUnreadAlertes((data.alertes ?? []).length))
+        .catch(() => {});
+    }
+    loadUnread();
+    // Rafraîchi périodiquement — la sidebar reste montée entre les
+    // navigations, un simple fetch au montage se figerait après la
+    // génération d'alertes déclenchée ailleurs (dashboard, page Alertes).
+    const interval = setInterval(loadUnread, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Plusieurs hrefs peuvent être des préfixes les uns des autres (ex.
   // /dashboard/planning et /dashboard/planning/dispatch) — ne marquer actif
   // que le lien le plus spécifique, jamais les deux à la fois.
@@ -2065,6 +2091,9 @@ export function Sidebar({
                   <Link key={href} href={href} className={`nova-sidebar-link ${active ? "nova-sidebar-link-active" : ""}`}>
                     <Icon size={18} strokeWidth={1.75} />
                     <span>{t(navKey)}</span>
+                    {href === "/dashboard/alertes" && unreadAlertes > 0 && (
+                      <span className="nova-sidebar-badge">{unreadAlertes}</span>
+                    )}
                   </Link>
                 );
               })}
@@ -2098,6 +2127,10 @@ export function Sidebar({
           <span className="nova-sidebar-business">{businessName}</span>
         </div>
       </Link>
+      <div className="nova-sidebar-connection">
+        <span className={`nova-sidebar-connection-dot ${isOnline ? "nova-sidebar-connection-dot-online" : "nova-sidebar-connection-dot-offline"}`} />
+        <span>{isOnline ? "En ligne" : "Hors-ligne"}</span>
+      </div>
     </aside>
   );
 }

@@ -85,6 +85,7 @@ model Business {
   sousTraitants    SousTraitant[]
   contratsSousTraitance ContratSousTraitance[]
   pointages        Pointage[]
+  alertes          Alerte[]
 }
 
 // --- CRM : clients et chantiers (nouveau, socle opérationnel type BrainO) ---
@@ -539,4 +540,24 @@ model Subscription {
   currentPeriodEnd     DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+// --- IA proactive : alertes (sprint 4, point 1) ---
+// Générées par POST /api/alertes/generer à partir des données existantes
+// (jamais stockées ailleurs en double) — dédupliquées par (businessId, type,
+// lien) tant qu'une alerte non lue du même couple existe déjà.
+model Alerte {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type       String
+  titre      String
+  message    String
+  priorite   String   // haute | moyenne | basse
+  lien       String?
+  lu         Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+  @@index([lu])
 }

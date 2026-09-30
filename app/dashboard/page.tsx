@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, DollarSign, FileText, HardHat, Receipt, TrendingUp } from "lucide-react";
+import { AlertTriangle, ChevronRight, Clock, DollarSign, FileText, HardHat, Info, Receipt, TrendingUp } from "lucide-react";
 import {
   Badge,
   Card,
@@ -11,7 +11,6 @@ import {
   ConfirmModal,
   MiniLineChart,
   NewMenu,
-  PriorityBadge,
   RowActionsMenu,
   Skeleton,
   StatCard,
@@ -19,7 +18,7 @@ import {
   Timestamp,
   useToast,
   WeekRangePicker,
-  type PriorityLevel,
+  type BadgeTone,
   type TableColumn,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
@@ -34,14 +33,15 @@ type Metrics = {
 
 type ChartPoint = { month: string; ca: number; encaisse: number };
 
-type AFaireItem = {
+type Priorite = "haute" | "moyenne" | "basse";
+
+type AlerteRow = {
   id: string;
-  kind: "devis" | "facture" | "chantier" | "tache";
-  title: string;
-  subtitle: string;
-  date: string | null;
-  priority: PriorityLevel;
-  href: string;
+  titre: string;
+  message: string;
+  priorite: Priorite;
+  lien: string | null;
+  createdAt: string;
 };
 
 type ActivityRow = {
@@ -61,7 +61,6 @@ type Overview = {
   firstName: string | null;
   metrics: Metrics;
   chart: ChartPoint[];
-  aFaire: AFaireItem[];
   activites: ActivityRow[];
   onboarding: OnboardingData;
 };
@@ -99,12 +98,13 @@ const PROJECT_STATUS_TONE: Record<string, "neutral" | "teal" | "blue" | "success
   annule: "neutral",
 };
 
-const AFAIRE_KIND_ICON: Record<AFaireItem["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "neutral" | "blue" }> = {
-  devis: { icon: FileText, tone: "blue" },
-  facture: { icon: Receipt, tone: "amber" },
-  chantier: { icon: HardHat, tone: "teal" },
-  tache: { icon: FileText, tone: "neutral" },
+const PRIORITE_ICON: Record<Priorite, { icon: typeof AlertTriangle; tone: "danger" | "amber" | "blue" }> = {
+  haute: { icon: AlertTriangle, tone: "danger" },
+  moyenne: { icon: Clock, tone: "amber" },
+  basse: { icon: Info, tone: "blue" },
 };
+const PRIORITE_BADGE_TONE: Record<Priorite, BadgeTone> = { haute: "danger", moyenne: "amber", basse: "blue" };
+const PRIORITE_BADGE_LABEL: Record<Priorite, string> = { haute: "Haute", moyenne: "Moyenne", basse: "Basse" };
 
 const ACTIVITY_KIND_ICON: Record<ActivityRow["kind"], { icon: typeof FileText; tone: "teal" | "amber" | "blue" }> = {
   devis: { icon: FileText, tone: "blue" },
@@ -140,12 +140,27 @@ export default function DashboardPage() {
   const [deleteTarget, setDeleteTarget] = useState<ActivityRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [hidingOnboarding, setHidingOnboarding] = useState(false);
+  const [alertes, setAlertes] = useState<AlerteRow[] | null>(null);
 
   useEffect(() => {
     fetchWithAuth(`/api/dashboard-overview?months=${months}`)
       .then((res) => res.json())
       .then((json) => setData(json));
   }, [months]);
+
+  useEffect(() => {
+    // Génération silencieuse des alertes Nova à chaque chargement du
+    // dashboard, puis récupération des 5 premières non lues — aucun état de
+    // chargement dédié, un échec ne doit jamais perturber le reste de la page.
+    fetchWithAuth("/api/alertes/generer", { method: "POST" })
+      .catch(() => {})
+      .finally(() => {
+        fetchWithAuth("/api/alertes?lu=false")
+          .then((res) => res.json())
+          .then((json) => setAlertes((json.alertes ?? []).slice(0, 5)))
+          .catch(() => setAlertes([]));
+      });
+  }, []);
 
   async function handleHideOnboarding() {
     setHidingOnboarding(true);
@@ -329,29 +344,29 @@ export default function DashboardPage() {
 
         <Card>
           <div className="nova-section-header-row">
-            <CardTitle>À faire aujourd&apos;hui</CardTitle>
-            <Link href="/dashboard/taches" className="nova-inline-link">
+            <CardTitle>Alertes Nova</CardTitle>
+            <Link href="/dashboard/alertes" className="nova-inline-link">
               Voir tout
             </Link>
           </div>
-          {data === null ? (
+          {alertes === null ? (
             <Skeleton style={{ height: 220 }} />
-          ) : data.aFaire.length === 0 ? (
+          ) : alertes.length === 0 ? (
             <p className="nova-todo-empty">Rien d'urgent pour le moment.</p>
           ) : (
             <div className="nova-todo-list">
-              {data.aFaire.map((item) => {
-                const { icon: Icon, tone } = AFAIRE_KIND_ICON[item.kind];
+              {alertes.map((a) => {
+                const { icon: Icon, tone } = PRIORITE_ICON[a.priorite];
                 return (
-                  <Link key={item.id} href={item.href} className="nova-todo-item">
+                  <Link key={a.id} href={a.lien || "/dashboard/alertes"} className="nova-todo-item">
                     <span className={`nova-todo-icon nova-stat-icon-${tone}`}>
                       <Icon size={16} strokeWidth={1.75} />
                     </span>
                     <div className="nova-todo-body">
-                      <div className="nova-todo-title">{item.title}</div>
-                      <div className="nova-todo-subtitle">{item.subtitle}</div>
+                      <div className="nova-todo-title">{a.titre}</div>
+                      <div className="nova-todo-subtitle">{a.message}</div>
                     </div>
-                    <PriorityBadge level={item.priority} />
+                    <Badge tone={PRIORITE_BADGE_TONE[a.priorite]}>{PRIORITE_BADGE_LABEL[a.priorite]}</Badge>
                     <ChevronRight size={16} strokeWidth={1.75} className="nova-todo-chevron" />
                   </Link>
                 );

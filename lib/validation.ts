@@ -332,3 +332,7 @@ export const contratSousTraitanceUpdateSchema = z.object({
   dateDebut: z.string().datetime().optional(),
   dateFin: z.string().datetime().optional(),
 });
+
+export const alerteUpdateSchema = z.object({
+  lu: z.boolean(),
+});
