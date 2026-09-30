@@ -62,6 +62,7 @@ import {
 import { addDays, addMonths, monthGrid, startOfWeek, toDateKey } from "@/lib/dates";
 import { relanceLevel } from "@/lib/relance";
 import { SESSION_EXPIRED_EVENT, fetchWithAuth } from "@/lib/fetchClient";
+import { flushPendingTaskToggles } from "@/lib/offlineSync";
 
 /**
  * Registre d'icônes — les modules appelants passent une clé (string), jamais
@@ -2019,7 +2020,29 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
+  const toast = useToast();
   const [unreadAlertes, setUnreadAlertes] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    async function handleOnline() {
+      setIsOnline(true);
+      const synced = await flushPendingTaskToggles();
+      if (synced > 0) {
+        toast.success(`${synced} action${synced > 1 ? "s" : ""} synchronisée${synced > 1 ? "s" : ""}`);
+      }
+    }
+    function handleOffline() {
+      setIsOnline(false);
+    }
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [toast]);
 
   useEffect(() => {
     function loadUnread() {
@@ -2104,6 +2127,10 @@ export function Sidebar({
           <span className="nova-sidebar-business">{businessName}</span>
         </div>
       </Link>
+      <div className="nova-sidebar-connection">
+        <span className={`nova-sidebar-connection-dot ${isOnline ? "nova-sidebar-connection-dot-online" : "nova-sidebar-connection-dot-offline"}`} />
+        <span>{isOnline ? "En ligne" : "Hors-ligne"}</span>
+      </div>
     </aside>
   );
 }

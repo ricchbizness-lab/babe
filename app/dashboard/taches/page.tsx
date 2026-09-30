@@ -22,6 +22,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { fetchWithAuth } from "@/lib/fetchClient";
+import { queueTaskToggle } from "@/lib/offlineSync";
 import { TachesKanban } from "./TachesKanban";
 import { TachesCalendrier } from "./TachesCalendrier";
 
@@ -130,12 +131,23 @@ export default function TachesPage() {
   }
 
   async function handleToggle(task: TaskRow) {
-    setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
+    const newDone = !task.done;
+    setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: newDone } : t)));
+
+    // Hors-ligne détecté avant même d'essayer le réseau (sprint 4, point 2d)
+    // — on garde l'état optimiste et on met l'action en attente plutôt que
+    // de la faire échouer immédiatement.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await queueTaskToggle(task.id, newDone);
+      toast.success("Action enregistrée — sera synchronisée à la reconnexion");
+      return;
+    }
+
     try {
       const res = await fetchWithAuth(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ done: !task.done }),
+        body: JSON.stringify({ done: newDone }),
       });
       if (!res.ok) {
         setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
@@ -145,8 +157,11 @@ export default function TachesPage() {
       toast.success(task.done ? tt("toastMarkedUndone") : tt("toastMarkedDone"));
       router.refresh();
     } catch {
-      setTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? { ...t, done: task.done } : t)));
-      toast.error(tCommon("networkError"));
+      // Le réseau a lâché en cours de route (pas détecté par navigator.onLine
+      // au préalable) — même traitement que le cas hors-ligne explicite,
+      // plutôt que d'annuler l'action de l'utilisateur.
+      await queueTaskToggle(task.id, newDone);
+      toast.success("Action enregistrée — sera synchronisée à la reconnexion");
     }
   }
 
